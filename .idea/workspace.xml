@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)">
-      <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
-    </list>
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -40,13 +38,14 @@
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "WebServerToolWindowFactoryState": "false",
     "last_opened_file_path": "/Users/kiarareyes/PycharmProjects/RiboDesigner",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
-    "settings.editor.selected.configurable": "preferences.pathVariables"
+    "settings.editor.selected.configurable": "vcs.Git"
   },
   "keyToStringList": {
     "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
@@ -288,7 +287,7 @@
       <workItem from="1661458651105" duration="860000" />
       <workItem from="1661460799949" duration="52243000" />
       <workItem from="1664075471917" duration="4408000" />
-      <workItem from="1664492116507" duration="14701000" />
+      <workItem from="1664492116507" duration="15159000" />
     </task>
     <task id="LOCAL-00001" summary="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.">
       <created>1652300361864</created>
@@ -465,7 +464,21 @@
       <option name="project" value="LOCAL" />
       <updated>1661805512312</updated>
     </task>
-    <option name="localTasksCounter" value="26" />
+    <task id="LOCAL-00026" summary="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
+      <created>1665000492088</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1665000492088</updated>
+    </task>
+    <task id="LOCAL-00027" summary="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
+      <created>1665000671284</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1665000671285</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -503,7 +516,8 @@
     <MESSAGE value="Will test first with Bacteria only" />
     <MESSAGE value="Fixed a teeny mistake" />
     <MESSAGE value="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)" />
-    <option name="LAST_COMMIT_MESSAGE" value="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)" />
+    <MESSAGE value="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
+    <option name="LAST_COMMIT_MESSAGE" value="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

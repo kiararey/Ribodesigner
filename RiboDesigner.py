@@ -44,7 +44,7 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
     else:
         ref_name_and_seq = read_fasta(ref_sequence_file)
 
-    print('Analyzing ' + str(len(target_names_and_seqs)) + ' total sequences.')
+    print('Found ' + str(len(target_names_and_seqs)) + ' total sequences to analyze.')
     # Make the ribozyme sequence by combining the main body and the barcode
     ribo_seq = ribobody + barcode_seq
 
@@ -126,7 +126,7 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen):
             indexes[small_col] = i + 1  # we're adding 1 to the idx because of 0 based indexing
 
             small_col += 1
-        data[col] = [name, sequ, [IGS_and_ribo_seqs, IGS_and_guide_seqs, IGSes, guides, indexes]]
+        data[col] = [name, sequ, (IGS_and_ribo_seqs, IGS_and_guide_seqs, IGSes, guides, indexes)]
         col += 1
     # now remove entries with no viable sites
     # from https://www.geeksforgeeks.org/python-remove-none-values-from-list/
@@ -154,7 +154,7 @@ def align_to_ref(data, ref_name_and_seq, m, minlen, base_to_find='U'):
     alignments_separated = [None] * len(data)
     col = 0
 
-    print('Now re-indexing target sequences to reference ' + ref_name_and_seq[0][0].replace('_', ' '))
+    print('Now re-indexing target sequences to reference ' + ref_name_and_seq[0][0].replace('_', ' ') + '...')
 
     for name, sequ, cat_site_info in data:
         current_dict = conversion_dicts[name]
@@ -259,11 +259,9 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
         IGS_subset_a = list(set(cat_site_data[2]))  # extract each IGS sequence in this organism
         for j in range(col + 1, len(new_data)):  # this is to avoid repeat combinations
             # make a subset of second column of unique IGS values
+            # and find the shared values between sets with no duplicates
             org_b, sequ_b, cat_site_data_b = new_data[j]
-            IGS_subset_b = list(set(cat_site_data_b[2]))
-
-            # find the shared values between sets with no duplicates
-            no_dupes = (set(IGS_subset_a) & set(IGS_subset_b))
+            no_dupes = (set(IGS_subset_a) & set(list(set(cat_site_data_b[2]))))
 
             # remove any nans
             repeats = [item for item in no_dupes if str(item) != 'nan']
@@ -313,10 +311,9 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
 
                     guide_id = str(IGS_sequ) + str(
                         ref_pos)  # save a guide ID that is the IGS sequence and the reference position
-                    temp_data = [IGS_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
+                    temp_list.append([IGS_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
                                  ref_pos, cat_site_data[3][p], cat_site_data[1][p],
-                                 cat_site_data[0][p], sequ, guide_id]
-                    temp_list.append(temp_data)
+                                 cat_site_data[0][p], sequ, guide_id])
                 coverage_count += 1
             col += 1
 
@@ -377,10 +374,10 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, fileout=False, file='',
         # store these designs and score
         # store the data as follows: IGS, reference idx, score, % cov, % on target, true % cov, [(target name, target idx,
         # occurrences of IGS in target)], truncated_guide, design_sequence, ribo_design
-        target_info = [(target[4], target[6], target[5] - 1) for target in to_optimize[key]]
         opti_seqs[i] = [to_optimize[key][0][0], to_optimize[key][0][7], score, to_optimize[key][0][1],
                         to_optimize[key][0][2],
-                        to_optimize[key][0][3], target_info, truncated_guide, design_sequence, ribo_design]
+                        to_optimize[key][0][3], [(target[4], target[6], target[5] - 1) for target in to_optimize[key]],
+                        truncated_guide, design_sequence, ribo_design]
         i += 1
 
     if fileout:
