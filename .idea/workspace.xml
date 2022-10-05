@@ -1,0 +1,565 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)">
+      <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="parallel_threading" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="27tPcs0al7nYowZSPa9qHnT3XET" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_opened_file_path": "/Users/kiarareyes/PycharmProjects/RiboDesigner",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "settings.editor.selected.configurable": "preferences.pathVariables"
+  },
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.RiboDesigner_paper_figures">
+    <configuration name="RiboDesigner" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/python.app/Contents/MacOS/python" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="RiboDesigner_paper_figures" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/RiboDesigner_paper_figures.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SILVAanalysis" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/SILVAanalysis.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SILVAanalysisReferenceAligned" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/SILVAanalysisReferenceAligned.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="SequencePrepper" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/SequencePrepper.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="figureB" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/figureB.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="findReferenceIdxScript" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/findReferenceIdxScript.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.main" />
+      <item itemvalue="Python.RiboDesigner" />
+      <item itemvalue="Python.SequencePrepper" />
+      <item itemvalue="Python.RiboDesigner_paper_figures" />
+      <item itemvalue="Python.SILVAanalysisReferenceAligned" />
+      <item itemvalue="Python.figureB" />
+      <item itemvalue="Python.findReferenceIdxScript" />
+      <item itemvalue="Python.SILVAanalysis" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.RiboDesigner_paper_figures" />
+        <item itemvalue="Python.figureB" />
+        <item itemvalue="Python.SILVAanalysisReferenceAligned" />
+        <item itemvalue="Python.findReferenceIdxScript" />
+        <item itemvalue="Python.SILVAanalysis" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="" />
+      <created>1650136491685</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1650136491685</updated>
+      <workItem from="1650136493975" duration="1657000" />
+      <workItem from="1650648614493" duration="3883000" />
+      <workItem from="1652116776256" duration="2756000" />
+      <workItem from="1652128312496" duration="19000" />
+      <workItem from="1652128339029" duration="1182000" />
+      <workItem from="1652129531347" duration="10460000" />
+      <workItem from="1652301107745" duration="1581000" />
+      <workItem from="1652303986465" duration="3035000" />
+      <workItem from="1653054466325" duration="8580000" />
+      <workItem from="1653428695159" duration="636000" />
+      <workItem from="1653429339092" duration="135000" />
+      <workItem from="1653429481040" duration="30423000" />
+      <workItem from="1654873281906" duration="21241000" />
+      <workItem from="1655236517134" duration="2915000" />
+      <workItem from="1656440271376" duration="28839000" />
+      <workItem from="1658950083478" duration="21440000" />
+      <workItem from="1659558112353" duration="2716000" />
+      <workItem from="1660580394399" duration="66959000" />
+      <workItem from="1660864619419" duration="885000" />
+      <workItem from="1660936725301" duration="2923000" />
+      <workItem from="1660940005229" duration="30583000" />
+      <workItem from="1661458651105" duration="860000" />
+      <workItem from="1661460799949" duration="52243000" />
+      <workItem from="1664075471917" duration="4408000" />
+      <workItem from="1664492116507" duration="14701000" />
+    </task>
+    <task id="LOCAL-00001" summary="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.">
+      <created>1652300361864</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1652300361864</updated>
+    </task>
+    <task id="LOCAL-00002" summary="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.&#10;&#10;Also making variable names better. Slowly.">
+      <created>1652301868304</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1652301868304</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Works now but make makes ugly files">
+      <created>1653495739666</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1653495739666</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Works now but make makes ugly files&#10;&#10;Also removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!">
+      <created>1653512513124</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1653512513124</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!&#10;&#10;Still need to fix unique and narrow sequences so they work with the new code, and test the indexing, but this should be able to find common sequences in a dataset now.">
+      <created>1653590386576</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1653590386576</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info">
+      <created>1655229211489</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1655229211489</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info&#10;&#10;Made columns prettier">
+      <created>1655230247921</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1655230247921</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info&#10;&#10;Made columns prettier and added an option on Ribodesigner to not output files">
+      <created>1655230314414</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1655230314414</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Fixed SequencePrepper.py and made a new script, PullSequences.py, that will convert some metagenomic data into a format compatible with RiboChecker">
+      <created>1656446191438</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1656446191438</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Fixed SequencePrepper.py and made a new script, PullSequences.py, that will convert some metagenomic data into a format compatible with RiboChecker">
+      <created>1656448443323</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1656448443323</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Added a new function, findReferenceIdx, that should allow us to align a list of sequences to a reference sequence then give us the new indexes as well as a conversion dictionary for catalytic sites (convert from original sequence index to reference sequence index numbering). &#10;&#10;Also preparing new optimization strategy without recursion: optimizeToRefSequence. If more than one IGS, pairwise align to reference and only take the closest index to the average index. Hopefully this is faster/ less computationally intensive.">
+      <created>1659398292083</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1659398292083</updated>
+    </task>
+    <task id="LOCAL-00012" summary="Making big changes to generate figure B and make the code more efficient. It ran so much faster this time around!">
+      <created>1660689107010</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1660689107010</updated>
+    </task>
+    <task id="LOCAL-00013" summary="working on optimize_sequences: need to do the following:&#10;&#10;- Determine all cases of indexing to consider&#10;- maybe even a case where we take all of the cases then use the old ribodesigner function --&gt; can do this for later versions&#10;- figure out how best to implement the mode --&gt; something something with take the closest my braIn is mush so i will think better tomorrow&#10;&#10;- then finally add scoriiiing">
+      <created>1660776508490</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1660776508491</updated>
+    </task>
+    <task id="LOCAL-00014" summary="I've added a calculation for &quot;true percent coverage&quot;, which uses the information of on-target counts to determine if the IGS is at the same location in all organisms covered. &#10;&#10;true percent coverage = percent coverage * percent on target">
+      <created>1660851062172</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1660851062172</updated>
+    </task>
+    <task id="LOCAL-00015" summary="things are coming along great! Code works great when looking for 100% true coverage and is super super fast now that we only need to analyze a subset of sequences instead of all possible permutations. Now I need to implement the scoring we need and make sure it works for other minimum true coverage thresholds&#10;&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)">
+      <created>1660862817129</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1660862817129</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Hey it works!!! I had to make my own scoring function based on biopython's PSSM because it refused to work for me but the script finally works :)&#10;&#10;I will polish it and make the actual figures later!&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)">
+      <created>1660942235174</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1660942235174</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Made a formal ribozymer function. Will test with SILVA database soon.">
+      <created>1661376546643</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1661376546643</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Testing with SILVA database!">
+      <created>1661460323806</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1661460323806</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Testing with SILVA database!">
+      <created>1661464294704</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1661464294704</updated>
+    </task>
+    <task id="LOCAL-00020" summary="Will test first with Bacteria only">
+      <created>1661470404572</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1661470404572</updated>
+    </task>
+    <task id="LOCAL-00021" summary="Fixed a teeny mistake">
+      <created>1661791827252</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1661791827252</updated>
+    </task>
+    <task id="LOCAL-00022" summary="Fixed a teeny mistake">
+      <created>1661791924202</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1661791924202</updated>
+    </task>
+    <task id="LOCAL-00023" summary="Fixed a teeny mistake">
+      <created>1661791958347</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1661791958347</updated>
+    </task>
+    <task id="LOCAL-00024" summary="Fixed a teeny mistake">
+      <created>1661804996558</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1661804996558</updated>
+    </task>
+    <task id="LOCAL-00025" summary="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)">
+      <created>1661805512312</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1661805512312</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet." />
+    <MESSAGE value="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.&#10;&#10;Also making variable names better. Slowly." />
+    <MESSAGE value="Works now but make makes ugly files" />
+    <MESSAGE value="Works now but make makes ugly files&#10;&#10;Also removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!" />
+    <MESSAGE value="Removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!&#10;&#10;Still need to fix unique and narrow sequences so they work with the new code, and test the indexing, but this should be able to find common sequences in a dataset now." />
+    <MESSAGE value="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info" />
+    <MESSAGE value="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info&#10;&#10;Made columns prettier" />
+    <MESSAGE value="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info&#10;&#10;Made columns prettier and added an option on Ribodesigner to not output files" />
+    <MESSAGE value="Fixed SequencePrepper.py and made a new script, PullSequences.py, that will convert some metagenomic data into a format compatible with RiboChecker" />
+    <MESSAGE value="Added a new function, findReferenceIdx, that should allow us to align a list of sequences to a reference sequence then give us the new indexes as well as a conversion dictionary for catalytic sites (convert from original sequence index to reference sequence index numbering). &#10;&#10;Also preparing new optimization strategy without recursion: optimizeToRefSequence. If more than one IGS, pairwise align to reference and only take the closest index to the average index. Hopefully this is faster/ less computationally intensive." />
+    <MESSAGE value="Making big changes to generate figure B and make the code more efficient. It ran so much faster this time around!" />
+    <MESSAGE value="working on optimize_sequences: need to do the following:&#10;&#10;- Determine all cases of indexing to consider&#10;- maybe even a case where we take all of the cases then use the old ribodesigner function --&gt; can do this for later versions&#10;- figure out how best to implement the mode --&gt; something something with take the closest my braIn is mush so i will think better tomorrow&#10;&#10;- then finally add scoriiiing" />
+    <MESSAGE value="I've added a calculation for &quot;true percent coverage&quot;, which uses the information of on-target counts to determine if the IGS is at the same location in all organisms covered. &#10;&#10;true percent coverage = percent coverage * percent on target" />
+    <MESSAGE value="things are coming along great! Code works great when looking for 100% true coverage and is super super fast now that we only need to analyze a subset of sequences instead of all possible permutations. Now I need to implement the scoring we need and make sure it works for other minimum true coverage thresholds&#10;&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)" />
+    <MESSAGE value="Hey it works!!! I had to make my own scoring function based on biopython's PSSM because it refused to work for me but the script finally works :)&#10;&#10;I will polish it and make the actual figures later!&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)" />
+    <MESSAGE value="Made a formal ribozymer function. Will test with SILVA database soon." />
+    <MESSAGE value="Testing with SILVA database!" />
+    <MESSAGE value="Will test first with Bacteria only" />
+    <MESSAGE value="Fixed a teeny mistake" />
+    <MESSAGE value="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)" />
+    <option name="LAST_COMMIT_MESSAGE" value="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/findReferenceIdxScript.py</url>
+          <line>23</line>
+          <option name="timeStamp" value="16" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/SILVAanalysisReferenceAligned.py</url>
+          <line>101</line>
+          <option name="timeStamp" value="50" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/figureB.py</url>
+          <line>143</line>
+          <option name="timeStamp" value="91" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>8</line>
+          <option name="timeStamp" value="92" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/RiboDesigner_paper_figures.py</url>
+          <line>51</line>
+          <option name="timeStamp" value="94" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/RiboDesigner_paper_figures.py</url>
+          <line>44</line>
+          <option name="timeStamp" value="96" />
+        </line-breakpoint>
+      </breakpoints>
+      <default-breakpoints>
+        <breakpoint type="python-exception">
+          <properties notifyOnTerminate="true" exception="BaseException">
+            <option name="notifyOnTerminate" value="true" />
+          </properties>
+        </breakpoint>
+      </default-breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/RiboDesigner$RiboCheckerScript.coverage" NAME="RiboCheckerScript Coverage Results" MODIFIED="1656460158129" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1664995290775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysis.coverage" NAME="SILVAanalysis Coverage Results" MODIFIED="1660677354205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1664491844203" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$findReferenceIdxScript.coverage" NAME="findReferenceIdxScript Coverage Results" MODIFIED="1660677370975" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$SequencePrepper.coverage" NAME="SequencePrepper Coverage Results" MODIFIED="1661804956011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner__1_.coverage" NAME="RiboDesigner (1) Coverage Results" MODIFIED="1652129590997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$IGSchecker.coverage" NAME="IGSchecker Coverage Results" MODIFIED="1659372428534" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$PullSequences.coverage" NAME="PullSequences Coverage Results" MODIFIED="1656454979376" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+  </component>
+</project>
