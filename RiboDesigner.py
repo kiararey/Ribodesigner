@@ -37,12 +37,20 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
     else:
         target_names_and_seqs = read_fasta_folder(target_sequences_folder)
 
+    try:
+        target_names_and_seqs[0]
+    # if we hit an index error we've run out of sequence and
+    # should not add new residues
+    except IndexError:
+        print('No sequences found in ' + target_sequences_folder + '. Please make sure your files are not empty!\n')
+        return None
+
     if not ref_sequence_file:
         # If we do not have a reference sequence, just choose one randomly
         print('No reference sequence provided. Picking a random sequence as reference...')
         ref_name_and_seq = random.choice(target_names_and_seqs)
     else:
-        ref_name_and_seq = read_fasta(ref_sequence_file)
+        ref_name_and_seq = read_fasta(ref_sequence_file)[0]
 
     print('Found ' + str(len(target_names_and_seqs)) + ' total sequences to analyze.')
     # Make the ribozyme sequence by combining the main body and the barcode
@@ -55,16 +63,14 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
     # Now align sequences to reference sequences and get the conversion dictionaries for each
     new_data, conversion_dicts, alignments_separated = align_to_ref(data, ref_name_and_seq, m, minlen)
 
-    big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS = find_repeat_targets(new_data,
-                                                                                                   min_true_cov=
-                                                                                                   min_true_cov,
-                                                                                                   fileout=fileout,
-                                                                                                   file=folder_to_save)
+    big_temp_list, to_optimize, filtered_list, \
+    ranked_IGS, ranked_sorted_IGS, to_keep_single_targets = find_repeat_targets(new_data, min_true_cov=min_true_cov,
+                                                                                fileout=fileout, file=folder_to_save)
 
     # Now, we can optimize each sequence
     if optimize_seq:
-        opti_seqs = optimize_sequences(to_optimize, identity_thresh, n, ribo_seq, fileout=fileout, file=folder_to_save,
-                           score_type=score_type)
+        opti_seqs = optimize_sequences(to_optimize, identity_thresh, n, ribo_seq, to_keep_single_targets,
+                                       fileout=fileout, file=folder_to_save, score_type=score_type)
 
         return opti_seqs
 
@@ -154,13 +160,13 @@ def align_to_ref(data, ref_name_and_seq, m, minlen, base_to_find='U'):
     alignments_separated = [None] * len(data)
     col = 0
 
-    print('Now re-indexing target sequences to reference ' + ref_name_and_seq[0][0].replace('_', ' ') + '...')
+    print('Now re-indexing target sequences to reference ' + ref_name_and_seq[0].replace('_', ' ') + '...')
 
     for name, sequ, cat_site_info in data:
         current_dict = conversion_dicts[name]
         # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
 
-        alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[0][1])
+        alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[1])
         new_aligns[col] = (''.join(str(alignments[0])))
 
         seq_a = re.search(pattern_a, new_aligns[col]).group(1)
@@ -266,11 +272,11 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
             # remove any nans
             repeats = [item for item in no_dupes if str(item) != 'nan']
             # append to our big list
-            if repeats != []:
+            if repeats:
                 big_repeats.append(repeats)
         col += 1  # move to the next column
 
-    print('Found repeat subsets. Now storing sequences...')
+    print('Found repeat subsets. Now analyzing sequences...')
 
     # now flatten the list to compare all IGS sequences against one another
     flat_repeats = [item for sublist in big_repeats for item in sublist]
@@ -278,6 +284,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
     filtered_list = list(set(flat_repeats))
 
     to_optimize = defaultdict(list)  # will keep those IGSes that meet our minimum percent coverage later
+    to_keep_single_targets = defaultdict(list)
 
     # Now find the IGS sequences in the original target sequences and extract matching data
     big_temp_list = []
@@ -326,9 +333,13 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
             true_coverage = on_target_count[item[7]] / len(new_data)
             item[3] = true_coverage
             big_temp_list.append(list(item))
-            if true_coverage >= min_true_cov:  # if the true % coverage is above min_true_cov, mark this IGS for optimization
-                to_optimize[item[12]].append(
-                    item)  # save the IGS sequence AND the matching index in the reference sequence
+            # if the true % coverage is above min_true_cov, and more than one sequence, mark this IGS for optimization
+            if true_coverage >= min_true_cov and on_target_count[item[7]] > 1:
+                # save the IGS sequence AND the matching index in the reference sequence
+                to_optimize[item[12]].append(item)
+            # Else if the true % coverage is above min_true_cov but only one sequence still keep but will not optimize
+            elif true_coverage >= min_true_cov:
+                to_keep_single_targets[item[12]].append(item)
 
     # Make dataframes for excel ig
     ranked_IGS = pd.DataFrame(data=big_temp_list, index=None,
@@ -348,14 +359,14 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
         new_data_df = pd.DataFrame.from_records(new_data).T
         new_data_df.to_csv(file + '/All catalytic U data unsorted.csv', index=True)
 
-    return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS
+    return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
 
 
-def optimize_sequences(to_optimize, thresh, n, ribo_seq, fileout=False, file='', score_type='quantitative',
+def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout=False, file='', score_type='quantitative',
                        gaps_allowed=True):
     print('Optimizing ' + str(len(to_optimize)) + ' guide sequences...')
 
-    opti_seqs = [None] * len(to_optimize.keys())
+    opti_seqs = [None] * (len(to_optimize.keys()) + len(single_targets.keys()))
     i = 0
     for key in to_optimize.keys():
         guides_to_optimize = [target[8] for target in to_optimize[key]]
@@ -367,8 +378,7 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, fileout=False, file='',
         truncated_guide = opti_seq[-n:]
 
         # Now make an actual full design with the length needed
-        this_IGS = re.sub(r'[0-9]+', '', key)
-        design_sequence = truncated_guide + 'G' + this_IGS  # our ID is the IGS and the ref index so remove the index
+        design_sequence = truncated_guide + 'G' + re.sub(r'[0-9]+', '', key)  # our ID is the IGS and the ref index so remove the index
         ribo_design = design_sequence + ribo_seq
 
         # store these designs and score
@@ -379,6 +389,23 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, fileout=False, file='',
                         to_optimize[key][0][3], [(target[4], target[6], target[5] - 1) for target in to_optimize[key]],
                         truncated_guide, design_sequence, ribo_design]
         i += 1
+
+    # If there are any single targets to keep (depends on min true coverage setting) add them here
+    if single_targets:
+        print('Storing ' + str(len(single_targets)) + ' single target sequences. If you do not want single target '
+                                                      'guides, please increase your min true coverage parameter.')
+        for key in single_targets.keys():
+
+            guide = single_targets[key][0][8]
+            design_sequence = guide + 'G' + re.sub(r'[0-9]+', '', key)
+            ribo_design = design_sequence + ribo_seq
+
+            # set score to nan
+            opti_seqs[i] = [single_targets[key][0][0], single_targets[key][0][7], 'nan', single_targets[key][0][1],
+                            single_targets[key][0][2], single_targets[key][0][3],
+                            [(target[4], target[6], target[5] - 1) for target in single_targets[key]], guide,
+                            design_sequence, ribo_design]
+            i += 1
 
     if fileout:
         sorted_opti_seqs = pd.DataFrame(data=opti_seqs, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
@@ -516,7 +543,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
     else:
         states = ['A', 'U', 'C', 'G']
 
-    probs = {pos: {'A': 0, 'U': 0, 'C': 0, 'G': 0, '-': 0} for pos in range(len(ref_name_and_seq[0][1]))}
+    probs = {pos: {'A': 0, 'U': 0, 'C': 0, 'G': 0, '-': 0} for pos in range(len(ref_name_and_seq[1]))}
 
     col = 0
     new_aligns = [None] * len(target_names_and_seqs)
@@ -524,7 +551,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
     for name, sequ in target_names_and_seqs:
         # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
 
-        alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[0][1])
+        alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[1])
         new_aligns[col] = (''.join(str(alignments[0])))
 
         # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
@@ -589,7 +616,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 
         col += 1
 
-    shannon_entropy_list = {pos: 0 for pos in range(len(ref_name_and_seq[0][1]))}
+    shannon_entropy_list = {pos: 0 for pos in range(len(ref_name_and_seq[1]))}
 
     # The original Shannon entropy assumes a log base 2 as it deals with bits, but we can use any tbh. We'll default to
     # the natural log

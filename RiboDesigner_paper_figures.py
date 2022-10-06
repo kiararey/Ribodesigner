@@ -25,6 +25,7 @@ datasets_path = 'Datasets_used/'
 # Output folder
 output_path = 'Figure_2_output_files/'
 
+# Generate data here. If already generated we'll just import it with pandas
 # For each folder in datasets used run RiboDesigner and keep the data for plotting later
 data = [None] * len(os.listdir(datasets_path))
 col = 0
@@ -34,9 +35,11 @@ for dataset in os.listdir(datasets_path):
 
     if os.path.isdir(output_path_folder) is False:
         os.mkdir(output_path_folder)
+    # else:
+    #     continue
 
     target_sequences_folder = datasets_path + dataset
-    data[0] = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder, min_true_cov=0.7,
+    data[0] = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder, min_true_cov=0,
                             identity_thresh=0.7, fileout=True, folder_to_save=output_path_folder)
     col += 1
 
