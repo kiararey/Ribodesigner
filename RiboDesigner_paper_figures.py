@@ -35,8 +35,8 @@ for dataset in os.listdir(datasets_path):
 
     if os.path.isdir(output_path_folder) is False:
         os.mkdir(output_path_folder)
-    # else:
-    #     continue
+    else:
+        continue
 
     target_sequences_folder = datasets_path + dataset
     data[0] = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder, min_true_cov=0,
