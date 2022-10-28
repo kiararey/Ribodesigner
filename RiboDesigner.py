@@ -42,7 +42,7 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
     # if we hit an index error we've run out of sequence and
     # should not add new residues
     except IndexError:
-        print('No sequences found in ' + target_sequences_folder + '. Please make sure your files are not empty!\n')
+        print(f'No sequences found in {target_sequences_folder}. Please make sure your files are not empty!\n')
         return None
 
     if not ref_sequence_file:
@@ -52,7 +52,7 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
     else:
         ref_name_and_seq = read_fasta(ref_sequence_file)[0]
 
-    print('Found ' + str(len(target_names_and_seqs)) + ' total sequences to analyze.')
+    print(f'Found {len(target_names_and_seqs)} total sequences to analyze.')
     # Make the ribozyme sequence by combining the main body and the barcode
     ribo_seq = ribobody + barcode_seq
 
@@ -105,7 +105,7 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen):
         idx_new = [res for res in idx if m <= res < (len(sequ) - minlen)]
 
         if not idx_new:
-            print('No viable catalytic sites in ' + name)
+            print(f'No viable catalytic sites in {name}')
             col += 1
             continue
 
@@ -160,8 +160,7 @@ def align_to_ref(data, ref_name_and_seq, m, minlen, base_to_find='U'):
     alignments_separated = [None] * len(data)
     col = 0
 
-    print('Now re-indexing target sequences to reference ' + ref_name_and_seq[0].replace('_', ' ') + '...')
-
+    print(f'Now re-indexing target sequences to reference {ref_name_and_seq[0].replace("_", " ")}...' )
     for name, sequ, cat_site_info in data:
         current_dict = conversion_dicts[name]
         # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
@@ -353,18 +352,18 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
                                                ascending=[False, False])
 
     if fileout:
-        ranked_sorted_IGS.to_csv(file + '/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv',
+        ranked_sorted_IGS.to_csv(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv',
                                  index=False)
 
         new_data_df = pd.DataFrame.from_records(new_data).T
-        new_data_df.to_csv(file + '/All catalytic U data unsorted.csv', index=True)
+        new_data_df.to_csv(f'{file}/All catalytic U data unsorted.csv', index=True)
 
     return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
 
 
 def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout=False, file='', score_type='quantitative',
                        gaps_allowed=True):
-    print('Optimizing ' + str(len(to_optimize)) + ' guide sequences...')
+    print(f'Optimizing {len(to_optimize)} guide sequences...')
 
     opti_seqs = [None] * (len(to_optimize.keys()) + len(single_targets.keys()))
     i = 0
@@ -392,8 +391,8 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout
 
     # If there are any single targets to keep (depends on min true coverage setting) add them here
     if single_targets:
-        print('Storing ' + str(len(single_targets)) + ' single target sequences. If you do not want single target '
-                                                      'guides, please increase your min true coverage parameter.')
+        print(f'Storing {len(single_targets)} single target sequences. If you do not want single target guides, '
+              f'please increase your min true coverage parameter.')
         for key in single_targets.keys():
 
             guide = single_targets[key][0][8]
@@ -401,7 +400,7 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout
             ribo_design = design_sequence + ribo_seq
 
             # set score to nan
-            opti_seqs[i] = [single_targets[key][0][0], single_targets[key][0][7], 'nan', single_targets[key][0][1],
+            opti_seqs[i] = [single_targets[key][0][0], single_targets[key][0][7], 1, single_targets[key][0][1],
                             single_targets[key][0][2], single_targets[key][0][3],
                             [(target[4], target[6], target[5] - 1) for target in single_targets[key]], guide,
                             design_sequence, ribo_design]
@@ -416,8 +415,7 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout
                                                                              'Optimized guide + G + IGS',
                                                                              'Full ribozyme design'],
                                         dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
-        sorted_opti_seqs.to_csv(file + '/Ranked Ribozyme Designs with Optimized Guide Sequence Designs ' + score_type +
-                                '.csv', index=False)
+        sorted_opti_seqs.to_csv(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', index=False)
 
     print('All guide sequences optimized.\n')
     return opti_seqs
@@ -522,13 +520,7 @@ def get_quantitative_score(msa, thresh=0.7, chars_to_ignore=None, count_gaps=Tru
         sum_probabilities += pos_prob / seq_num
 
     opti_seq = left_seq.strip('-')
-
-    if penalize_trailing_gaps:
-        total_len = len(left_seq)
-    else:
-        total_len = len(opti_seq)
-
-    score = sum_probabilities / total_len
+    score = sum_probabilities / len(left_seq)
 
     return score, opti_seq
 
@@ -635,7 +627,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 
     if fileout:
         sorted_opti_seqs = pd.DataFrame(data={'Reference index': xaxis_list, 'Shannon entropy': yaxis_list}, index=None)
-        sorted_opti_seqs.to_csv(file + '/Shannon entropy of aligned sequences.csv', index=False)
+        sorted_opti_seqs.to_csv(f'{file}/Shannon entropy of aligned sequences.csv', index=False)
 
     return shannon_entropy_list, xaxis_list, yaxis_list
 
