@@ -1,3 +1,15 @@
+"""
+RiboDesigner is a Python program that takes in processed FASTA files containing sequences that we want to target with
+RAM, and optionally sequences we want to avoid targeting, and generates ribozyme designs to target a maximum amount
+of targets with as few designs as possible.
+
+Planned features:
+- Return design pool: returns several designs to hit everything in a community
+- Refine avoid function: make RiboDesigner avoid specific sequences in a pool
+- Multiprocessing: cleverly utilize computer memory and cores to process more data, faster
+"""
+
+
 import glob
 import os
 import random
@@ -12,9 +24,10 @@ from Bio.Align import AlignInfo
 from math import exp, log
 
 
-def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder, ref_sequence_file=None,
-              optimize_seq=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
-              score_type='quantitative'):
+def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
+                 target_sequences_folder: str, ref_sequence_file=None,
+                 optimize_seq=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
+                 score_type='quantitative'):
     # RiboDesigner is a function that generates ribozyme designs to target a set of sequences (target_seqs)
 
     # target_seqs: list of seqs, containing the target RNA sequences to target (5' -> 3'). Generate with read_fasta or
@@ -23,9 +36,9 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
     # read_fasta_folder
     # ribobody: string, containing the ribozyme sequence to use as the body template (5' -> 3')
     # bar_seq: string, with the desired insertion barcode sequence (5' -> 3')
-    # minlen: int, must be smaller than n. nucleotide tolerance at 3' end of target sequence
+    # min_length: int, must be smaller than guide_length. nucleotide tolerance at 3' end of target sequence
     #   (a.k.a. minimum guide sequence length from 3' end) ex: if you want your guide sequence to
-    #   bind to at least 35 nt at the 3' end of the target sequence, set minlen = 35.
+    #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
     # fileout: boolean, whether we want a csv file output or not (default True)
     # file_name: string, the path where the folder we will save our outputs in if fileout = True
 
@@ -58,10 +71,10 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
 
     # find all catalytic U sites
     # Remember: data has one tuple per target sequence, the third entry is a tuple for each catalytic U site
-    data = find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen)
+    data = find_cat_sites(target_names_and_seqs, ribo_seq, igs_length, guide_length, min_length)
 
     # Now align sequences to reference sequences and get the conversion dictionaries for each
-    new_data, conversion_dicts, alignments_separated = align_to_ref(data, ref_name_and_seq, m, minlen)
+    new_data, conversion_dicts, alignments_separated = align_to_ref(data, ref_name_and_seq, igs_length, min_length)
 
     big_temp_list, to_optimize, filtered_list, \
     ranked_IGS, ranked_sorted_IGS, to_keep_single_targets = find_repeat_targets(new_data, min_true_cov=min_true_cov,
@@ -69,7 +82,7 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
 
     # Now, we can optimize each sequence
     if optimize_seq:
-        opti_seqs = optimize_sequences(to_optimize, identity_thresh, n, ribo_seq, to_keep_single_targets,
+        opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
                                        fileout=fileout, file=folder_to_save, score_type=score_type)
 
         return opti_seqs
@@ -78,15 +91,15 @@ def RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences
         return ranked_sorted_IGS
 
 
-def find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen):
+def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_length, min_length: int):
     # find_cat_sites finds all instances of a U or T in a set of sequences and creates ribozyme designs for these
     # target_seqs_and_names (list of tuples: each with format (string, Seq object) are the sequences we want to analyze
     # ribo_seq (Seq object) is the sequence of the ribozyme body and barcode we are using
-    # m (int), desired IGS sequence length
-    # n (int), desired guide binding sequence length
-    # minlen (int), must be smaller than n. nucleotide tolerance at 3' end of target sequence
+    # igs_length (int), desired IGS sequence length
+    # guide_length (int), desired guide binding sequence length
+    # min_length (int), must be smaller than guide_length. nucleotide tolerance at 3' end of target sequence
     #   (a.k.a. minimum guide sequence length from 3' end) ex: if you want your guide sequence to
-    #   bind to at least 35 nt at the 3' end of the target sequence, set minlen = 35.
+    #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
 
     # initialize final product - will be a list of tuples of the format:
     # [target_name, target_sequence, (IGS_and_guide_seq + ribo_seq, IGS_and_guide_seq, IGS, guide_seq, IGS_idx]
@@ -99,10 +112,10 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen):
         # find all possible splice sites
         idx = find(sequ, 'U')
 
-        if not idx:  # in case it's a DNA sequence (so no U sites in sequence)
+        if not idx:  # in case it'string_to_analyze a DNA sequence (so no U sites in sequence)
             idx = find(sequ, 'T')  # because U is T duh
-        # remove indexes that are < n or > len(sequ) - m (must have enough residues to attach to)
-        idx_new = [res for res in idx if m <= res < (len(sequ) - minlen)]
+        # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
+        idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
 
         if not idx_new:
             print(f'No viable catalytic sites in {name}')
@@ -116,10 +129,10 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen):
         indexes = [None] * len(idx_new)
         small_col = 0
         for i in idx_new:
-            # generate complementary guide sequence n residues *downstream* of U site
-            guide = sequ[i + 1:i + n + 1].reverse_complement()
-            # generate complementary IGS sequence m bases long *upstream* of U site
-            IGS = sequ[i - m:i].reverse_complement()
+            # generate complementary guide sequence guide_length residues *downstream* of U site
+            guide = sequ[i + 1:i + guide_length + 1].reverse_complement_rna()
+            # generate complementary IGS sequence igs_length bases long *upstream* of U site
+            IGS = sequ[i - igs_length:i].reverse_complement_rna()
 
             # now join IGS + G (where U site should be for wobble pair) + guide sequence and
             # append to ribozyme template
@@ -141,7 +154,7 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, m, n, minlen):
     return filtered_data
 
 
-def align_to_ref(data, ref_name_and_seq, m, minlen, base_to_find='U'):
+def align_to_ref(data, ref_name_and_seq, base_to_find='U'):
     # align_to_ref will first align each target sequence to a reference sequence, find all catalytic site indexes, and
     # return a list of all the data analyzed with their new indexes, with one entry per target sequence as below:
     # [name, sequ, (ribozyme_seq, IGS_and_guide_seq, IGS, guide_seq, og_idx, ref_idx)]
@@ -163,7 +176,7 @@ def align_to_ref(data, ref_name_and_seq, m, minlen, base_to_find='U'):
     print(f'Now re-indexing target sequences to reference {ref_name_and_seq[0].replace("_", " ")}...' )
     for name, sequ, cat_site_info in data:
         current_dict = conversion_dicts[name]
-        # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
+        # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final E.coli index
 
         alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[1])
         new_aligns[col] = (''.join(str(alignments[0])))
@@ -230,23 +243,25 @@ def read_fasta_folder(path, file_type='fasta'):
     return target_seqs_and_names
 
 
-def read_fasta(fastaFile, file_type='fasta'):
+def read_fasta(in_file: str, file_type='fasta'):
     # filepath here is a fasta file
     # will return a list of tuples as (ID, sequence)
 
     target_seqs_and_names = []
-    fasta_iter = SeqIO.parse(fastaFile, file_type)
+    fasta_iter = SeqIO.parse(in_file, file_type)
     for record in fasta_iter:
         target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
     return target_seqs_and_names
 
 
-def find(s, ch):
-    # finds all instances of a character in a string
-    return [i for i, ltr in enumerate(s) if ltr == ch]
+def find(string_to_analyze: str, char_to_find: str):
+    """
+    Finds all instances of a character char_to_find in a string string_to_analyze.
+    """
+    return [i for i, ltr in enumerate(string_to_analyze) if ltr == char_to_find]
 
 
-def transcribe_seq_file(seq_file):
+def transcribe_seq_file(seq_file: str):
     # seq_file must be a .txt file
     with open(seq_file) as f:
         for i in f:
@@ -361,7 +376,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
     return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
 
 
-def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout=False, file='', score_type='quantitative',
+def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='', score_type='quantitative',
                        gaps_allowed=True):
     print(f'Optimizing {len(to_optimize)} guide sequences...')
 
@@ -374,7 +389,7 @@ def optimize_sequences(to_optimize, thresh, n, ribo_seq, single_targets, fileout
         opti_seq, score = msa_and_optimize(guides_to_optimize, thresh, score_type, gaps_allowed)
 
         # truncate optimized sequence to the desired guide sequence length
-        truncated_guide = opti_seq[-n:]
+        truncated_guide = opti_seq[-guide_length:]
 
         # Now make an actual full design with the length needed
         design_sequence = truncated_guide + 'G' + re.sub(r'[0-9]+', '', key)  # our ID is the IGS and the ref index so remove the index
@@ -476,7 +491,7 @@ def msa_and_optimize(seqs_to_align, thresh=0.7, score_type='quantitative', gaps_
 
 
 def get_quantitative_score(msa, thresh=0.7, chars_to_ignore=None, count_gaps=True, penalize_trailing_gaps=False):
-    # a modified version of BioPython's PSSM funtction that counts gaps by default and also gives us the quantitative score.
+    # a modified version of BioPython'string_to_analyze PSSM funtction that counts gaps by default and also gives us the quantitative score.
     # This quantitative score is as follows:
 
     if chars_to_ignore is None:
@@ -541,12 +556,12 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
     new_aligns = [None] * len(target_names_and_seqs)
 
     for name, sequ in target_names_and_seqs:
-        # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
+        # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final E.coli index
 
         alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[1])
         new_aligns[col] = (''.join(str(alignments[0])))
 
-        # will have to keep in mind the potential lengths of the sequences and add length m to our final E.coli index
+        # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final E.coli index
         seq_a = re.search(pattern_a, new_aligns[col]).group(1)
         seq_b = re.search(pattern_b, new_aligns[col]).group(1)
 
@@ -566,7 +581,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
                     probs[ref_idx]['U'] += 1
                 elif nucleotide == 'R':
                     probs[ref_idx]['A'] += 0.5
-                    probs[ref_idx]['C'] += 0.5
+                    probs[ref_idx]['G'] += 0.5
                 elif nucleotide == 'Y':
                     probs[ref_idx]['U'] += 0.5
                     probs[ref_idx]['C'] += 0.5
@@ -633,7 +648,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 
 
 # def ambiguity_consensus(summary_align, threshold=0.7, gaps_allowed=False):
-#     # I've made a modified version of BioPython's dumb consensus that will allow IUPAC ambiguity codes
+#     # I've made a modified version of BioPython'string_to_analyze dumb consensus that will allow IUPAC ambiguity codes
 #
 #     consensus = ""
 #
@@ -641,7 +656,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 #     con_len = summary_align.alignment.get_alignment_length()
 #
 #     # go through each seq item
-#     for n in range(con_len):
+#     for guide_length in range(con_len):
 #         # keep track of the counts of the different atoms we get
 #         atom_dict = Counter()
 #         num_atoms = 0
@@ -650,7 +665,7 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 #             # make sure we haven't run past the end of any sequences
 #             # if they are of different lengths
 #             try:
-#                 c = record[n]
+#                 c = record[guide_length]
 #             except IndexError:
 #                 continue
 #             if c != "-" and c != ".":
@@ -678,3 +693,4 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 #             consensus += ambiguous
 #
 #     return Seq(consensus)
+
