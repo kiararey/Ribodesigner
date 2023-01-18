@@ -3,17 +3,17 @@ import numpy as np
 np.random.seed(1)
 # This is a very poorly written script, but it does the job and I am too tired to make it more efficient.
 
-# Determine at what taxonomic level we want the datasets. This must match one of the filenames from SequencePrepper.py:
+# Determine at what taxonomic level we want the datasets. This must match one of the filenames from sequence_prepper.py:
 taxonomy_level = 'Genus'
+domain_counted = 'All'
 
 # Here is the file where the dataset is. I've already run a script on this to separate it by levels of taxonomy.
-# To do this, SequencePrepper.py on the SILVA database file.
-silva_by_taxonomy_path = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy/{taxonomy_level}'
+# To do this, sequence_prepper.py on the SILVA database file.
+silva_by_taxonomy_path = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_{domain_counted}/{taxonomy_level}'
 
 # Here is the file where we want to save the dataset
-output_path = 'Datasets_used/SILVA_squished_datasets'
+output_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{domain_counted}/'
 
-# There are only Bacteria in this dataset, so will only do that:
 fasta_file_names = np.array([file_name for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
 
 # Prepare list to store data in:
@@ -153,7 +153,7 @@ print(f'100% of {len(fasta_file_names)} datasets completed. Now saving in {outpu
 
 # Add to FASTA file and save
 for i, dataset in enumerate(seqs_to_write):
-    file_name = f'{output_path}Bacteria_by_{taxonomy_level}_{i + 1}.fasta'
+    file_name = f'{output_path}{domain_counted}_by_{taxonomy_level}_{i + 1}.fasta'
     with open(file_name, 'w') as f:
         for sequence in set(dataset):
             f.writelines([sequence.id, sequence.seq, '\n'])

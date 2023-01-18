@@ -74,7 +74,7 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     data = find_cat_sites(target_names_and_seqs, ribo_seq, igs_length, guide_length, min_length)
 
     # Now align sequences to reference sequences and get the conversion dictionaries for each
-    new_data, conversion_dicts, alignments_separated = align_to_ref(data, ref_name_and_seq, igs_length, min_length)
+    new_data, conversion_dicts, alignments_separated = align_to_ref(data, ref_name_and_seq)
 
     big_temp_list, to_optimize, filtered_list, \
     ranked_IGS, ranked_sorted_IGS, to_keep_single_targets = find_repeat_targets(new_data, min_true_cov=min_true_cov,
@@ -693,4 +693,3 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 #             consensus += ambiguous
 #
 #     return Seq(consensus)
-
