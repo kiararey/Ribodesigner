@@ -22,7 +22,7 @@ from collections import defaultdict
 import subprocess
 from Bio.Align import AlignInfo
 from math import exp, log
-
+from multiprocessing import Pool
 
 def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
                  target_sequences_folder: str, ref_sequence_file=None,
@@ -105,53 +105,99 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
     # [target_name, target_sequence, (IGS_and_guide_seq + ribo_seq, IGS_and_guide_seq, IGS, guide_seq, IGS_idx]
     # where each big list is one target sequence, and each tuple is one individual catalytic site
 
-    data = [None] * len(target_names_and_seqs)  # one entry per target sequence
-    col = 0
+    in_data = [None] * len(target_names_and_seqs)  # one entry per target sequence
+    # col = 0
+
+    # prepare data for multiprocessing
+    in_data = [(name, sequ, ribo_seq, igs_length, guide_length, min_length) for name, sequ in target_names_and_seqs]
+
+    with Pool() as pool:
+        data = pool.starmap(find_cat_sites_loop, in_data)
+
     # run function to find the index of all U residues of each sequence in target_seqs
-    for name, sequ in target_names_and_seqs:
-        # find all possible splice sites
-        idx = find(sequ, 'U')
-
-        if not idx:  # in case it'string_to_analyze a DNA sequence (so no U sites in sequence)
-            idx = find(sequ, 'T')  # because U is T duh
-        # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
-        idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
-
-        if not idx_new:
-            print(f'No viable catalytic sites in {name}')
-            col += 1
-            continue
-
-        IGS_and_ribo_seqs = [None] * len(idx_new)
-        IGS_and_guide_seqs = [None] * len(idx_new)
-        IGSes = [None] * len(idx_new)
-        guides = [None] * len(idx_new)
-        indexes = [None] * len(idx_new)
-        small_col = 0
-        for i in idx_new:
-            # generate complementary guide sequence guide_length residues *downstream* of U site
-            guide = sequ[i + 1:i + guide_length + 1].reverse_complement_rna()
-            # generate complementary IGS sequence igs_length bases long *upstream* of U site
-            IGS = sequ[i - igs_length:i].reverse_complement_rna()
-
-            # now join IGS + G (where U site should be for wobble pair) + guide sequence and
-            # append to ribozyme template
-            IGS_and_guide_seq = guide + 'G' + IGS  # Make 5'-> 3' binding seq: attaches to 5' end of ribo_seq correctly
-
-            IGS_and_ribo_seqs[small_col] = IGS_and_guide_seq + ribo_seq
-            IGS_and_guide_seqs[small_col] = IGS_and_guide_seq
-            IGSes[small_col] = IGS
-            guides[small_col] = guide
-            indexes[small_col] = i + 1  # we're adding 1 to the idx because of 0 based indexing
-
-            small_col += 1
-        data[col] = [name, sequ, (IGS_and_ribo_seqs, IGS_and_guide_seqs, IGSes, guides, indexes)]
-        col += 1
+    # for name, sequ in target_names_and_seqs:
+    #     # find all possible splice sites
+    #     idx = find(sequ, 'U')
+    #
+    #     if not idx:  # in case it'string_to_analyze a DNA sequence (so no U sites in sequence)
+    #         idx = find(sequ, 'T')  # because U is T duh
+    #     # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
+    #     idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
+    #
+    #     if not idx_new:
+    #         print(f'No viable catalytic sites in {name}')
+    #         col += 1
+    #         continue
+    #
+    #     IGS_and_ribo_seqs = [None] * len(idx_new)
+    #     IGS_and_guide_seqs = [None] * len(idx_new)
+    #     IGSes = [None] * len(idx_new)
+    #     guides = [None] * len(idx_new)
+    #     indexes = [None] * len(idx_new)
+    #     small_col = 0
+    #     for i in idx_new:
+    #         # generate complementary guide sequence guide_length residues *downstream* of U site
+    #         guide = sequ[i + 1:i + guide_length + 1].reverse_complement_rna()
+    #         # generate complementary IGS sequence igs_length bases long *upstream* of U site
+    #         IGS = sequ[i - igs_length:i].reverse_complement_rna()
+    #
+    #         # now join IGS + G (where U site should be for wobble pair) + guide sequence and
+    #         # append to ribozyme template
+    #         IGS_and_guide_seq = guide + 'G' + IGS  # Make 5'-> 3' binding seq: attaches to 5' end of ribo_seq correctly
+    #
+    #         IGS_and_ribo_seqs[small_col] = IGS_and_guide_seq + ribo_seq
+    #         IGS_and_guide_seqs[small_col] = IGS_and_guide_seq
+    #         IGSes[small_col] = IGS
+    #         guides[small_col] = guide
+    #         indexes[small_col] = i + 1  # we're adding 1 to the idx because of 0 based indexing
+    #
+    #         small_col += 1
+    #     data[col] = [name, sequ, (IGS_and_ribo_seqs, IGS_and_guide_seqs, IGSes, guides, indexes)]
+    #     col += 1
     # now remove entries with no viable sites
     # from https://www.geeksforgeeks.org/python-remove-none-values-from-list/
     filtered_data = list(filter(lambda item: item is not None, data))
 
     return filtered_data
+
+
+def find_cat_sites_loop(name, sequ, ribo_seq, igs_length: int, guide_length, min_length: int):
+    # find all possible splice sites
+    idx = find(sequ, 'U')
+
+    if not idx:  # in case it'string_to_analyze a DNA sequence (so no U sites in sequence)
+        idx = find(sequ, 'T')  # because U is T duh
+    # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
+    idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
+
+    if not idx_new:
+        print(f'No viable catalytic sites in {name}')
+        return
+
+    IGS_and_ribo_seqs = [None] * len(idx_new)
+    IGS_and_guide_seqs = [None] * len(idx_new)
+    IGSes = [None] * len(idx_new)
+    guides = [None] * len(idx_new)
+    indexes = [None] * len(idx_new)
+    small_col = 0
+    for i in idx_new:
+        # generate complementary guide sequence guide_length residues *downstream* of U site
+        guide = sequ[i + 1:i + guide_length + 1].reverse_complement_rna()
+        # generate complementary IGS sequence igs_length bases long *upstream* of U site
+        IGS = sequ[i - igs_length:i].reverse_complement_rna()
+
+        # now join IGS + G (where U site should be for wobble pair) + guide sequence and
+        # append to ribozyme template
+        IGS_and_guide_seq = guide + 'G' + IGS  # Make 5'-> 3' binding seq: attaches to 5' end of ribo_seq correctly
+
+        IGS_and_ribo_seqs[small_col] = IGS_and_guide_seq + ribo_seq
+        IGS_and_guide_seqs[small_col] = IGS_and_guide_seq
+        IGSes[small_col] = IGS
+        guides[small_col] = guide
+        indexes[small_col] = i + 1  # we're adding 1 to the idx because of 0 based indexing
+
+        small_col += 1
+    return [name, sequ, (IGS_and_ribo_seqs, IGS_and_guide_seqs, IGSes, guides, indexes)]
 
 
 def align_to_ref(data, ref_name_and_seq, base_to_find='U'):
