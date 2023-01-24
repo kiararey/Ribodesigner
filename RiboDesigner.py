@@ -108,6 +108,8 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
     # [target_name, target_sequence, (IGS_and_guide_seq + ribo_seq, IGS_and_guide_seq, IGS, guide_seq, IGS_idx]
     # where each big list is one target sequence, and each tuple is one individual catalytic site
 
+    print('Finding catalytic sites...')
+
     # prepare data for multiprocessing
     in_data = [(name, sequ, ribo_seq, igs_length, guide_length, min_length) for name, sequ in target_names_and_seqs]
 
@@ -277,31 +279,22 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
 
     print('Looking for repeat subsets...')
 
-    col = 0  # initialize the current column counter
+    # in_data_1 = [(cat_site_data[2], new_data[i+1:][2][2]) for i, (_, _, cat_site_data) in enumerate(new_data[-1:])]
+    temp_igs_for_all = [set(cat_site_data[2]) for _, _, cat_site_data in new_data]
+    in_data_1 = [(igs_list, temp_igs_for_all[i + 1:]) for i, igs_list in enumerate(temp_igs_for_all[:-1])]
 
-    for org, sequ, cat_site_data in new_data:  # for each target sequence
-        IGS_subset_a = list(set(cat_site_data[2]))  # extract each IGS sequence in this organism
-        for j in range(col + 1, len(new_data)):  # this is to avoid repeat combinations
-            # make a subset of second column of unique IGS values
-            # and find the shared values between sets with no duplicates
-            org_b, sequ_b, cat_site_data_b = new_data[j]
-            no_dupes = (set(IGS_subset_a) & set(list(set(cat_site_data_b[2]))))
+    with Pool() as pool:
+        big_repeats = pool.starmap(find_repeat_targets_initialize_loop, in_data_1)
 
-            # remove any nans
-            repeats = [item for item in no_dupes if str(item) != 'nan']
-            # append to our big list
-            if repeats:
-                big_repeats.extend(repeats)
-        col += 1  # move to the next column
-
+    flat_list = [igs for sublist in big_repeats for igs in sublist]
+    flat_list.extend([item for item in temp_igs_for_all[-1]])
     print('Found repeat subsets. Now analyzing sequences...')
 
     # remove duplicates of all IGSes found
-    filtered_list = list(set(big_repeats))
+    filtered_list = list(set(flat_list))
 
     in_data = [(igs_sequ, new_data, min_true_cov) for igs_sequ in filtered_list]
     # Now find the IGS sequences in the original target sequences and extract matching data
-    big_temp_list = []
     with Pool() as pool:
         data_to_unpack = pool.starmap(find_repeat_targets_loop, in_data)
 
@@ -338,6 +331,17 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
         new_data_df.to_csv(f'{file}/All catalytic U data unsorted.csv', index=True)
 
     return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
+
+
+def find_repeat_targets_initialize_loop(igs_data_a, to_compare):
+    for igs_data_b in to_compare:
+        # make a subset of second column of unique IGS values
+        # and find the shared values between sets with no duplicates
+        no_dupes = igs_data_a & igs_data_b
+        # remove any nans
+        repeats = [item for item in no_dupes if str(item) != 'nan']
+        if repeats:
+            return repeats
 
 
 def find_repeat_targets_loop(igs_sequ, new_data, min_true_cov):
@@ -459,7 +463,6 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
 
     print('All guide sequences optimized.\n')
     return opti_seqs
-
 
 
 def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide_length, ribo_seq):
