@@ -94,7 +94,7 @@ def align_to_ref(n, file, barcode_seq_file, ribobody_file, target_path, ref_path
     # n is the guide length
     # file is where the data output will be saved
     # barcode_seq_file is the FASTA or .txt file with the barcode sequence
-    # ribobody_file is the FASTA or .txt file with the ribozyme body sequence
+    # ribobody_file is the FASTA or .txt file with the Ribozyme body sequence
     # target_path is the folder where the data to check is
     # ref_path is the folder where the reference genome is
     # riboscore_test is a Boolean that tells if we also want to dcompare NGS vs. RiboDesigner scores
@@ -124,7 +124,7 @@ def align_to_ref(n, file, barcode_seq_file, ribobody_file, target_path, ref_path
         for i in f:
             bar_seq = Seq(i).upper().transcribe()
 
-    # prepare ribozyme template sequence
+    # prepare Ribozyme template sequence
     with open(ribobody_file) as f:
         for i in f:
             ribo_body = Seq(i).upper().transcribe()
@@ -310,7 +310,7 @@ def align_to_ref(n, file, barcode_seq_file, ribobody_file, target_path, ref_path
 
             all_data.append((name, refidx, igs, row[0], repeat, off_target_color))
 
-    title_template = 'Score of optimized ribozyme designs with 100' + '%' + ' coverage'
+    title_template = 'Score of optimized Ribozyme designs with 100' + '%' + ' coverage'
     key_word = 'optimized'
 
     make_plot(on_target_data, insert_into_title(title_template, key_word, 'on-target '), file + '/on target data.pdf',
@@ -413,7 +413,7 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
                                                                            ' IGS in target sequence)',
                                                                            'Optimized guide',
                                                                            'Optimized guide + G + IGS',
-                                                                           'Full ribozyme design'],
+                                                                           'Full Ribozyme design'],
                                        dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
 
         else:
@@ -534,7 +534,7 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
                                                                            ' IGS in target sequence)',
                                                                            'Optimized guide',
                                                                            'Optimized guide + G + IGS',
-                                                                           'Full ribozyme design'],
+                                                                           'Full Ribozyme design'],
                                        dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
 
 
