@@ -406,7 +406,7 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
                 os.mkdir(output_path_folder)
 
             out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
-                                min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
+                                min_true_cov=0, identity_thresh=0.7, fileout=fileout, ref_sequence_file=ref_path,
                                     folder_to_save=output_path_folder)
             out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
                                                                            '% on target', 'True % cov',
