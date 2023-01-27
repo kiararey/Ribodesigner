@@ -4,6 +4,7 @@ import figure_plotting_functions as fig_plt
 import os
 import numpy as np
 from RiboDesigner import RiboDesigner
+import time
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
@@ -69,13 +70,11 @@ class TargetSeq:
 #                   temp_guide_sequences, temp_og_and_ref_idexes)]
 
 
-
-
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # Figure 2: synthetic community data violin plots
-
-    # Basically, look at the datasets used data and then run RiboDesigner on them. Generate a violin plot using the results.
+    # Basically, look at the datasets used data and then run RiboDesigner on them.
+    # Generate a violin plot using the results.
     # Run RiboDesigner on all datasets we are looking at
     # First, set up base files and parameters
     m = 5
@@ -98,13 +97,18 @@ if __name__ == '__main__':
     ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
 
     ########################################################
+    start = time.time()
     # Test datasets
+    print('Running test data...\n')
     test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
                 "Data files and Outputs/Ribozyme paper dataset/Original files"
 
     out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
                                     min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
                                         folder_to_save=output_path)
+    end = time.time()
+    print(f'Test data done! Time taken: {end - start}s\n')
+
 
     # ########################################################
     # # Score vs. True Coverage graphs
@@ -117,20 +121,21 @@ if __name__ == '__main__':
     # fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, None)
     # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
 
-    # ########################################################
-    # # SILVA squished datasets
-    # dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
+    ########################################################
+    # SILVA squished datasets
+    dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
     # dataset_names = ['Bacteria_Only', 'All']
-    # output_path = 'SILVA_figure_output_files/'
-    #
-    # for name in dataset_names:
-    #     datasets_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{name}/'
-    #     print(f'Now analyzing data in {datasets_path[:-1]}...')
-    #
-    #     datasets = np.array([file_name for file_name in os.listdir(datasets_path) if file_name != '.DS_Store'])
-    #     datasets.sort()
-    #     ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
-    #     fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
-    #     fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
+    output_path = 'SILVA_figure_output_files/'
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    for name in dataset_names:
+        datasets_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{name}/'
+        print(f'Now analyzing data in {datasets_path[:-1]}...')
+
+        datasets = np.array([file_name for file_name in os.listdir(datasets_path) if file_name != '.DS_Store'])
+        datasets.sort()
+        ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
+        start = time.time()
+        fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
+        end = time.time()
+        print(f'{name} figures done! Time taken: {end - start}s\n')
+        fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)

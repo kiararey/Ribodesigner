@@ -401,8 +401,9 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
         target_sequences_folder = datasets_path + datasets[i]
         org_nums = len(read_fasta_folder(target_sequences_folder))
 
-        if os.path.isdir(output_path_folder) is False:
-            os.mkdir(output_path_folder)
+        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) == 0:
+            if os.path.isdir(output_path_folder) is False:
+                os.mkdir(output_path_folder)
 
             out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
@@ -520,8 +521,9 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
         target_sequences_folder = datasets_path + datasets[i]
         org_nums = len(read_fasta_folder(target_sequences_folder))
 
-        if os.path.isdir(output_path_folder) is False:
-            os.mkdir(output_path_folder)
+        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) == 0:
+            if os.path.isdir(output_path_folder) is False:
+                os.mkdir(output_path_folder)
 
             # Same as before, but we have a reference sequence now (E. coli) to plot variable regions
             out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,

@@ -9,7 +9,6 @@ Planned features:
 - Multiprocessing: cleverly utilize computer memory and cores to process more data, faster
 """
 
-
 import glob
 import os
 import random
@@ -26,6 +25,8 @@ import subprocess
 from Bio.Align import AlignInfo
 from math import exp, log
 from multiprocessing import Pool
+import time
+
 
 
 def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
@@ -46,6 +47,7 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     # fileout: boolean, whether we want a csv file output or not (default True)
     # file_name: string, the path where the folder we will save our outputs in if fileout = True
 
+    start = time.time()
     barcode_seq = transcribe_seq_file(barcode_seq_file)
     ribobody = transcribe_seq_file(ribobody_file)
 
@@ -88,9 +90,14 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     if optimize_seq:
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
                                        fileout=fileout, file=folder_to_save, score_type=score_type)
+        end = time.time()
+        print(f'Time taken: {end - start}s\n')
         return opti_seqs
 
     else:
+        print('All guide sequences generated.')
+        end = time.time()
+        print(f'Time taken: {end - start}s\n')
         return ranked_sorted_IGS
 
 
@@ -175,7 +182,7 @@ def align_to_ref(data, ref_name_and_seq, base_to_find='U'):
 
     in_data = [(name, sequ, cat_site_info, ref_name_and_seq, base_to_find) for name, sequ, cat_site_info in data]
 
-    print(f'Now re-indexing target sequences to reference {ref_name_and_seq[0].replace("_", " ")}...' )
+    print(f'Now re-indexing target sequences to reference {ref_name_and_seq[0].replace("_", " ")}...')
     with Pool() as pool:
         new_data = pool.starmap(align_to_ref_loop, in_data)
 
@@ -298,6 +305,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
     with Pool() as pool:
         data_to_unpack = pool.starmap(find_repeat_targets_loop, in_data)
 
+    print('Generated designs. Preparing data...')
     # Unpack the data into separate bundles
     to_optimize = defaultdict(list)  # will keep those IGSes that meet our minimum percent coverage later
     to_keep_single_targets = defaultdict(list)
@@ -342,6 +350,55 @@ def find_repeat_targets_initialize_loop(igs_data_a, to_compare):
         repeats = [item for item in no_dupes if str(item) != 'nan']
         if repeats:
             return repeats
+
+
+def find_repeat_targets_middle_loop(igs_sequ, org, sequ, cat_site_data):
+    # in each target sequence (target seq is org)
+    pos = [i for i, e in enumerate(cat_site_data[2]) if e == igs_sequ]  # extract positions of matching IGSes
+    if pos:  # if not in this particular seq, try next seq
+        # if the IGS is found in the target seq, get all the data we want
+        # To calculate whether a particular IGS is in the same position in multiple targets or not I am making a
+        # HUGE assumption: as the sequences are already aligned to a single reference sequence, any base
+        # position will have EXACTLY the same position numbering. This allows my code to use dictionaries to
+        # determine whether something is or is not on target as the position must match exactly. If we want some
+        # tolerance in how many base pairs away a position can be to be considered on-target I will need to find
+        # another way to calculate this which would probably use a LOT more computational power.
+        on_target_count = defaultdict(list)
+        target_num = len(pos)
+
+        for p in pos:
+            ref_pos = cat_site_data[4][p][1]
+            if on_target_count[ref_pos]:
+                on_target_count[ref_pos] += 1
+            else:
+                on_target_count[ref_pos] = 1
+
+            guide_id = str(igs_sequ) + str(
+                ref_pos)  # save a guide ID that is the IGS sequence and the reference position
+            temp_list = [igs_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
+                         ref_pos, cat_site_data[3][p], cat_site_data[1][p],
+                         cat_site_data[0][p], sequ, guide_id]
+        return (temp_list, on_target_count)
+
+
+def find_repeat_targets_last_loop(item, new_data, min_true_cov, perc_coverage, on_target_count, coverage_count):
+    to_optimize = defaultdict(list)  # will keep those IGSes that meet our minimum percent coverage later
+    to_keep_single_targets = defaultdict(list)
+
+    item[1] = perc_coverage
+    item[2] = on_target_count[item[7]] / coverage_count  # out of all organisms with this IGS at this position
+    true_coverage = on_target_count[item[7]] / len(new_data)
+    item[3] = true_coverage
+    big_temp_list = list(item)
+    # if the true % coverage is above min_true_cov, and more than one sequence, mark this IGS for optimization
+    if true_coverage >= min_true_cov and on_target_count[item[7]] > 1:
+        # save the IGS sequence AND the matching index in the reference sequence
+        to_optimize[item[12]].append(item)
+    # Else if the true % coverage is above min_true_cov but only one sequence still keep but will not optimize
+    elif true_coverage >= min_true_cov:
+        to_keep_single_targets[item[12]].append(item)
+
+    return (big_temp_list, to_optimize, to_keep_single_targets)
 
 
 def find_repeat_targets_loop(igs_sequ, new_data, min_true_cov):
@@ -400,11 +457,11 @@ def find_repeat_targets_loop(igs_sequ, new_data, min_true_cov):
         elif true_coverage >= min_true_cov:
             to_keep_single_targets[item[12]].append(item)
 
-
     return (big_temp_list, to_optimize, to_keep_single_targets)
 
 
-def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='', score_type='quantitative',
+def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='',
+                       score_type='quantitative',
                        gaps_allowed=True):
     print(f'Optimizing {len(to_optimize)} guide sequences...')
 
@@ -412,43 +469,21 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
 
     with Pool() as pool:
         opti_seqs = pool.starmap(optimize_sequences_loop, in_data)
-    # for key in to_optimize.keys():
-    #     guides_to_optimize = [target[8] for target in to_optimize[key]]
-    #
-    #     # do a MSA of the sequences and optimize the guide sequence with this MSA
-    #     opti_seq, score = msa_and_optimize(guides_to_optimize, thresh, score_type, gaps_allowed)
-    #
-    #     # truncate optimized sequence to the desired guide sequence length
-    #     truncated_guide = opti_seq[-guide_length:]
-    #
-    #     # Now make an actual full design with the length needed
-    #     design_sequence = truncated_guide + 'G' + re.sub(r'[0-9]+', '', key)  # our ID is the IGS and the ref index so remove the index
-    #     ribo_design = design_sequence + ribo_seq
-    #
-    #     # store these designs and score
-    #     # store the data as follows: IGS, reference idx, score, % cov, % on target, true % cov, [(target name, target idx,
-    #     # occurrences of IGS in target)], truncated_guide, design_sequence, ribo_design
-    #     opti_seqs[i] = [to_optimize[key][0][0], to_optimize[key][0][7], score, to_optimize[key][0][1],
-    #                     to_optimize[key][0][2],
-    #                     to_optimize[key][0][3], [(target[4], target[6], target[5] - 1) for target in to_optimize[key]],
-    #                     truncated_guide, design_sequence, ribo_design]
-    #     i += 1
 
     # If there are any single targets to keep (depends on min true coverage setting) add them here
     if single_targets:
         print(f'Storing {len(single_targets)} single target sequences. If you do not want single target guides, '
               f'please increase your min true coverage parameter.')
         for key in single_targets.keys():
-
             guide = single_targets[key][0][8]
             design_sequence = guide + 'G' + re.sub(r'[0-9]+', '', key)
             ribo_design = design_sequence + ribo_seq
 
             # set score to nan
             opti_seqs.append([single_targets[key][0][0], single_targets[key][0][7], 1, single_targets[key][0][1],
-                            single_targets[key][0][2], single_targets[key][0][3],
-                            [(target[4], target[6], target[5] - 1) for target in single_targets[key]], guide,
-                            design_sequence, ribo_design])
+                              single_targets[key][0][2], single_targets[key][0][3],
+                              [(target[4], target[6], target[5] - 1) for target in single_targets[key]], guide,
+                              design_sequence, ribo_design])
 
     if fileout:
         sorted_opti_seqs = pd.DataFrame(data=opti_seqs, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
@@ -459,7 +494,8 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
                                                                              'Optimized guide + G + IGS',
                                                                              'Full Ribozyme design'],
                                         dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
-        sorted_opti_seqs.to_csv(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', index=False)
+        sorted_opti_seqs.to_csv(
+            f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', index=False)
 
     print('All guide sequences optimized.\n')
     return opti_seqs
@@ -475,15 +511,15 @@ def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide
     truncated_guide = opti_seq[-guide_length:]
 
     # Now make an actual full design with the length needed
-    design_sequence = truncated_guide + 'G' + re.sub(r'[0-9]+', '', name)  # our ID is the IGS and the ref index so remove the index
+    design_sequence = truncated_guide + 'G' + re.sub(r'\d+', '', name)  # our ID is the IGS and the ref index so remove the index
     ribo_design = design_sequence + ribo_seq
 
     # store these designs and score
     # store the data as follows: IGS, reference idx, score, % cov, % on target, true % cov, [(target name, target idx,
     # occurrences of IGS in target)], truncated_guide, design_sequence, ribo_design
     opti_seqs = [items[0][0], items[0][7], score, items[0][1], items[0][2], items[0][3],
-                    [(target[4], target[6], target[5] - 1) for target in items], truncated_guide, design_sequence,
-                    ribo_design]
+                 [(target[4], target[6], target[5] - 1) for target in items], truncated_guide, design_sequence,
+                 ribo_design]
 
     return opti_seqs
 
@@ -498,7 +534,8 @@ def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative',
     # now align the sequences.
     muscle_exe = 'muscle5'
 
-    subprocess.check_output([muscle_exe, "-align", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'], stderr=subprocess.DEVNULL)
+    subprocess.check_output([muscle_exe, "-align", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
+                            stderr=subprocess.DEVNULL)
     msa = AlignIO.read(open(f'aln_{name}.afa'), 'fasta')
 
     # delete files:
@@ -549,8 +586,8 @@ def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative',
 
 
 def get_quantitative_score(msa, thresh=0.7, chars_to_ignore=None, count_gaps=True, penalize_trailing_gaps=False):
-    # a modified version of BioPython'string_to_analyze PSSM funtction that counts gaps by default and also gives us the quantitative score.
-    # This quantitative score is as follows:
+    # a modified version of BioPython'string_to_analyze PSSM funtction that counts gaps by default and also gives us
+    # the quantitative score. This quantitative score is as follows:
 
     if chars_to_ignore is None:
         chars_to_ignore = []
@@ -704,7 +741,6 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 
     return shannon_entropy_list, xaxis_list, yaxis_list
 
-
 # def ambiguity_consensus(summary_align, threshold=0.7, gaps_allowed=False):
 #     # I've made a modified version of BioPython'string_to_analyze dumb consensus that will allow IUPAC ambiguity codes
 #
@@ -751,4 +787,3 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
 #             consensus += ambiguous
 #
 #     return Seq(consensus)
-
