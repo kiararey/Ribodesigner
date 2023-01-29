@@ -387,7 +387,7 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
     ribobody_file = ribodesigner_settings[4]
     min_true_cov = ribodesigner_settings[5]
     identity_thresh = ribodesigner_settings[6]
-    fileout = ribodesigner_settings[7]
+    msa_fast = ribodesigner_settings[7]
     data = [None] * len(datasets)
     plt.figure()
     set_params_for_plots((30, 16), 'talk')
@@ -406,8 +406,8 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
                 os.mkdir(output_path_folder)
 
             out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
-                                min_true_cov=0, identity_thresh=0.7, fileout=fileout, ref_sequence_file=ref_path,
-                                    folder_to_save=output_path_folder)
+                                    min_true_cov=0, identity_thresh=0.7, ref_sequence_file=ref_path,
+                                    fileout=True, folder_to_save=output_path_folder, msa_fast=msa_fast)
             out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
                                                                            '% on target', 'True % cov',
                                                                            '(Target name, Target idx, Other occurrences of'
@@ -498,7 +498,7 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
     ribobody_file = ribodesigner_settings[4]
     min_true_cov = ribodesigner_settings[5]
     identity_thresh = ribodesigner_settings[6]
-    fileout = ribodesigner_settings[7]
+    msa_fast = ribodesigner_settings[7]
 
     # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
     var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
@@ -528,7 +528,7 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
             # Same as before, but we have a reference sequence now (E. coli) to plot variable regions
             out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
                                 ref_sequence_file=ref_path, min_true_cov=0, identity_thresh=0.7, fileout=True,
-                                folder_to_save=output_path_folder)
+                                folder_to_save=output_path_folder, msa_fast=msa_fast)
 
             out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
                                                                            '% on target', 'True % cov',

@@ -13,11 +13,13 @@ import glob
 import os
 import random
 import warnings
+from io import StringIO
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
     from Bio import SeqIO, pairwise2, AlignIO
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 import re
 import pandas as pd
 from collections import defaultdict
@@ -26,13 +28,13 @@ from Bio.Align import AlignInfo
 from math import exp, log
 from multiprocessing import Pool
 import time
-
+from Bio.Align.Applications import MuscleCommandline
 
 
 def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
                  target_sequences_folder: str, ref_sequence_file=None,
                  optimize_seq=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
-                 score_type='quantitative'):
+                 score_type='quantitative', msa_fast=False):
     # RiboDesigner is a function that generates Ribozyme designs to target a set of sequences (target_seqs)
 
     # target_seqs: list of seqs, containing the target RNA sequences to target (5' -> 3'). Generate with read_fasta or
@@ -48,6 +50,7 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     # file_name: string, the path where the folder we will save our outputs in if fileout = True
 
     start = time.time()
+
     barcode_seq = transcribe_seq_file(barcode_seq_file)
     ribobody = transcribe_seq_file(ribobody_file)
 
@@ -63,6 +66,9 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     except IndexError:
         print(f'No sequences found in {target_sequences_folder}. Please make sure your files are not empty!\n')
         return None
+
+    if not msa_fast and len(target_names_and_seqs) > 300:
+        print(f'Consider setting msa_fast=True for large datasets over 300 sequences for faster data processing!!\n')
 
     if not ref_sequence_file:
         # If we do not have a reference sequence, just choose one randomly
@@ -100,10 +106,10 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     if optimize_seq:
         time1 = time.time()
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
-                                       fileout=fileout, file=folder_to_save, score_type=score_type)
+                                       fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast)
         time2 = time.time()
         end = time.time()
-        print(f'Time taken: {time2 - time1}s\n')
+        print(f'Time taken: {time2 - time1}s')
         print(f'Time taken overall: {end - start}s\n')
         return opti_seqs
 
@@ -291,6 +297,8 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
     # recall that new_data is a list of lists with one entry per target sequence where each entry is of the form:
     # [name, sequ, (ribozyme_sequences, IGS_and_guide_sequences, IGSes, guide_sequences, (og_idx, ref_idx))]
     big_repeats = []
+    start = time.time()
+    print('Finding repeat subsets...')
 
     col = 0  # initialize the current column counter
     for org, sequ, cat_site_data in new_data:  # for each target sequence
@@ -308,6 +316,8 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
                 big_repeats.append(repeats)
         col += 1  # move to the next column
 
+    end = time.time()
+    print(f'Time taken: {end - start}s\n')
     print('Found repeat subsets. Now analyzing sequences...')
 
     # now flatten the list to compare all IGS sequences against one another
@@ -515,11 +525,12 @@ def find_repeat_targets_loop(igs_sequ, new_data, min_true_cov):
 
 def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='',
                        score_type='quantitative',
-                       gaps_allowed=True):
+                       gaps_allowed=True, msa_fast=False):
     print(f'Optimizing {len(to_optimize)} guide sequences...')
 
-    in_data = [(key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq) for key in to_optimize]
+    in_data = [(key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast) for key in to_optimize]
 
+    # opti_seqs = optimize_sequences_loop('ACUAA1126', to_optimize['ACUAA1126'], thresh, score_type, gaps_allowed, guide_length, ribo_seq)
     with Pool() as pool:
         opti_seqs = pool.starmap(optimize_sequences_loop, in_data)
 
@@ -554,11 +565,11 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
     return opti_seqs
 
 
-def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide_length, ribo_seq):
+def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast):
     guides_to_optimize = [target[8] for target in items]
 
     # do a MSA of the sequences and optimize the guide sequence with this MSA
-    opti_seq, score = msa_and_optimize(name, guides_to_optimize, thresh, score_type, gaps_allowed)
+    opti_seq, score = msa_and_optimize(name, guides_to_optimize, thresh, score_type, gaps_allowed, msa_fast)
 
     # truncate optimized sequence to the desired guide sequence length
     truncated_guide = opti_seq[-guide_length:]
@@ -577,18 +588,54 @@ def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide
     return opti_seqs
 
 
-def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative', gaps_allowed='True'):
+def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative', gaps_allowed='True', msa_fast=False):
     # seqs_to_align is a list containing a sequence from an individual organism in each position.
 
     with open(f'to_align_{name}.fasta', 'w') as f:
         for line in range(len(seqs_to_align)):
             f.write('>seq' + str(line) + '\n' + str(seqs_to_align[line]) + '\n')
 
-    # now align the sequences.
+    # seqs_str = ''
+    # for i, seq in enumerate(seqs_to_align):
+    #     seqs_str += f'>seq{i}\n{str(seqs_to_align[i])}\n'
+    # # print(seqs_str)
+    #
+    # seqs_str_write = (SeqRecord(seq, id=f'seq{i}', name='_', description='_') for i, seq in enumerate(seqs_to_align))
+    #
+    # # now align the sequences.
     muscle_exe = 'muscle5'
-
-    subprocess.check_output([muscle_exe, "-align", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
+    # # muscle_cline = MuscleCommandline(muscle_exe)
+    # # print(muscle_cline)
+    # with subprocess.Popen([muscle_exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    #                       universal_newlines=True) as child:
+    #
+    #     # SeqIO.write(seqs_str_write, child.stdin, 'fasta')
+    #     # msa = AlignIO.read(child.stdout, 'fasta')
+    #     # print(msa)
+    #
+    #     child.stdin.write(seqs_str)
+    #     child_out = StringIO(child.communicate()[0])
+    #     print(child_out)
+    #     seqs_aligned = list(SeqIO.parse(child_out, format='fasta'))
+    #     print(seqs_aligned)
+    #     msa = AlignIO.read(child_out, 'fasta')
+    #     print(msa)
+    # # msa = AlignIO.read(seqs_aligned, format='fasta')
+    # # msa = AlignIO.read(child_out, 'fasta')
+    # # print(msa)
+    # summary_align = AlignInfo.SummaryInfo(msa)
+    # print(summary_align.gap_consensus(threshold=thresh, ambiguous='N'))
+    # child = subprocess.check_output([muscle_exe, "-align"],
+    #                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    # child.stdin.write(seqs_str.encode())
+    # child_out = child.communicate()[0].decode('utf8')
+    if msa_fast:
+        subprocess.check_output([muscle_exe, "-super5", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
+                                stderr=subprocess.DEVNULL)
+    else:
+        subprocess.check_output([muscle_exe, "-align", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
                             stderr=subprocess.DEVNULL)
+
     msa = AlignIO.read(open(f'aln_{name}.afa'), 'fasta')
 
     # delete files:

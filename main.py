@@ -96,36 +96,35 @@ if __name__ == '__main__':
     # Reference sequence - will have to be E. coli to graph the variable regions
     ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
 
-    ########################################################
-    # Test datasets
-    print('Running test data...\n')
-    test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
-                "Data files and Outputs/Ribozyme paper dataset/Original files"
-
-
-    print('########################################################\nNew multiprocessing - Adjustment 1:\n')
-    out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
-                                    min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
-                                        folder_to_save=output_path)
-
-    print('########################################################\nOld no multiprocessing:\n')
-    out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
-                                    min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
-                                        folder_to_save=output_path)
-
-    test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
-
-    print('########################################################\nNew multiprocessing - Adjustment 1:\n')
-    out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
-                            min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
-                            folder_to_save=output_path)
-
-    print('########################################################\nOld no multiprocessing:\n')
-    out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
-                                   min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
-                                   folder_to_save=output_path)
-    print(f'Test data done!\n########################################################\n')
-
+    # ########################################################
+    # # Test datasets
+    # print('Running test data...\n')
+    # test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
+    #             "Data files and Outputs/Ribozyme paper dataset/Original files"
+    #
+    #
+    # print('########################################################\nNew multiprocessing - Super5:\n')
+    # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
+    #                                 min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
+    #                                     folder_to_save=output_path, msa_fast=True)
+    #
+    # print('########################################################\nOld no multiprocessing:\n')
+    # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
+    #                                 min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
+    #                                     folder_to_save=output_path)
+    #
+    # test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
+    #
+    # print('########################################################\nNew multiprocessing - Super5:\n')
+    # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
+    #                         min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
+    #                         folder_to_save=output_path, msa_fast=True)
+    #
+    # print('########################################################\nOld no multiprocessing:\n')
+    # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
+    #                                min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
+    #                                folder_to_save=output_path)
+    # print(f'Test data done!\n########################################################\n')
 
     # ########################################################
     # # Score vs. True Coverage graphs
@@ -138,10 +137,10 @@ if __name__ == '__main__':
     # fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, None)
     # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
 
-    ########################################################
+    # ########################################################
     # SILVA squished datasets
     dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
-    # dataset_names = ['Bacteria_Only', 'All']
+    dataset_names = ['Bacteria_Only', 'All']
     output_path = 'SILVA_figure_output_files/'
 
     for name in dataset_names:
@@ -150,6 +149,6 @@ if __name__ == '__main__':
 
         datasets = np.array([file_name for file_name in os.listdir(datasets_path) if file_name != '.DS_Store'])
         datasets.sort()
-        ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, False]
+        ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
         fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
-        fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
+        # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
