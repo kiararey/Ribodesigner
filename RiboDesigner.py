@@ -300,30 +300,26 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
     start = time.time()
     print('Finding repeat subsets...')
 
-    col = 0  # initialize the current column counter
-    for org, sequ, cat_site_data in new_data:  # for each target sequence
-        IGS_subset_a = list(set(cat_site_data[2]))  # extract each IGS sequence in this organism
-        for j in range(col + 1, len(new_data)):  # this is to avoid repeat combinations
+    igs_subsets = [set(cat_site_data[2]) for i, (_, _, cat_site_data) in enumerate(new_data)]
+    # igs_subsets_pairs = [(igs_subsets[i], igs_subsets[i+1:]) for i in range(len(igs_subsets) -1)]
+
+    for i, igs_data_a in enumerate(igs_subsets):
+        if i == len(igs_subsets):
+            break
+        for igs_data_b in igs_subsets[i+1:]:
             # make a subset of second column of unique IGS values
             # and find the shared values between sets with no duplicates
-            org_b, sequ_b, cat_site_data_b = new_data[j]
-            no_dupes = (set(IGS_subset_a) & set(list(set(cat_site_data_b[2]))))
-
+            no_dupes = igs_data_a & igs_data_b
             # remove any nans
             repeats = [item for item in no_dupes if str(item) != 'nan']
-            # append to our big list
             if repeats:
-                big_repeats.append(repeats)
-        col += 1  # move to the next column
+                big_repeats.extend(repeats)
 
-    end = time.time()
-    print(f'Time taken: {end - start}s\n')
+    print(f'Time taken: {time.time() - start}s\n')
     print('Found repeat subsets. Now analyzing sequences...')
 
-    # now flatten the list to compare all IGS sequences against one another
-    flat_repeats = [item for sublist in big_repeats for item in sublist]
     # remove duplicates of all IGSes found
-    filtered_list = list(set(flat_repeats))
+    filtered_list = list(set(big_repeats))
 
     to_optimize = defaultdict(list)  # will keep those IGSes that meet our minimum percent coverage later
     to_keep_single_targets = defaultdict(list)
@@ -361,8 +357,8 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
                     guide_id = str(IGS_sequ) + str(
                         ref_pos)  # save a guide ID that is the IGS sequence and the reference position
                     temp_list.append([IGS_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
-                                 ref_pos, cat_site_data[3][p], cat_site_data[1][p],
-                                 cat_site_data[0][p], sequ, guide_id])
+                                      ref_pos, cat_site_data[3][p], cat_site_data[1][p],
+                                      cat_site_data[0][p], sequ, guide_id])
                 coverage_count += 1
             col += 1
 
@@ -402,125 +398,6 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
         new_data_df.to_csv(f'{file}/All catalytic U data unsorted.csv', index=True)
 
     return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
-
-
-def find_repeat_targets_initialize_loop(igs_data_a, to_compare):
-    for igs_data_b in to_compare:
-        # make a subset of second column of unique IGS values
-        # and find the shared values between sets with no duplicates
-        no_dupes = igs_data_a & igs_data_b
-        # remove any nans
-        repeats = [item for item in no_dupes if str(item) != 'nan']
-        if repeats:
-            return repeats
-
-
-def find_repeat_targets_middle_loop(igs_sequ, org, sequ, cat_site_data):
-    # in each target sequence (target seq is org)
-    pos = [i for i, e in enumerate(cat_site_data[2]) if e == igs_sequ]  # extract positions of matching IGSes
-    if pos:  # if not in this particular seq, try next seq
-        # if the IGS is found in the target seq, get all the data we want
-        # To calculate whether a particular IGS is in the same position in multiple targets or not I am making a
-        # HUGE assumption: as the sequences are already aligned to a single reference sequence, any base
-        # position will have EXACTLY the same position numbering. This allows my code to use dictionaries to
-        # determine whether something is or is not on target as the position must match exactly. If we want some
-        # tolerance in how many base pairs away a position can be to be considered on-target I will need to find
-        # another way to calculate this which would probably use a LOT more computational power.
-        on_target_count = defaultdict(list)
-        target_num = len(pos)
-
-        for p in pos:
-            ref_pos = cat_site_data[4][p][1]
-            if on_target_count[ref_pos]:
-                on_target_count[ref_pos] += 1
-            else:
-                on_target_count[ref_pos] = 1
-
-            guide_id = str(igs_sequ) + str(
-                ref_pos)  # save a guide ID that is the IGS sequence and the reference position
-            temp_list = [igs_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
-                         ref_pos, cat_site_data[3][p], cat_site_data[1][p],
-                         cat_site_data[0][p], sequ, guide_id]
-        return (temp_list, on_target_count)
-
-
-def find_repeat_targets_last_loop(item, new_data, min_true_cov, perc_coverage, on_target_count, coverage_count):
-    to_optimize = defaultdict(list)  # will keep those IGSes that meet our minimum percent coverage later
-    to_keep_single_targets = defaultdict(list)
-
-    item[1] = perc_coverage
-    item[2] = on_target_count[item[7]] / coverage_count  # out of all organisms with this IGS at this position
-    true_coverage = on_target_count[item[7]] / len(new_data)
-    item[3] = true_coverage
-    big_temp_list = list(item)
-    # if the true % coverage is above min_true_cov, and more than one sequence, mark this IGS for optimization
-    if true_coverage >= min_true_cov and on_target_count[item[7]] > 1:
-        # save the IGS sequence AND the matching index in the reference sequence
-        to_optimize[item[12]].append(item)
-    # Else if the true % coverage is above min_true_cov but only one sequence still keep but will not optimize
-    elif true_coverage >= min_true_cov:
-        to_keep_single_targets[item[12]].append(item)
-
-    return (big_temp_list, to_optimize, to_keep_single_targets)
-
-
-def find_repeat_targets_loop(igs_sequ, new_data, min_true_cov):
-    to_optimize = defaultdict(list)  # will keep those IGSes that meet our minimum percent coverage later
-    to_keep_single_targets = defaultdict(list)
-    temp_list = []
-    big_temp_list = []
-    coverage_count = 0  # this will track how many target sequences contain the IGS
-    col = 0
-    for org, sequ, cat_site_data in new_data:  # in each target sequence (target seq is org)
-        pos = [i for i, e in enumerate(cat_site_data[2]) if e == igs_sequ]  # extract positions of matching IGSes
-
-        if not pos:  # if not in this particular seq, try next seq
-            col += 1
-            continue
-        else:  # if the IGS is found in the target seq, get all the data we want
-            # To calculate whether a particular IGS is in the same position in multiple targets or not I am making a
-            # HUGE assumption: as the sequences are already aligned to a single reference sequence, any base
-            # position will have EXACTLY the same position numbering. This allows my code to use dictionaries to
-            # determine whether something is or is not on target as the position must match exactly. If we want some
-            # tolerance in how many base pairs away a position can be to be considered on-target I will need to find
-            # another way to calculate this which would probably use a LOT more computational power.
-            if coverage_count == 0:
-                on_target_count = defaultdict(list)
-            target_num = len(pos)
-
-            for p in pos:
-                ref_pos = cat_site_data[4][p][1]
-                if on_target_count[ref_pos]:
-                    on_target_count[ref_pos] += 1
-                else:
-                    on_target_count[ref_pos] = 1
-
-                guide_id = str(igs_sequ) + str(
-                    ref_pos)  # save a guide ID that is the IGS sequence and the reference position
-                temp_list.append([igs_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
-                                  ref_pos, cat_site_data[3][p], cat_site_data[1][p],
-                                  cat_site_data[0][p], sequ, guide_id])
-            coverage_count += 1
-        col += 1
-
-    # if the IGS sequence wasn't found in enough target seqs, add to list of seqs to filter
-    perc_coverage = coverage_count / len(new_data)
-
-    for item in temp_list:
-        item[1] = perc_coverage
-        item[2] = on_target_count[item[7]] / coverage_count  # out of all organisms with this IGS at this position
-        true_coverage = on_target_count[item[7]] / len(new_data)
-        item[3] = true_coverage
-        big_temp_list.append(list(item))
-        # if the true % coverage is above min_true_cov, and more than one sequence, mark this IGS for optimization
-        if true_coverage >= min_true_cov and on_target_count[item[7]] > 1:
-            # save the IGS sequence AND the matching index in the reference sequence
-            to_optimize[item[12]].append(item)
-        # Else if the true % coverage is above min_true_cov but only one sequence still keep but will not optimize
-        elif true_coverage >= min_true_cov:
-            to_keep_single_targets[item[12]].append(item)
-
-    return (big_temp_list, to_optimize, to_keep_single_targets)
 
 
 def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='',

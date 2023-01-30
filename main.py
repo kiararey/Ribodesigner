@@ -4,7 +4,8 @@ import figure_plotting_functions as fig_plt
 import os
 import numpy as np
 from RiboDesigner import RiboDesigner
-from oldribodesigner import RiboDesigner as oldRiboDesigner
+from v2RiboDesigner import RiboDesigner as oldRiboDesigner
+from playsound import playsound
 
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
@@ -108,10 +109,10 @@ if __name__ == '__main__':
     #                                 min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
     #                                     folder_to_save=output_path, msa_fast=True)
     #
-    # print('########################################################\nOld no multiprocessing:\n')
+    # print('########################################################\nOld multiprocessing - Super5:\n')
     # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
     #                                 min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
-    #                                     folder_to_save=output_path)
+    #                                     folder_to_save=output_path, msa_fast=True)
     #
     # test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
     #
@@ -120,10 +121,11 @@ if __name__ == '__main__':
     #                         min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
     #                         folder_to_save=output_path, msa_fast=True)
     #
-    # print('########################################################\nOld no multiprocessing:\n')
+    # print('########################################################\nOld multiprocessing - Super5:\n')
     # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
-    #                                min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
-    #                                folder_to_save=output_path)
+    #                         min_true_cov=0, identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path,
+    #                         folder_to_save=output_path, msa_fast=True)
+    # playsound('/System/Library/Sounds/Pop.aiff')
     # print(f'Test data done!\n########################################################\n')
 
     # ########################################################
@@ -150,5 +152,9 @@ if __name__ == '__main__':
         datasets = np.array([file_name for file_name in os.listdir(datasets_path) if file_name != '.DS_Store'])
         datasets.sort()
         ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
-        fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
+        try:
+            fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
+        except:
+            continue
+        playsound('/System/Library/Sounds/Pop.aiff')
         # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
