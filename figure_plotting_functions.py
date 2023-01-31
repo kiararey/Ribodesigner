@@ -401,7 +401,7 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
         target_sequences_folder = datasets_path + datasets[i]
         org_nums = len(read_fasta_folder(target_sequences_folder))
 
-        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) == 0:
+        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) < 2:
             if os.path.isdir(output_path_folder) is False:
                 os.mkdir(output_path_folder)
 

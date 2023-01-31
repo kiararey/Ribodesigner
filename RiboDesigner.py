@@ -22,6 +22,7 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 import re
 import pandas as pd
+import numpy as np
 from collections import defaultdict
 import subprocess
 from Bio.Align import AlignInfo
@@ -109,7 +110,7 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
                                        fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast)
         time2 = time.time()
         end = time.time()
-        print(f'Time taken: {time2 - time1}s')
+        print(f'Time taken: {time2 - time1}s\n')
         print(f'Time taken overall: {end - start}s\n')
         return opti_seqs
 
@@ -379,6 +380,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
             elif true_coverage >= min_true_cov:
                 to_keep_single_targets[item[12]].append(item)
 
+
     # Make dataframes for excel ig
     ranked_IGS = pd.DataFrame(data=big_temp_list, index=None,
                               columns=['IGS sequence', '%' + ' coverage', '% on target in targets covered',
@@ -391,11 +393,20 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
                                                ascending=[False, False])
 
     if fileout:
+        # # Save as csv
+        # with open(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv', 'w') as f:
+        #     f.write('IGS sequence,% coverage,% on target in targets covered,True % coverage,Target name,Occurrences in '
+        #             'Target Sequence,Index of Splice Site,Equivalent Reference Index of Splice Site,Just Guide,Guide + G + '
+        #             'IGS,Ribozyme Design,Original sequence,ID\n')
+        #     for item in big_temp_list:
+        #         f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{item[7]},{item[8]},'
+        #                 f'{item[9]},{item[10]},{item[11]},{item[12]}\n')
         ranked_sorted_IGS.to_csv(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv',
                                  index=False)
 
-        new_data_df = pd.DataFrame.from_records(new_data).T
-        new_data_df.to_csv(f'{file}/All catalytic U data unsorted.csv', index=True)
+        # # don't currently need this, but maybe in the future will need?
+        # new_data_df = pd.DataFrame.from_records(new_data).T
+        # new_data_df.to_csv(f'{file}/All catalytic U data unsorted.csv', index=True)
 
     return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
 
@@ -417,7 +428,7 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
               f'please increase your min true coverage parameter.')
         for key in single_targets.keys():
             guide = single_targets[key][0][8]
-            design_sequence = guide + 'G' + re.sub(r'[0-9]+', '', key)
+            design_sequence = guide + 'G' + re.sub(r'\d+', '', key)
             ribo_design = design_sequence + ribo_seq
 
             # set score to nan
@@ -427,18 +438,25 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
                               design_sequence, ribo_design])
 
     if fileout:
-        sorted_opti_seqs = pd.DataFrame(data=opti_seqs, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
-                                                                             '% on target', 'True % cov',
-                                                                             '(Target name, Target idx, Other '
-                                                                             'occurrences of IGS in target sequence)',
-                                                                             'Optimized guide',
-                                                                             'Optimized guide + G + IGS',
-                                                                             'Full Ribozyme design'],
-                                        dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
-        sorted_opti_seqs.to_csv(
-            f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', index=False)
+        with open(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', 'w') as f:
+            f.write('IGS,Reference index,Score,% cov,% on target,True % cov,(Target name, Target idx, Other occurrences '
+                    'of IGS in target sequence),Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
+            for item in opti_seqs:
+                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{item[7]},{item[8]},'
+                        f'{item[9]}\n')
 
-    print('All guide sequences optimized.\n')
+    # sorted_opti_seqs = pd.DataFrame(data=opti_seqs, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
+    #                                                                      '% on target', 'True % cov',
+    #                                                                      '(Target name, Target idx, Other '
+    #                                                                      'occurrences of IGS in target sequence)',
+    #                                                                      'Optimized guide',
+    #                                                                      'Optimized guide + G + IGS',
+    #                                                                      'Full Ribozyme design'],
+    #                                 dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
+    # sorted_opti_seqs.to_csv(
+    #     f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', index=False)
+
+    print('All guide sequences optimized.')
     return opti_seqs
 
 
