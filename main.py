@@ -1,77 +1,11 @@
-# This is a sample Python script.
-from RiboDesigner import RiboDesigner
 import figure_plotting_functions as fig_plt
 import os
 import numpy as np
+import pandas as pd
 from RiboDesigner import RiboDesigner
 from v2RiboDesigner import RiboDesigner as oldRiboDesigner
 from playsound import playsound
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-class OptimizedRibozyme:
-    def __init__(self, full_design: str, igs: str, optimized_guide_g_igs: str, ref_idx: int, perc_cov: float,
-                 perc_on_target:float, true_perc_cov: float, barcode: str, targets: list):
-        self.seq = full_design
-        self.igs = igs
-        self.guide_g_igs = optimized_guide_g_igs
-        self.ref_idx = ref_idx
-        self.perc_cov = perc_cov
-        self.perc_on_target = perc_on_target
-        self.true_perc_cov = true_perc_cov
-        self.barcode = barcode
-        self.targets = targets
-
-    def __str__(self):
-        return f'{self.seq})'
-
-    def __repr__(self):
-        return f'{self.seq})'
-
-
-class BasicRibozyme:
-    def __init__(self, full_design: str, igs: str, guide_g_igs: str, ref_idx: int, perc_cov: float,
-                 perc_on_target:float, true_perc_cov: float, barcode: str, target: str):
-        self.seq = full_design
-        self.igs = igs
-        self.guide_g_igs = guide_g_igs
-        self.ref_idx = ref_idx
-        self.perc_cov = perc_cov
-        self.perc_on_target = perc_on_target
-        self.true_perc_cov = true_perc_cov
-        self.barcode = barcode
-        self.target = target
-
-    def __str__(self):
-        return f'{self.seq})'
-
-    def __repr__(self):
-        return f'{self.seq})'
-
-
-class TargetSeq:
-    def __init__(self, name: str, sequ: str, igs_and_ribo_seqs: list, igs_and_guide_seqs: list, all_igs: list, guides: list, indexes: list):
-        self.name = name
-        self.sequ = sequ
-        self.igs_and_ribo_seqs = igs_and_ribo_seqs
-        self.igs_and_guide_seqs = igs_and_guide_seqs
-        self.all_igs = all_igs
-        self.guides = guides
-        self.indexes = indexes
-
-    def __str__(self):
-        return f'{self.name}({self.seq})'
-
-    def __repr__(self):
-        return f'{self.name}({self.seq})'
-
-#
-# class AlignedTarget:
-#     [name, sequ, (temp_ribozyme_sequences, temp_IGS_and_guide_sequences, temp_IGSes,
-#                   temp_guide_sequences, temp_og_and_ref_idexes)]
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # Figure 2: synthetic community data violin plots
     # Basically, look at the datasets used data and then run RiboDesigner on them.
@@ -98,12 +32,23 @@ if __name__ == '__main__':
     ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
 
     # ########################################################
+    # # Test figure making
+    # print('Testing figure making...')
+    # test_data = 'Datasets_used/Test_data/'
+    # ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
+    # fig_plt.score_vs_true_coverage(['test_fasta_for_figures.fasta'], test_data, output_path, ribodesigner_settings, ref_path,
+    #                                'test data')
+    #
+    # fig_plt.plot_for_16s_coverage(['test_fasta_for_figures.fasta'], test_data, output_path, ribodesigner_settings, ref_path,
+    #                               'test data')
+    # print(f'Figure test done!\n########################################################\n')
+
+    ########################################################
     # # Test datasets
     # print('Running test data...\n')
+
     # test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
     #             "Data files and Outputs/Ribozyme paper dataset/Original files"
-    #
-    #
     # print('########################################################\nNew multiprocessing - Super5:\n')
     # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
     #                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
@@ -142,8 +87,9 @@ if __name__ == '__main__':
     # ########################################################
     # SILVA squished datasets
     dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
-    dataset_names = ['Bacteria_Only', 'All']
-    output_path = 'SILVA_figure_output_files/'
+    dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only']
+    output_path = 'SILVA_output_files_Super5/E_coli_ref'
+    all_above_coverage = []
 
     for name in dataset_names:
         datasets_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{name}/'
@@ -153,7 +99,43 @@ if __name__ == '__main__':
         datasets.sort()
         ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
 
-        fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
-
+        above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
+                                       name.replace('_', ' '), 'png')
+        # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
+        #                               name.replace('_', ' '), above_coverage, 'png')
         playsound('/System/Library/Sounds/Pop.aiff')
-        # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path)
+
+        all_above_coverage.append(above_coverage)
+
+        # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
+        #                               name.replace('_', ' '))
+
+
+    # Now plot the 16s rRNA figures one on top of the other
+    fig_plt.plot_for_16s_coverage_multipanel(all_above_coverage, dataset_names, output_path, file_type='png')
+
+    # Now, align to model organisms and make more data!
+    archea_model_ref_path = 'Common_sequences/Methanobrevibacter smithii 16s.fasta'
+    eukaryota_model_ref_path = 'Common_sequences/Saccharomyces cerevisiae 18s.fasta'
+    archea_output_path = 'SILVA_output_files_Super5/M_smithii_ref'
+    eukaryota_output_path = 'SILVA_output_files_Super5/S_cerevisiae_ref'
+
+    dataset_names = ['Archaea_Only', 'Eukaryota_Only']
+    ref_paths = [archea_model_ref_path, eukaryota_model_ref_path]
+    output_paths = [archea_output_path, eukaryota_output_path]
+
+    for i, name in enumerate(dataset_names):
+        datasets_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{name}/'
+        print(f'Now analyzing data in {datasets_path[:-1]}...')
+
+        datasets = np.array([file_name for file_name in os.listdir(datasets_path) if file_name != '.DS_Store'])
+        datasets.sort()
+        ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
+
+        above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_paths[i], ribodesigner_settings,
+                                                        ref_paths[i],
+                                                        name.replace('_', ' '), 'png')
+        fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_paths[i], ribodesigner_settings, ref_paths[i],
+                                      name.replace('_', ' '), above_coverage, 'png')
+        playsound('/System/Library/Sounds/Pop.aiff')
+

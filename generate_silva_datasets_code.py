@@ -8,7 +8,7 @@ taxonomy_level = 'Genus'
 
 # Here is the file where the dataset is. I've already run a script on this to separate it by levels of taxonomy.
 # To do this, SequencePrepper.py on the SILVA database file.
-silva_by_taxonomy_path = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy/{taxonomy_level}'
+silva_by_taxonomy_path = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/{taxonomy_level}'
 
 # Here is the file where we want to save the dataset
 output_path = 'Datasets_used/SILVA_squished_datasets'

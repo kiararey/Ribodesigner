@@ -373,12 +373,13 @@ def align_to_ref(n, file, barcode_seq_file, ribobody_file, target_path, ref_path
 
 def set_params_for_plots(figsize, context):
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': figsize}
-    cmap = np.append([cmc.batlow.colors[0]], [cmc.batlow.colors[-1]], axis=0)
-    sns.set_theme(context=context, style="ticks", rc=custom_params, palette=cmap)
+    # cmap = np.append([cmc.batlow.colors[0]], [cmc.batlow.colors[-1]], axis=0)
+    sns.set_theme(context=context, style="ticks", rc=custom_params, palette='viridis')
     return
 
 
-def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path):
+def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path, file_name,
+                           file_type='svg'):
     # ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
     m = ribodesigner_settings[0]
     n = ribodesigner_settings[1]
@@ -392,16 +393,21 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
     plt.figure()
     set_params_for_plots((30, 16), 'talk')
 
-    fig, axs = plt.subplots(math.ceil(len(datasets) / 3), 3, sharex=True, sharey=True, layout="constrained")
+    if len(datasets) == 1:
+        fig, axs = plt.subplots(1, 1, sharex=True, sharey=True, layout="constrained")
+    else:
+        fig, axs = plt.subplots(math.ceil(len(datasets) / 3), 3, sharex=True, sharey=True, layout="constrained")
 
     for i in range(0, len(datasets)):
         dataset_name = datasets[i].replace('_', ' ').replace('.fasta', '')
 
         output_path_folder = output_path + datasets[i].replace('.fasta', '') + '_results'
         target_sequences_folder = datasets_path + datasets[i]
-        org_nums = len(read_fasta_folder(target_sequences_folder))
+        org_nums = len(read_fasta(target_sequences_folder))
+        if org_nums == 0:
+            org_nums = len(read_fasta_folder(target_sequences_folder))
 
-        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) < 2:
+        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) < 1:
             if os.path.isdir(output_path_folder) is False:
                 os.mkdir(output_path_folder)
 
@@ -418,32 +424,27 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
                                        dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
 
         else:
-
-            output_path_file = output_path_folder + '/Ranked Ribozyme Designs with Optimized Guide Sequence Designs quantitative.csv'
-            out_data_df = pd.read_csv(output_path_file)
+            try:
+                output_path_file = output_path_folder + '/Ranked Ribozyme Designs with Optimized Guide Sequence Designs quantitative.csv'
+                out_data_df = pd.read_csv(output_path_file)
+                num = len(out_data_df.loc[:, ['True % cov']])
+                print(f'Dataset has {org_nums} sequences, {num} designs, and pandas worked!')
+            except:
+                print(f'Dataset has {org_nums} sequences, but pandas does not work. Bad pandas!')
+                continue
 
         # append data for heatmap
         try:
-            big_df_for_heatmap = pd.concat([big_df_for_heatmap, out_data_df.loc[:, ['Score', 'True % cov']]],
-                                           ignore_index=True)
-
+            big_df_for_heatmap = pd.concat([big_df_for_heatmap, out_data_df.loc[:, ['Score', 'Reference index',
+                                                                                    'True % cov']]], ignore_index=True)
         except:
             big_df_for_heatmap = out_data_df.loc[:, ['Score', 'Reference index', 'True % cov']]
-
-        if '16s' in dataset_name:
-            # Also make a separate dataframe for bacteria and archaea for the heatmap
-            try:
-                big_df_for_heatmap_bac = pd.concat([big_df_for_heatmap_bac,
-                                                    out_data_df.loc[:, ['Score', 'Reference index', 'True % cov']]],
-                                                   ignore_index=True)
-            except:
-                big_df_for_heatmap_bac = out_data_df.loc[:, ['Score', 'Reference index', 'True % cov']]
 
         colors = [None] * len(out_data_df.loc[:, ['True % cov']])
 
         for j in range(0, len(colors)):
             row = out_data_df.loc[j, ['True % cov', 'Score']]
-            if row[0] > 0.7 and row[1] > 0.7:
+            if row[0] >= 0.7 and row[1] >= 0.7:
                 colors[j] = True
             else:
                 colors[j] = False
@@ -453,21 +454,29 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
         # relevant data here: dataset name, percent above threshold, species number, ribodesigner output
         data[i] = (dataset_name, perc, org_nums, out_data_df, colors)
 
-        ax_r_coord = math.floor(i / 3)
-        if math.floor(i / 3) == math.ceil(i / 3):
-            ax_c_coord = 0
-        elif math.floor(i / 3) == round(i / 3):
-            ax_c_coord = 1
-        else:
-            ax_c_coord = 2
 
-        axs[ax_r_coord, ax_c_coord].set_title(dataset_name + '\nn = ' + str(org_nums) + ', ' + str(round(perc, 2)) +
-                                              '% designs above threshold.')
-        sns.scatterplot(data=out_data_df, x='True % cov', y='Score', alpha=0.8, hue=colors, legend=False,
-                        ax=axs[ax_r_coord, ax_c_coord])
+        if len(datasets) == 1:
+            sns.scatterplot(data=out_data_df, x='True % cov', y='Score', alpha=0.8, hue=colors,
+                            legend=False).set(ylim=(0, 1), xlim=(0, 1))
+
+        else:
+            ax_r_coord = math.floor(i / 3)
+            if math.floor(i / 3) == math.ceil(i / 3):
+                ax_c_coord = 0
+            elif math.floor(i / 3) == round(i / 3):
+                ax_c_coord = 1
+            else:
+                ax_c_coord = 2
+
+            f'{dataset_name}\nn = {org_nums}, {sum(colors)} ({str(round(perc, 2))}%) designs above threshold.'
+            axs[ax_r_coord, ax_c_coord].set_title(f'{dataset_name}\nn = {org_nums}, {sum(colors)} ({str(round(perc, 2))}%) designs above threshold.')
+            axs[ax_r_coord, ax_c_coord].axhline(y=0.7, xmin=0.7, xmax=1, c='b', ls='--')
+            axs[ax_r_coord, ax_c_coord].axvline(x=0.7, ymin=0.7, ymax=1, c='b', ls='--')
+            sns.scatterplot(data=out_data_df, x='True % cov', y='Score', alpha=0.8, hue=colors, legend=False,
+                            ax=axs[ax_r_coord, ax_c_coord]).set(ylim=(0, 1), xlim=(0, 1))
 
     sns.despine()
-    plt.savefig(output_path + 'multi panel figure.png', transparent=False)
+    plt.savefig(f'{output_path}{file_name} multi panel figure.{file_type}', transparent=False)
     plt.show()
 
     # # Now make a final plot comparing number of species vs. percentage above threshold
@@ -476,20 +485,24 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
 
     plt.title('% above threshold vs. number of species')
 
-    x_to_plot = [data[i][1] for i in range(len(data) - 1)]
-    y_to_plot = [data[i][2] for i in range(len(data) - 1)]
+    y_to_plot = [data[i][1] for i in range(max(len(data) - 1, 1))]
+    x_to_plot = [data[i][2] for i in range(max(len(data) - 1, 1))]
     sns.scatterplot(x=x_to_plot, y=y_to_plot, alpha=0.8)
     sns.lineplot(x=x_to_plot, y=y_to_plot, alpha=0.8)
-    plt.xlabel('Percent of designs above threshold')
-    plt.ylabel('Number of species in dataset')
+    plt.ylabel('Percent of designs above threshold')
+    plt.xlabel('Number of species in dataset')
     sns.despine()
 
-    plt.savefig(output_path + 'species vs percent above threshold.png', transparent=False)
+    plt.savefig(f'{output_path}{file_name} species vs percent above threshold.{file_type}', transparent=False)
     plt.show()
-    return
+
+    above_coverage = big_df_for_heatmap.loc[(big_df_for_heatmap['True % cov'] >= 0.7) & (big_df_for_heatmap['Score'] >= 0.7)]
+
+    return above_coverage
 
 
-def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path):
+def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path, file_name, big_df=[],
+                          file_type='svg'):
     # ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
     m = ribodesigner_settings[0]
     n = ribodesigner_settings[1]
@@ -506,70 +519,138 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
 
     # set up plots to look pretty
     set_params_for_plots((12, 8), 'talk')
+    if len(big_df) == 0:
+        for i in range(0, len(datasets)):
+            # custom_params = {"axes.spines.right": False, "axes.spines.top": False}
+            # sns.set_theme(style="ticks", rc=custom_params, palette='viridis')
+            # sns.set_context("paper")
 
-    for i in range(0, len(datasets)):
-        # custom_params = {"axes.spines.right": False, "axes.spines.top": False}
-        # sns.set_theme(style="ticks", rc=custom_params, palette='viridis')
-        # sns.set_context("paper")
+            dataset_name = datasets[i].replace('_', ' ').replace('.fasta', '')
 
-        dataset_name = datasets[i].replace('_', ' ').replace('.fasta', '')
-        # if '16s' not in dataset_name:
-        #     # only align bacteria and archaea to E. coli
-        #     continue
+            output_path_folder = output_path + datasets[i].replace('.fasta', '') + '_results'
+            target_sequences_folder = datasets_path + datasets[i]
+            org_nums = len(read_fasta_folder(target_sequences_folder))
 
-        output_path_folder = output_path + datasets[i].replace('.fasta', '') + '_ecoli_ref_results'
-        target_sequences_folder = datasets_path + datasets[i]
-        org_nums = len(read_fasta_folder(target_sequences_folder))
+            if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) < 1:
+                if os.path.isdir(output_path_folder) is False:
+                    os.mkdir(output_path_folder)
 
-        if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) == 0:
-            if os.path.isdir(output_path_folder) is False:
-                os.mkdir(output_path_folder)
+                # Same as before, but we have a reference sequence now (E. coli) to plot variable regions
+                out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
+                                    ref_sequence_file=ref_path, min_true_cov=0, identity_thresh=0.7, fileout=True,
+                                    folder_to_save=output_path_folder, msa_fast=msa_fast)
 
-            # Same as before, but we have a reference sequence now (E. coli) to plot variable regions
-            out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
-                                ref_sequence_file=ref_path, min_true_cov=0, identity_thresh=0.7, fileout=True,
-                                folder_to_save=output_path_folder, msa_fast=msa_fast)
-
-            out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
-                                                                           '% on target', 'True % cov',
-                                                                           '(Target name, Target idx, Other occurrences of'
-                                                                           ' IGS in target sequence)',
-                                                                           'Optimized guide',
-                                                                           'Optimized guide + G + IGS',
-                                                                           'Full Ribozyme design'],
-                                       dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
+                out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
+                                                                               '% on target', 'True % cov',
+                                                                               '(Target name, Target idx, Other occurrences of'
+                                                                               ' IGS in target sequence)',
+                                                                               'Optimized guide',
+                                                                               'Optimized guide + G + IGS',
+                                                                               'Full Ribozyme design'],
+                                           dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
 
 
-        else:
-            output_path_file = output_path_folder + '/Ranked Ribozyme Designs with Optimized Guide Sequence ' \
-                                                    'Designs quantitative.csv'
-            out_data_df = pd.read_csv(output_path_file)
-            out_data = out_data_df.values.tolist()
-
-        colors = [None] * len(out_data_df.loc[:, ['Score']])
-
-        for j in range(0, len(colors)):
-            row = out_data_df.loc[j, ['True % cov', 'Score']]
-            if row[0] > 0.7 and row[1] > 0.7:
-                colors[j] = True
             else:
-                colors[j] = False
+                output_path_file = output_path_folder + '/Ranked Ribozyme Designs with Optimized Guide Sequence ' \
+                                                        'Designs quantitative.csv'
+                out_data_df = pd.read_csv(output_path_file)
+                # out_data = out_data_df.values.tolist()
 
-        fig, ax = plt.subplots()
-        ax.set_ylim(0, 1)
-        ax.set_xlim(0, 1600)
-        plot_variable_regions(ax, var_regs)
+            to_plot = out_data_df.loc[(out_data_df['True % cov'] >= 0.7) & (out_data_df['Score'] >= 0.7)]
+
+            try:
+                big_df = pd.concat([big_df, to_plot.loc[:, ['Score', 'Reference index', 'True % cov']]], ignore_index=True)
+
+            except:
+                big_df = to_plot.loc[:, ['Score', 'Reference index', 'True % cov']]
+
+
+        # colors = [None] * len(out_data_df.loc[:, ['Score']])
+        #
+        # for j in range(0, len(colors)):
+        #     row = out_data_df.loc[j, ['True % cov', 'Score']]
+        #     if row[0] > 0.7 and row[1] >= 0.7:
+        #         colors[j] = True
+        #     else:
+        #         colors[j] = False
+
+    fig, ax = plt.subplots()
+    # ax.set_ylim(0, 1)
+    ax.set_ylim(0.7, 1)
+    ax.set_xlim(0, 1600)
+    plot_variable_regions(ax, var_regs)
+    # plot score vs. site of U (ref--> E.coli)
+    # sns.scatterplot(data=to_plot, x='Reference index', y='Score', alpha=0.8, hue=colors, legend=False)
+    sns.scatterplot(data=big_df, x='Reference index', y='Score', alpha=0.8, legend=False)
+
+    # Add labels
+    title = file_name.replace('_', ' ')
+    ax.set_ylabel('Score')
+    ax.set_xlabel('Location of U on E. coli 16s rRNA (base pair location)')
+    ax.set_title(title + '\nScore along 16s for generated designs above thresholds')
+
+    # make pretty and save
+    sns.despine(offset=10, trim=False)
+    fig.savefig(f'{output_path}/{title} designs along 16s.{file_type}', transparent=False)
+    plt.show()
+    return
+
+
+def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path, file_type='svg'):
+    # Quick and dirty function to make three stacked plots in time for lab meeting
+
+    # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
+    var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
+                (1435, 1465)]
+    # set up plots to look pretty
+    set_params_for_plots((12, 8), 'talk')
+    mid_i = math.ceil(len(above_coverage) / 2)
+
+    fig, ax = plt.subplots(len(above_coverage), 1, sharex=True, sharey=True, layout="constrained")
+
+    for i, big_df in enumerate(above_coverage):
+        ax[i].set_ylim(0.7, 1)
+        ax[i].set_xlim(0, 1600)
+        plot_variable_regions(ax[i], var_regs)
         # plot score vs. site of U (ref--> E.coli)
-        sns.scatterplot(data=out_data_df, x='Reference index', y='Score', alpha=0.8, hue=colors, legend=False)
+        sns.scatterplot(data=big_df, ax=ax[i], x='Reference index', y='Score', alpha=0.8, legend=False)
 
         # Add labels
-        ax.set_ylabel('Score')
-        ax.set_xlabel('Location of U on E. coli 16s rRNA (base pair location)')
-        ax.set_title(dataset_name + '\nScore along 16s for generated designs')
+        title = dataset_names[i].replace('_', ' ')
+        if i == mid_i:
+            ax[i].set_ylabel('Score')
+        ax[i].set_xlabel('Location of U on E. coli 16s rRNA (base pair location)')
+        if i == 0:
+            ax[i].set_title(f'Score along 16s for generated designs above thresholds\n{title}')
+        else:
+            ax[i].set_title(title)
 
-        # make pretty and save
-        sns.despine(offset=10, trim=False)
-        fig.savefig(output_path_folder + '/designs_along_16s.png', transparent=False)
-        plt.show()
-        return
+    # make pretty and save
+    sns.despine(offset=10, trim=False)
+    fig.savefig(f'{output_path}/All designs along 16s score.{file_type}', transparent=False)
+    plt.show()
+
+    fig, ax = plt.subplots(len(above_coverage), 1, sharex=True, sharey=True, layout="constrained")
+
+    for i, big_df in enumerate(above_coverage):
+        ax[i].set_ylim(0.7, 1)
+        ax[i].set_xlim(0, 1600)
+        plot_variable_regions(ax[i], var_regs)
+        # plot score vs. site of U (ref--> E.coli)
+        sns.scatterplot(data=big_df, ax=ax[i], x='Reference index', y='True % cov', alpha=0.8, legend=False)
+
+        # Add labels
+        title = dataset_names[i].replace('_', ' ')
+        if i == mid_i:
+            ax[i].set_ylabel('True % coverage of dataset')
+        ax[i].set_xlabel('Location of U on E. coli 16s rRNA (base pair location)')
+        if i == 0:
+            ax[i].set_title(f'True % coverage along 16s for generated designs above thresholds\n{title}')
+        else:
+            ax[i].set_title(title)
+
+    # make pretty and save
+    sns.despine(offset=10, trim=False)
+    fig.savefig(f'{output_path}/All designs along 16s coverage.{file_type}', transparent=False)
+    plt.show()
 

@@ -13,23 +13,19 @@ import glob
 import os
 import random
 import warnings
-from io import StringIO
 
 with warnings.catch_warnings():
     warnings.simplefilter('ignore')
     from Bio import SeqIO, pairwise2, AlignIO
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 import re
 import pandas as pd
-import numpy as np
 from collections import defaultdict
 import subprocess
 from Bio.Align import AlignInfo
 from math import exp, log
 from multiprocessing import Pool
 import time
-from Bio.Align.Applications import MuscleCommandline
 
 
 def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
@@ -97,9 +93,13 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     print(f'Time taken: {time2 - time1}s\n')
 
     time1 = time.time()
+    if optimize_seq:
+        mid_file = False
+    else:
+        mid_file = True
     big_temp_list, to_optimize, filtered_list, \
     ranked_IGS, ranked_sorted_IGS, to_keep_single_targets = find_repeat_targets(new_data, min_true_cov=min_true_cov,
-                                                                                fileout=fileout, file=folder_to_save)
+                                                                                fileout=mid_file, file=folder_to_save)
     time2 = time.time()
     print(f'Time taken: {time2 - time1}s\n')
 
@@ -112,12 +112,14 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
         end = time.time()
         print(f'Time taken: {time2 - time1}s\n')
         print(f'Time taken overall: {end - start}s\n')
+        print('########################################################\n')
         return opti_seqs
 
     else:
         print('All guide sequences generated.')
         end = time.time()
         print(f'Time taken overall: {end - start}s\n')
+        print('########################################################\n')
         return ranked_sorted_IGS
 
 
@@ -380,7 +382,6 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
             elif true_coverage >= min_true_cov:
                 to_keep_single_targets[item[12]].append(item)
 
-
     # Make dataframes for excel ig
     ranked_IGS = pd.DataFrame(data=big_temp_list, index=None,
                               columns=['IGS sequence', '%' + ' coverage', '% on target in targets covered',
@@ -393,6 +394,10 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
                                                ascending=[False, False])
 
     if fileout:
+        # make a new file
+        if os.path.exists(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv'):
+            os.remove(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv')
+
         # # Save as csv
         # with open(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv', 'w') as f:
         #     f.write('IGS sequence,% coverage,% on target in targets covered,True % coverage,Target name,Occurrences in '
@@ -438,11 +443,15 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
                               design_sequence, ribo_design])
 
     if fileout:
+        if os.path.exists(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv'):
+            os.remove(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv')
+
         with open(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', 'w') as f:
-            f.write('IGS,Reference index,Score,% cov,% on target,True % cov,(Target name, Target idx, Other occurrences '
+            f.write('IGS,Reference index,Score,% cov,% on target,True % cov,(Target name| Target idx| Other occurrences '
                     'of IGS in target sequence),Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_seqs:
-                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{item[7]},{item[8]},'
+                list_for_csv = str(item[6]).replace(',', '|')
+                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{list_for_csv},{item[7]},{item[8]},'
                         f'{item[9]}\n')
 
     # sorted_opti_seqs = pd.DataFrame(data=opti_seqs, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
@@ -490,23 +499,21 @@ def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative',
         for line in range(len(seqs_to_align)):
             f.write('>seq' + str(line) + '\n' + str(seqs_to_align[line]) + '\n')
 
-    # seqs_str = ''
-    # for i, seq in enumerate(seqs_to_align):
-    #     seqs_str += f'>seq{i}\n{str(seqs_to_align[i])}\n'
-    # # print(seqs_str)
-    #
+    muscle_exe = 'muscle5'
+
+    seqs_str = ''
+    for i, seq in enumerate(seqs_to_align):
+        seqs_str += f'>seq{i}\n{str(seqs_to_align[i])}\n'
+
     # seqs_str_write = (SeqRecord(seq, id=f'seq{i}', name='_', description='_') for i, seq in enumerate(seqs_to_align))
     #
     # # now align the sequences.
-    muscle_exe = 'muscle5'
-    # # muscle_cline = MuscleCommandline(muscle_exe)
-    # # print(muscle_cline)
     # with subprocess.Popen([muscle_exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     #                       universal_newlines=True) as child:
     #
-    #     # SeqIO.write(seqs_str_write, child.stdin, 'fasta')
-    #     # msa = AlignIO.read(child.stdout, 'fasta')
-    #     # print(msa)
+    #     SeqIO.write(seqs_str_write, child.stdin, 'fasta')
+    #     msa = AlignIO.read(child.stdout, 'fasta')
+    #     print(msa)
     #
     #     child.stdin.write(seqs_str)
     #     child_out = StringIO(child.communicate()[0])
@@ -524,12 +531,13 @@ def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative',
     #                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     # child.stdin.write(seqs_str.encode())
     # child_out = child.communicate()[0].decode('utf8')
+
     if msa_fast:
         subprocess.check_output([muscle_exe, "-super5", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
                                 stderr=subprocess.DEVNULL)
     else:
         subprocess.check_output([muscle_exe, "-align", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
-                            stderr=subprocess.DEVNULL)
+                                stderr=subprocess.DEVNULL)
 
     msa = AlignIO.read(open(f'aln_{name}.afa'), 'fasta')
 
