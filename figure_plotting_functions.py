@@ -596,12 +596,14 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
     return
 
 
-def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path, file_type='svg'):
+def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path, file_type='svg',
+                                     var_regs_overrides=[]):
     # Quick and dirty function to make three stacked plots in time for lab meeting
 
     # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
-    var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
-                (1435, 1465)]
+    if not var_regs_overrides:
+        var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
+                    (1435, 1465)]
     # set up plots to look pretty
     set_params_for_plots((12, 8), 'talk')
     mid_i = math.ceil(len(above_coverage) / 2)
@@ -611,14 +613,17 @@ def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path,
     for i, big_df in enumerate(above_coverage):
         ax[i].set_ylim(0.7, 1)
         ax[i].set_xlim(0, 1600)
-        plot_variable_regions(ax[i], var_regs)
+
+        if not var_regs_overrides:
+            plot_variable_regions(ax[i], var_regs)
+        else:
+            plot_variable_regions(ax[i], var_regs_overrides[i])
+
         # plot score vs. site of U (ref--> E.coli)
         sns.scatterplot(data=big_df, ax=ax[i], x='Reference index', y='Score', alpha=0.8, legend=False)
 
         # Add labels
         title = dataset_names[i].replace('_', ' ')
-        if i == mid_i:
-            ax[i].set_ylabel('Score')
         ax[i].set_xlabel('Location of U on E. coli 16s rRNA (base pair location)')
         if i == 0:
             ax[i].set_title(f'Score along 16s for generated designs above thresholds\n{title}')
@@ -635,14 +640,17 @@ def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path,
     for i, big_df in enumerate(above_coverage):
         ax[i].set_ylim(0.7, 1)
         ax[i].set_xlim(0, 1600)
-        plot_variable_regions(ax[i], var_regs)
+
+        if not var_regs_overrides:
+            plot_variable_regions(ax[i], var_regs)
+        else:
+            plot_variable_regions(ax[i], var_regs_overrides[i])
+
         # plot score vs. site of U (ref--> E.coli)
         sns.scatterplot(data=big_df, ax=ax[i], x='Reference index', y='True % cov', alpha=0.8, legend=False)
 
         # Add labels
         title = dataset_names[i].replace('_', ' ')
-        if i == mid_i:
-            ax[i].set_ylabel('True % coverage of dataset')
         ax[i].set_xlabel('Location of U on E. coli 16s rRNA (base pair location)')
         if i == 0:
             ax[i].set_title(f'True % coverage along 16s for generated designs above thresholds\n{title}')

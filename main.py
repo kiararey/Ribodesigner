@@ -88,7 +88,7 @@ if __name__ == '__main__':
     # SILVA squished datasets
     dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
     dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only']
-    output_path = 'SILVA_output_files_Super5/E_coli_ref'
+    output_path = 'SILVA_output_files_Super5/E_coli_ref/'
     all_above_coverage = []
 
     for name in dataset_names:
@@ -99,16 +99,13 @@ if __name__ == '__main__':
         datasets.sort()
         ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
 
-        above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
-                                       name.replace('_', ' '), 'png')
+        above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings,
+                                                        ref_path, name.replace('_', ' '), 'png')
         # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
         #                               name.replace('_', ' '), above_coverage, 'png')
         playsound('/System/Library/Sounds/Pop.aiff')
 
         all_above_coverage.append(above_coverage)
-
-        # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
-        #                               name.replace('_', ' '))
 
 
     # Now plot the 16s rRNA figures one on top of the other
@@ -117,12 +114,20 @@ if __name__ == '__main__':
     # Now, align to model organisms and make more data!
     archea_model_ref_path = 'Common_sequences/Methanobrevibacter smithii 16s.fasta'
     eukaryota_model_ref_path = 'Common_sequences/Saccharomyces cerevisiae 18s.fasta'
-    archea_output_path = 'SILVA_output_files_Super5/M_smithii_ref'
-    eukaryota_output_path = 'SILVA_output_files_Super5/S_cerevisiae_ref'
+    archea_output_path = 'SILVA_output_files_Super5/M_smithii_ref/'
+    eukaryota_output_path = 'SILVA_output_files_Super5/S_cerevisiae_ref/'
 
     dataset_names = ['Archaea_Only', 'Eukaryota_Only']
     ref_paths = [archea_model_ref_path, eukaryota_model_ref_path]
     output_paths = [archea_output_path, eukaryota_output_path]
+
+    # The variable regions below were obtained by doing a mafft pairwise alignment with MG1655. Let me know if this is
+    # incorrect please and I will fix it! This is base-1 indexing btw.
+    m_smithii_var_regs = [(64, 74), (112, 205), (394, 433), (528, 589), (768, 799), (940, 978), (1056, 1103),
+                          (1190, 1242), (1384, 1402)]
+    s_cerevisiae_var_regs = [(80, 318), (355, 444), (635, 689), (785, 845), (1040, 1071), (1223, 1257), (1339, 1387),
+                             (1476, 1532), (1695, 1728)]
+    var_regs_overrides = [m_smithii_var_regs, s_cerevisiae_var_regs]
 
     for i, name in enumerate(dataset_names):
         datasets_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{name}/'
@@ -133,9 +138,10 @@ if __name__ == '__main__':
         ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
 
         above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_paths[i], ribodesigner_settings,
-                                                        ref_paths[i],
-                                                        name.replace('_', ' '), 'png')
+                                                        ref_paths[i], name.replace('_', ' '), 'png')
         fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_paths[i], ribodesigner_settings, ref_paths[i],
-                                      name.replace('_', ' '), above_coverage, 'png')
+                                      name.replace('_', ' '), above_coverage, 'png', var_regs_overrides)
         playsound('/System/Library/Sounds/Pop.aiff')
+
+
 
