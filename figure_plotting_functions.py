@@ -502,7 +502,7 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
 
 
 def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path, file_name, big_df=[],
-                          file_type='svg'):
+                          file_type='svg', var_regs_override=[]):
     # ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
     m = ribodesigner_settings[0]
     n = ribodesigner_settings[1]
@@ -514,8 +514,13 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
     msa_fast = ribodesigner_settings[7]
 
     # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
-    var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
+    default_var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
                 (1435, 1465)]
+
+    if var_regs_override:
+        var_regs = var_regs_override
+    else:
+        var_regs = default_var_regs
 
     # set up plots to look pretty
     set_params_for_plots((12, 8), 'talk')
@@ -577,7 +582,14 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
     fig, ax = plt.subplots()
     # ax.set_ylim(0, 1)
     ax.set_ylim(0.7, 1)
-    ax.set_xlim(0, 1600)
+    # Find the x limit by rounding to the nearest thousandth of the reference sequence length
+    ref_seq_length = len(read_fasta(ref_path)[0][1])
+
+    limit = round(ref_seq_length, -2)
+    if limit < ref_seq_length:
+        limit += 100
+
+    ax.set_xlim(0, limit)
     plot_variable_regions(ax, var_regs)
     # plot score vs. site of U (ref--> E.coli)
     # sns.scatterplot(data=to_plot, x='Reference index', y='Score', alpha=0.8, hue=colors, legend=False)
@@ -597,27 +609,35 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
 
 
 def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path, file_type='svg',
-                                     var_regs_overrides=[]):
+                                     var_regs_overrides=None, xlim=1600, share_x_lim=True):
     # Quick and dirty function to make three stacked plots in time for lab meeting
+    # var_regs_overrides is a list that can either have a list of variable regions formatted as below, or None if we
+    # want to use the default E. coli variable regions
 
     # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
-    if not var_regs_overrides:
-        var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
-                    (1435, 1465)]
+    default_var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156),
+                        (1243, 1295), (1435, 1465)]
+    var_regs = []
+    if var_regs_overrides is not None:
+        for indexes in var_regs_overrides:
+            if not indexes:
+                var_regs.append(default_var_regs)
+            else:
+                var_regs.append(indexes)
+    else:
+        var_regs = [default_var_regs] * len(above_coverage)
+
     # set up plots to look pretty
     set_params_for_plots((12, 8), 'talk')
-    mid_i = math.ceil(len(above_coverage) / 2)
 
-    fig, ax = plt.subplots(len(above_coverage), 1, sharex=True, sharey=True, layout="constrained")
+    fig, ax = plt.subplots(len(above_coverage), 1, sharex=share_x_lim, sharey=True, layout="constrained")
 
     for i, big_df in enumerate(above_coverage):
         ax[i].set_ylim(0.7, 1)
-        ax[i].set_xlim(0, 1600)
+        if share_x_lim:
+            ax[i].set_xlim(0, xlim)
 
-        if not var_regs_overrides:
-            plot_variable_regions(ax[i], var_regs)
-        else:
-            plot_variable_regions(ax[i], var_regs_overrides[i])
+        plot_variable_regions(ax[i], var_regs[i])
 
         # plot score vs. site of U (ref--> E.coli)
         sns.scatterplot(data=big_df, ax=ax[i], x='Reference index', y='Score', alpha=0.8, legend=False)
@@ -635,16 +655,13 @@ def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path,
     fig.savefig(f'{output_path}/All designs along 16s score.{file_type}', transparent=False)
     plt.show()
 
-    fig, ax = plt.subplots(len(above_coverage), 1, sharex=True, sharey=True, layout="constrained")
+    fig, ax = plt.subplots(len(above_coverage), 1, sharex=share_x_lim, sharey=True, layout="constrained")
 
     for i, big_df in enumerate(above_coverage):
         ax[i].set_ylim(0.7, 1)
-        ax[i].set_xlim(0, 1600)
-
-        if not var_regs_overrides:
-            plot_variable_regions(ax[i], var_regs)
-        else:
-            plot_variable_regions(ax[i], var_regs_overrides[i])
+        if share_x_lim:
+            ax[i].set_xlim(0, xlim)
+        plot_variable_regions(ax[i], var_regs[i])
 
         # plot score vs. site of U (ref--> E.coli)
         sns.scatterplot(data=big_df, ax=ax[i], x='Reference index', y='True % cov', alpha=0.8, legend=False)

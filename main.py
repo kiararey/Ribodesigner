@@ -101,15 +101,17 @@ if __name__ == '__main__':
 
         above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings,
                                                         ref_path, name.replace('_', ' '), 'png')
-        # fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
-        #                               name.replace('_', ' '), above_coverage, 'png')
-        playsound('/System/Library/Sounds/Pop.aiff')
+        fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path,
+                                      name.replace('_', ' '), above_coverage, 'png')
 
         all_above_coverage.append(above_coverage)
 
 
     # Now plot the 16s rRNA figures one on top of the other
-    fig_plt.plot_for_16s_coverage_multipanel(all_above_coverage, dataset_names, output_path, file_type='png')
+    # The largest SSU is the 18s, we need this to keep everything on the same axis!
+    limit_override = 1800
+    fig_plt.plot_for_16s_coverage_multipanel(all_above_coverage, dataset_names, output_path, file_type='png',
+                                             xlim=limit_override)
 
     # Now, align to model organisms and make more data!
     archea_model_ref_path = 'Common_sequences/Methanobrevibacter smithii 16s.fasta'
@@ -125,9 +127,9 @@ if __name__ == '__main__':
     # incorrect please and I will fix it! This is base-1 indexing btw.
     m_smithii_var_regs = [(64, 74), (112, 205), (394, 433), (528, 589), (768, 799), (940, 978), (1056, 1103),
                           (1190, 1242), (1384, 1402)]
-    s_cerevisiae_var_regs = [(80, 318), (355, 444), (635, 689), (785, 845), (1040, 1071), (1223, 1257), (1339, 1387),
-                             (1476, 1532), (1695, 1728)]
-    var_regs_overrides = [m_smithii_var_regs, s_cerevisiae_var_regs]
+    s_cerevisiae_var_regs = [(69, 80), (126, 292), (478, 510), (643, 850), (1048, 1070), (1350, 1400), (1480, 1531),
+                             (1674, 1730)]
+    var_regs_overrides = [m_smithii_var_regs, s_cerevisiae_var_regs, None]
 
     for i, name in enumerate(dataset_names):
         datasets_path = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_{name}/'
@@ -140,8 +142,14 @@ if __name__ == '__main__':
         above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_paths[i], ribodesigner_settings,
                                                         ref_paths[i], name.replace('_', ' '), 'png')
         fig_plt.plot_for_16s_coverage(datasets, datasets_path, output_paths[i], ribodesigner_settings, ref_paths[i],
-                                      name.replace('_', ' '), above_coverage, 'png', var_regs_overrides)
-        playsound('/System/Library/Sounds/Pop.aiff')
+                                      name.replace('_', ' '), above_coverage, 'png', var_regs_overrides[i])
 
+        all_above_coverage[i] = above_coverage
 
+    dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only']
+    big_out_path = 'SILVA_output_files_Super5/'
+    # Now plot the 16s rRNA figures one on top of the other
+    fig_plt.plot_for_16s_coverage_multipanel(all_above_coverage, dataset_names, big_out_path, file_type='png',
+                                             var_regs_overrides=var_regs_overrides, share_x_lim=False)
+    playsound('/System/Library/Sounds/Pop.aiff')
 
