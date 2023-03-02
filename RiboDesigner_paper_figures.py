@@ -14,7 +14,7 @@ minlen = 50
 # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
 barcode_seq_file = 'Common_sequences/sfGFP_2_seq_barcode.txt'
 
-# We'll be using the ribozyme published in the RAM paper
+# We'll be using the Ribozyme published in the RAM paper
 ribobody_file = 'Common_sequences/ribozyme_body.txt'
 
 # Prepare the datasets
@@ -34,7 +34,7 @@ ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
 # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
 #                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
 #                                     folder_to_save=output_path)
-#
+
 
 
 # ########################################################
@@ -52,7 +52,7 @@ ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
 ########################################################
 # SILVA squished datasets
 dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
-dataset_names = ['Eukaryota_Only', 'Bacteria_Only', 'All']
+dataset_names = ['Bacteria_Only', 'All']
 output_path = 'SILVA_figure_output_files/'
 
 for name in dataset_names:
