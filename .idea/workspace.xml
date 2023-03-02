@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Alrighty here is a good working RiboDesigner.py. I'll merge the branches and begin working on bringing back targeted designs">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Small memory optimization. I realized I am generating the whole ribozyme design for all sequences way too early. Now the full guide + G + IGS and full ribozyme designs are only generated at the very end. This should be a minor speed and memory usage improvement.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -366,7 +365,7 @@
       <workItem from="1675101464992" duration="23407000" />
       <workItem from="1675292234152" duration="42425000" />
       <workItem from="1676409303140" duration="14075000" />
-      <workItem from="1677519528530" duration="16792000" />
+      <workItem from="1677519528530" duration="22588000" />
     </task>
     <task id="LOCAL-00001" summary="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.">
       <created>1652300361864</created>
@@ -704,7 +703,14 @@
       <option name="project" value="LOCAL" />
       <updated>1677780030990</updated>
     </task>
-    <option name="localTasksCounter" value="49" />
+    <task id="LOCAL-00049" summary="Small memory optimization. I realized I am generating the whole ribozyme design for all sequences way too early. Now the full guide + G + IGS and full ribozyme designs are only generated at the very end. This should be a minor speed and memory usage improvement.">
+      <created>1677791102076</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1677791102077</updated>
+    </task>
+    <option name="localTasksCounter" value="50" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -734,7 +740,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Made a formal ribozymer function. Will test with SILVA database soon." />
     <MESSAGE value="Testing with SILVA database!" />
     <MESSAGE value="Will test first with Bacteria only" />
     <MESSAGE value="Fixed a teeny mistake" />
@@ -759,7 +764,8 @@
     <MESSAGE value="scrambling to make figures for lab meeting" />
     <MESSAGE value="Finalized figure making scripts" />
     <MESSAGE value="Alrighty here is a good working RiboDesigner.py. I'll merge the branches and begin working on bringing back targeted designs" />
-    <option name="LAST_COMMIT_MESSAGE" value="Alrighty here is a good working RiboDesigner.py. I'll merge the branches and begin working on bringing back targeted designs" />
+    <MESSAGE value="Small memory optimization. I realized I am generating the whole ribozyme design for all sequences way too early. Now the full guide + G + IGS and full ribozyme designs are only generated at the very end. This should be a minor speed and memory usage improvement." />
+    <option name="LAST_COMMIT_MESSAGE" value="Small memory optimization. I realized I am generating the whole ribozyme design for all sequences way too early. Now the full guide + G + IGS and full ribozyme designs are only generated at the very end. This should be a minor speed and memory usage improvement." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
