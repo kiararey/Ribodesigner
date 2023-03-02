@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from RiboDesigner import RiboDesigner
-from v2RiboDesigner import RiboDesigner as oldRiboDesigner
+from oldribodesigner import RiboDesigner as oldRiboDesigner
 from playsound import playsound
 
 if __name__ == '__main__':
@@ -44,23 +44,23 @@ if __name__ == '__main__':
     # print(f'Figure test done!\n########################################################\n')
 
     ########################################################
-    # # Test datasets
-    # print('Running test data...\n')
+    # Test datasets
+    print('Running test data...\n')
 
-    # test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
-    #             "Data files and Outputs/Ribozyme paper dataset/Original files"
+    test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
+                "Data files and Outputs/Ribozyme paper dataset/Original files"
     # print('########################################################\nNew multiprocessing - Super5:\n')
     # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
     #                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
     #                                     folder_to_save=output_path, msa_fast=True)
-    #
-    # print('########################################################\nOld multiprocessing - Super5:\n')
-    # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
-    #                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
-    #                                     folder_to_save=output_path, msa_fast=True)
-    #
-    # test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
-    #
+
+    print('########################################################\nOld multiprocessing - Super5:\n')
+    out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
+                                    min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
+                                        folder_to_save=output_path)
+
+    test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
+
     # print('########################################################\nNew multiprocessing - Super5:\n')
     # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
     #                         min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     # ########################################################
     # SILVA squished datasets
     dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only', 'All']
-    dataset_names = ['Archaea_Only', 'Eukaryota_Only', 'Bacteria_Only']
+    dataset_names = ['All']
     output_path = 'SILVA_output_files_Super5/E_coli_ref/'
     all_above_coverage = []
 
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
         datasets = np.array([file_name for file_name in os.listdir(datasets_path) if file_name != '.DS_Store'])
         datasets.sort()
-        ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True, True]
+        ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0.7, 0.7, True, True]
 
         above_coverage = fig_plt.score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings,
                                                         ref_path, name.replace('_', ' '), 'png')

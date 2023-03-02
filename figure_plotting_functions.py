@@ -678,4 +678,3 @@ def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path,
     sns.despine(offset=10, trim=False)
     fig.savefig(f'{output_path}/All designs along 16s coverage.{file_type}', transparent=False)
     plt.show()
-

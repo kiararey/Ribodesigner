@@ -677,40 +677,40 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, cou
             if nucleotide not in ['A', 'U', 'C', 'G', '-']:
                 if nucleotide == 'T':
                     probs[ref_idx]['U'] += 1
-                elif nucleotide == 'R':
-                    probs[ref_idx]['A'] += 0.5
-                    probs[ref_idx]['G'] += 0.5
-                elif nucleotide == 'Y':
-                    probs[ref_idx]['U'] += 0.5
-                    probs[ref_idx]['C'] += 0.5
                 elif nucleotide == 'M':
                     probs[ref_idx]['A'] += 0.5
                     probs[ref_idx]['C'] += 0.5
-                elif nucleotide == 'K':
+                elif nucleotide == 'R':
+                    probs[ref_idx]['A'] += 0.5
                     probs[ref_idx]['G'] += 0.5
+                elif nucleotide == 'W':
+                    probs[ref_idx]['A'] += 0.5
                     probs[ref_idx]['U'] += 0.5
                 elif nucleotide == 'S':
                     probs[ref_idx]['G'] += 0.5
                     probs[ref_idx]['C'] += 0.5
-                elif nucleotide == 'W':
-                    probs[ref_idx]['A'] += 0.5
+                elif nucleotide == 'Y':
                     probs[ref_idx]['U'] += 0.5
+                    probs[ref_idx]['C'] += 0.5
+                elif nucleotide == 'K':
+                    probs[ref_idx]['G'] += 0.5
+                    probs[ref_idx]['U'] += 0.5
+                elif nucleotide == 'V':
+                    probs[ref_idx]['A'] += 1 / 3
+                    probs[ref_idx]['C'] += 1 / 3
+                    probs[ref_idx]['G'] += 1 / 3
                 elif nucleotide == 'H':
                     probs[ref_idx]['A'] += 1 / 3
                     probs[ref_idx]['C'] += 1 / 3
-                    probs[ref_idx]['U'] += 1 / 3
-                elif nucleotide == 'B':
-                    probs[ref_idx]['C'] += 1 / 3
-                    probs[ref_idx]['G'] += 1 / 3
                     probs[ref_idx]['U'] += 1 / 3
                 elif nucleotide == 'D':
                     probs[ref_idx]['A'] += 1 / 3
                     probs[ref_idx]['G'] += 1 / 3
                     probs[ref_idx]['U'] += 1 / 3
-                elif nucleotide == 'V':
-                    probs[ref_idx]['A'] += 1 / 3
+                elif nucleotide == 'B':
                     probs[ref_idx]['C'] += 1 / 3
                     probs[ref_idx]['G'] += 1 / 3
+                    probs[ref_idx]['U'] += 1 / 3
                 elif nucleotide == 'N':
                     probs[ref_idx]['A'] += 0.25
                     probs[ref_idx]['C'] += 0.25
