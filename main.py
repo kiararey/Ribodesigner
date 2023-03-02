@@ -43,33 +43,36 @@ if __name__ == '__main__':
     #                               'test data')
     # print(f'Figure test done!\n########################################################\n')
 
-    ########################################################
-    # Test datasets
-    print('Running test data...\n')
-
-    test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
-                "Data files and Outputs/Ribozyme paper dataset/Original files"
-    # print('########################################################\nNew multiprocessing - Super5:\n')
+    # ########################################################
+    # # Test datasets
+    # print('Running test data...\n')
+    #
+    # test_data = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
+    #             "Data files and Outputs/Ribozyme paper dataset/Original files"
+    # print('########################################################\nNew less memory - Super5:\n')
     # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
     #                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
     #                                     folder_to_save=output_path, msa_fast=True)
-
-    print('########################################################\nOld multiprocessing - Super5:\n')
-    out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
-                                    min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
-                                        folder_to_save=output_path)
-
-    test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
-
-    # print('########################################################\nNew multiprocessing - Super5:\n')
+    #
+    # print('########################################################\nOld more momory - Super5:\n')
+    # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data,
+    #                                 min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
+    #                                     folder_to_save=output_path, msa_fast=True)
+    # print(f'Are old data and new data the same? {out_data==out_data_old}')
+    #
+    # test_data_archaea = f'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
+    #
+    # print('########################################################\nNew less memory - Super5:\n')
     # out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
     #                         min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
     #                         folder_to_save=output_path, msa_fast=True)
     #
-    # print('########################################################\nOld multiprocessing - Super5:\n')
+    # print('########################################################\nOld more momory - Super5:\n')
     # out_data_old = oldRiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, test_data_archaea,
-    #                         min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
-    #                         folder_to_save=output_path, msa_fast=True)
+    #                                min_true_cov=0, identity_thresh=0.7, fileout=True, ref_sequence_file=ref_path,
+    #                                folder_to_save=output_path, msa_fast=True)
+    #
+    # print(f'Are old data and new data the same? {out_data == out_data_old}')
     # playsound('/System/Library/Sounds/Pop.aiff')
     # print(f'Test data done!\n########################################################\n')
 
