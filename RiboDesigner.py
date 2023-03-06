@@ -28,9 +28,28 @@ with warnings.catch_warnings():
 
 
 def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
-                 target_sequences_folder: str, ref_sequence_file=None, targeted=False, background_sequences_folder='',
-                 optimize_seq=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
-                 score_type='quantitative', msa_fast=False, keep_single_targets=False):
+                 target_sequences_folder: str, ref_sequence_file=None, targeted: bool = False,
+                 background_sequences_folder: str = '', optimize_seq: bool = True,
+                 min_true_cov: float = 0.7, identity_thresh: float = 0.7, fileout: bool = False,
+                 folder_to_save: str = '', score_type: str = 'quantitative', msa_fast: bool = False,
+                 keep_single_targets: bool = False):
+    """Generates ribozyme designs to target a set of sequences.
+
+    :param igs_length:
+    :param guide_length:
+    :param min_length: minimum guide sequence length from 3' end. Must be smaller than guide_length
+    :param barcode_seq_file: file containing the desired insertion barcode sequence (5' -> 3')
+    :param ribobody_file: file containing the ribozyme sequence to use as the body template (5' -> 3')
+    :param target_sequences_folder:
+    :param ref_sequence_file:
+    :param optimize_seq:
+    :param min_true_cov:
+    :param identity_thresh:
+    :param fileout:
+    :param folder_to_save:
+    :param score_type:
+    :param msa_fast:
+    """
     # RiboDesigner is a function that generates Ribozyme designs to target a set of sequences (target_seqs)
 
     # target_seqs: list of seqs, containing the target RNA sequences to target (5' -> 3'). Generate with read_fasta or
@@ -130,6 +149,7 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
         end = time.perf_counter()
         print(f'Time taken: {time2 - time1}s\n')
         print(f'Time taken overall: {end - start}s\n')
+        print('########################################################\n')
         return opti_seqs
 
     else:
@@ -139,15 +159,20 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
         print('All guide sequences generated.')
         end = time.perf_counter()
         print(f'Time taken overall: {end - start}s\n')
+        print('########################################################\n')
         return ranked_sorted_IGS
 
 
-def find_cat_sites(target_names_and_seqs, igs_length: int, guide_length, min_length: int):
-    # find_cat_sites finds all instances of a U or T in a set of sequences and creates ribozyme designs for these
-    # target_seqs_and_names (list of tuples: each with format (string, Seq object) are the sequences we want to analyze
-    # igs_length (int), desired IGS sequence length
-    # guide_length (int), desired guide binding sequence length
-    # min_length (int), must be smaller than guide_length. nucleotide tolerance at 3' end of target sequence
+def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int, guide_length: int, min_length: int):
+    """
+    Finds all instances of a U or T in a set of sequences and creates ribozyme designs for these sites.
+
+    :param target_names_and_seqs: list of tuples, each formatted as (string, Seq object) for all sequences.
+    :param igs_length: desired IGS sequence length.
+    :param guide_length: desired guide binding sequence length.
+    :param min_length: minimum guide sequence length from 3' end. Must be smaller than guide_length.
+    :return:
+    """
     #   (a.k.a. minimum guide sequence length from 3' end) ex: if you want your guide sequence to
     #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
 
@@ -194,14 +219,22 @@ def find_cat_sites(target_names_and_seqs, igs_length: int, guide_length, min_len
     return filtered_data
 
 
-def align_to_ref(data, ref_name_and_seq, base_to_find='U'):
-    # align_to_ref will first align each target sequence to a reference sequence, find all catalytic site indexes, and
-    # return a list of all the data analyzed with their new indexes, with one entry per target sequence as below:
-    # [name, sequ, (IGS, guide_seq, og_idx, ref_idx)]
-    # will also return a dictionary of dictionaries (one inner dictionary for each target sequence) containing the
-    # index of each catalytic site to match it with its reference index site.
-    # the dictionary will have the form: conversion_dicts = {name: {original_idx: reference_idx}}
-    # finally it will also return the alignments in case we need them downstream.
+def align_to_ref(data, ref_name_and_seq, base_to_find: str = 'U'):
+    """
+    Aligns each target sequence to a reference sequence, finds all catalytic site indexes, and returns:
+
+    a list of all analyzed data with new indices wherein each entry has the following formatting:
+    [name, sequ, (ribozyme_seq, IGS_and_guide_seq, IGS, guide_seq, og_idx, ref_idx)]
+
+    a nested dictionary containing the index of each catalytic site to match ite with its reference index site.
+    Formatting: {name: {original_idx: reference_idx}}
+
+    aligned sequences
+
+    :param data:
+    :param ref_name_and_seq:
+    :param base_to_find:
+    """
 
     # Ok doing this because biopython is deprecating pairwise2 and I do not have the bandwidth to deal with that rn
 
@@ -215,6 +248,15 @@ def align_to_ref(data, ref_name_and_seq, base_to_find='U'):
 
 
 def align_to_ref_loop(name, sequ, cat_site_info, ref_name_and_seq, base_to_find):
+    """
+
+    :param name:
+    :param sequ:
+    :param cat_site_info:
+    :param ref_name_and_seq:
+    :param base_to_find:
+    :return:
+    """
     # prepare patterns to look for to extract individual sequences from pairwise alignment
     pattern_a = 'seqA=\'(.*?)\''
     pattern_b = 'seqB=\'(.*?)\''
@@ -261,8 +303,15 @@ def align_to_ref_loop(name, sequ, cat_site_info, ref_name_and_seq, base_to_find)
     return new_data
 
 
-def read_fasta_folder(path, file_type='fasta'):
-    # for now, filepath is where we are keeping all of the .FASTA files
+def read_fasta_folder(path: str, file_type: str = 'fasta') -> list[tuple]:
+    """
+    Reads in two or more .fasta files from directory
+
+    :param path: filepath to directory of .fasta files
+    :param file_type: file extension
+    :return: A list of tuples formatted as (ID, sequence)
+    """
+    # for now, filepath is where we are keeping all the .FASTA files
     # will return a list of tuples as (ID, sequence)
 
     target_seqs_and_names = []
@@ -273,7 +322,14 @@ def read_fasta_folder(path, file_type='fasta'):
     return target_seqs_and_names
 
 
-def read_fasta(in_file: str, file_type='fasta'):
+def read_fasta(in_file: str, file_type: str = 'fasta') -> list[tuple]:
+    """
+    Reads in a single .fasta file
+
+    :param in_file: file path to single .fasta file
+    :param file_type: file extension
+    :return: A list of tuples formatted as (ID, sequence)
+    """
     # filepath here is a fasta file
     # will return a list of tuples as (ID, sequence)
 
@@ -284,14 +340,24 @@ def read_fasta(in_file: str, file_type='fasta'):
     return target_seqs_and_names
 
 
-def find(string_to_analyze: str, char_to_find: str):
+def find(string_to_analyze: str, char_to_find: str) -> list[int, str]:
     """
     Finds all instances of a character char_to_find in a string string_to_analyze.
+
+    :param string_to_analyze:
+    :param char_to_find:
+    :return: A list of the indices and strings where the desired character is found.
     """
     return [i for i, ltr in enumerate(string_to_analyze) if ltr == char_to_find]
 
 
-def transcribe_seq_file(seq_file: str):
+def transcribe_seq_file(seq_file: str) -> Seq:
+    """
+    Converts DNA sequences into RNA transcripts
+
+    :param seq_file: .txt file containing one or more DNA sequences
+    :return: Seq object
+    """
     # seq_file must be a .txt file
     with open(seq_file) as f:
         for i in f:
@@ -299,7 +365,7 @@ def transcribe_seq_file(seq_file: str):
     return out_seq
 
 
-def filter_for_targets(new_data: list, background_sequences_data: list, guide_length: int, ribo_seq: str,
+def filter_for_targets(new_data: list[list], background_sequences_data: list[list], guide_length: int, ribo_seq: str,
                        ref_name_and_seq, optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False,
                        folder_to_save='', score_type='quantitative', msa_fast=False, keep_single_targets=False):
     # Takes a list full of aligned target sequences and another with the background sequences which we do not want.
@@ -394,7 +460,13 @@ def filter_for_targets_loop(new_data: list, ideal_target_igs_list:list, guide_le
         return None
 
 
-def prep_for_optimizing(new_data, min_true_cov=0.0, accept_single_targets=True):
+def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_single_targets: bool = True):
+    """
+    :param new_data:
+    :param min_true_cov:
+    :param accept_single_targets:
+    :return:
+    """
     # recall that new_data is a list of lists with one entry per target sequence where each entry is of the form:
     # [name, sequ, (IGSes, guide_sequences, (og_idx, ref_idx))]
     big_repeats = []
@@ -483,7 +555,16 @@ def prep_for_optimizing(new_data, min_true_cov=0.0, accept_single_targets=True):
     return to_optimize, to_keep_single_targets
 
 
-def find_repeat_targets(new_data, ribo_seq, fileout=False, file=''):
+def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = False, file: str = ''):
+    """
+
+    :param new_data:
+    :param ribo_seq:
+    :param fileout:
+    :param file:
+    :return:
+    """
+
     # recall that new_data is a list of lists with one entry per target sequence where each entry is of the form:
     # [name, sequ, (IGSes, guide_sequences, (og_idx, ref_idx))]
     big_repeats = []
@@ -585,8 +666,23 @@ def find_repeat_targets(new_data, ribo_seq, fileout=False, file=''):
     return ranked_sorted_IGS
 
 
-def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='',
-                       score_type='quantitative', gaps_allowed=True, msa_fast=False):
+def optimize_sequences(to_optimize, thresh: float, guide_length: int, ribo_seq: str, single_targets,
+                       fileout: bool = False, file: str = '', score_type: str = 'quantitative',
+                       gaps_allowed: bool = True, msa_fast: bool = False):
+    """
+
+    :param to_optimize:
+    :param thresh:
+    :param guide_length:
+    :param ribo_seq:
+    :param single_targets:
+    :param fileout:
+    :param file:
+    :param score_type:
+    :param gaps_allowed:
+    :param msa_fast:
+    :return:
+    """
     print(f'Optimizing {len(to_optimize)} guide sequences...')
 
     in_data = [(key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast) for key in to_optimize]
@@ -649,7 +745,18 @@ def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide
     return opti_seqs
 
 
-def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative', gaps_allowed='True', msa_fast=False):
+def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str = 'quantitative',
+                     gaps_allowed: bool = True, msa_fast: bool = False):
+    """
+
+    :param name:
+    :param seqs_to_align:
+    :param thresh:
+    :param score_type:
+    :param gaps_allowed:
+    :param msa_fast:
+    :return:
+    """
     # seqs_to_align is a list containing a sequence from an individual organism in each position.
 
     with open(f'to_align_{name}.fasta', 'w') as f:
@@ -745,7 +852,17 @@ def msa_and_optimize(name, seqs_to_align, thresh=0.7, score_type='quantitative',
     return opti_seq, score
 
 
-def get_quantitative_score(msa, thresh=0.7, chars_to_ignore=None, count_gaps=True, penalize_trailing_gaps=False):
+def get_quantitative_score(msa, thresh: float = 0.7, chars_to_ignore: list[str] = None,
+                           count_gaps: bool = True, penalize_trailing_gaps: bool = False):
+    """
+
+    :param msa:
+    :param thresh:
+    :param chars_to_ignore:
+    :param count_gaps:
+    :param penalize_trailing_gaps:
+    :return:
+    """
     # a modified version of BioPython'string_to_analyze PSSM funtction that counts gaps by default and also gives us
     # the quantitative score. This quantitative score is as follows:
 
@@ -795,7 +912,18 @@ def get_quantitative_score(msa, thresh=0.7, chars_to_ignore=None, count_gaps=Tru
     return score, opti_seq
 
 
-def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base=None, count_gap=False, fileout=False, file=''):
+def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = None, count_gap: bool = False,
+                         fileout: bool = False, file: str = ''):
+    """
+
+    :param target_names_and_seqs:
+    :param ref_name_and_seq:
+    :param base:
+    :param count_gap:
+    :param fileout:
+    :param file:
+    :return:
+    """
     # prepare patterns to look for to extract individual sequences from pairwise alignment
     pattern_a = 'seqA=\'(.*?)\''
     pattern_b = 'seqB=\'(.*?)\''
