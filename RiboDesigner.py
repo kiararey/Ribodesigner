@@ -13,10 +13,6 @@ import glob
 import os
 import random
 import warnings
-
-with warnings.catch_warnings():
-    warnings.simplefilter('ignore')
-    from Bio import SeqIO, pairwise2, AlignIO
 from Bio.Seq import Seq
 import re
 import pandas as pd
@@ -26,12 +22,15 @@ from Bio.Align import AlignInfo
 from math import exp, log
 from multiprocessing import Pool
 import time
+with warnings.catch_warnings():
+    warnings.simplefilter('ignore')
+    from Bio import SeqIO, pairwise2, AlignIO
 
 
 def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
-                 target_sequences_folder: str, ref_sequence_file=None,
+                 target_sequences_folder: str, ref_sequence_file=None, targeted=False, background_sequences_folder='',
                  optimize_seq=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
-                 score_type='quantitative', msa_fast=False):
+                 score_type='quantitative', msa_fast=False, keep_single_targets=False):
     # RiboDesigner is a function that generates Ribozyme designs to target a set of sequences (target_seqs)
 
     # target_seqs: list of seqs, containing the target RNA sequences to target (5' -> 3'). Generate with read_fasta or
@@ -45,11 +44,14 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
     #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
     # fileout: boolean, whether we want a csv file output or not (default True)
     # file_name: string, the path where the folder we will save our outputs in if fileout = True
+    # background_sequences_folder: the sequences we do NOT want to target
 
-    start = time.time()
+    start = time.perf_counter()
 
+    # Make the Ribozyme sequence by combining the main body and the barcode
     barcode_seq = transcribe_seq_file(barcode_seq_file)
     ribobody = transcribe_seq_file(ribobody_file)
+    ribo_seq = ribobody + barcode_seq
 
     if target_sequences_folder[-6:] == '.fasta':
         target_names_and_seqs = read_fasta(target_sequences_folder)
@@ -76,57 +78,73 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
 
     print(f'Found {len(target_names_and_seqs)} total sequences to analyze.')
 
-    # Make the Ribozyme sequence by combining the main body and the barcode
-    ribo_seq = ribobody + barcode_seq
-
     # find all catalytic U sites
     # Remember: data has one tuple per target sequence, the third entry is a tuple for each catalytic U site
-    time1 = time.time()
-    data = find_cat_sites(target_names_and_seqs, ribo_seq, igs_length, guide_length, min_length)
-    time2 = time.time()
+    time1 = time.perf_counter()
+    data = find_cat_sites(target_names_and_seqs, igs_length, guide_length, min_length)
+    time2 = time.perf_counter()
     print(f'Time taken: {time2 - time1}s\n')
 
     # Now align sequences to reference sequences and get the conversion dictionaries for each
-    time1 = time.time()
+    time1 = time.perf_counter()
     new_data = align_to_ref(data, ref_name_and_seq)
-    time2 = time.time()
+    time2 = time.perf_counter()
     print(f'Time taken: {time2 - time1}s\n')
+    time1 = time.perf_counter()
 
-    time1 = time.time()
-    if optimize_seq:
-        mid_file = False
-    else:
-        mid_file = True
-    big_temp_list, to_optimize, filtered_list, \
-    ranked_IGS, ranked_sorted_IGS, to_keep_single_targets = find_repeat_targets(new_data, min_true_cov=min_true_cov,
-                                                                                fileout=mid_file, file=folder_to_save)
-    time2 = time.time()
-    print(f'Time taken: {time2 - time1}s\n')
+    if targeted:
+        print('Now finding targeted designs...')
+        time1 = time.perf_counter()
+        # get all background sequences
+        if target_sequences_folder[-6:] == '.fasta':
+            background_names_and_seqs = read_fasta(background_sequences_folder)
+        else:
+            background_names_and_seqs = read_fasta_folder(background_sequences_folder)
+
+        # first find the IGSes and locations of the background sequences. We do not want to hit these.
+        background_sequences_data = find_cat_sites(background_names_and_seqs, igs_length,
+                                                   guide_length, min_length)
+
+        # Then, use these data to only keep the designs that are least likely to work in background seqs
+        out_data = filter_for_targets(new_data, background_sequences_data, guide_length, ribo_seq, optimize_seq,
+                                      min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
+                                      msa_fast, keep_single_targets, ref_name_and_seq)
+
+        time2 = time.perf_counter()
+        print(f'Time taken: {time2 - time1}s\n')
+        return out_data
 
     # Now, we can optimize each sequence
     if optimize_seq:
-        time1 = time.time()
+
+        to_optimize, to_keep_single_targets = prep_for_optimizing(new_data, min_true_cov=min_true_cov,
+                                                                  accept_single_targets=keep_single_targets)
+        time2 = time.perf_counter()
+        print(f'Time taken: {time2 - time1}s\n')
+
+
+        time1 = time.perf_counter()
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
                                        fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast)
-        time2 = time.time()
-        end = time.time()
+        time2 = time.perf_counter()
+        end = time.perf_counter()
         print(f'Time taken: {time2 - time1}s\n')
         print(f'Time taken overall: {end - start}s\n')
-        print('########################################################\n')
         return opti_seqs
 
     else:
+        ranked_sorted_IGS = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
+        time2 = time.perf_counter()
+        print(f'Time taken: {time2 - time1}s\n')
         print('All guide sequences generated.')
-        end = time.time()
+        end = time.perf_counter()
         print(f'Time taken overall: {end - start}s\n')
-        print('########################################################\n')
         return ranked_sorted_IGS
 
 
-def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_length, min_length: int):
+def find_cat_sites(target_names_and_seqs, igs_length: int, guide_length, min_length: int):
     # find_cat_sites finds all instances of a U or T in a set of sequences and creates ribozyme designs for these
     # target_seqs_and_names (list of tuples: each with format (string, Seq object) are the sequences we want to analyze
-    # ribo_seq (Seq object) is the sequence of the ribozyme body and barcode we are using
     # igs_length (int), desired IGS sequence length
     # guide_length (int), desired guide binding sequence length
     # min_length (int), must be smaller than guide_length. nucleotide tolerance at 3' end of target sequence
@@ -134,7 +152,7 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
     #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
 
     # initialize final product - will be a list of tuples of the format:
-    # [target_name, target_sequence, (IGS_and_guide_seq + ribo_seq, IGS_and_guide_seq, IGS, guide_seq, IGS_idx]
+    # [target_name, target_sequence, (IGS, guide_seq, IGS_idx]
     # where each big list is one target sequence, and each tuple is one individual catalytic site
 
     data = [None] * len(target_names_and_seqs)  # one entry per target sequence
@@ -143,9 +161,6 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
     for name, sequ in target_names_and_seqs:
         # find all possible splice sites
         idx = find(sequ, 'U')
-
-        if not idx:  # in case it'string_to_analyze a DNA sequence (so no U sites in sequence)
-            idx = find(sequ, 'T')  # because U is T duh
         # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
         idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
 
@@ -153,9 +168,6 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
             print(f'No viable catalytic sites in {name}')
             col += 1
             continue
-
-        IGS_and_ribo_seqs = [None] * len(idx_new)
-        IGS_and_guide_seqs = [None] * len(idx_new)
         IGSes = [None] * len(idx_new)
         guides = [None] * len(idx_new)
         indexes = [None] * len(idx_new)
@@ -168,16 +180,12 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
 
             # now join IGS + G (where U site should be for wobble pair) + guide sequence and
             # append to ribozyme template
-            IGS_and_guide_seq = guide + 'G' + IGS  # Make 5'-> 3' binding seq: attaches to 5' end of ribo_seq correctly
-
-            IGS_and_ribo_seqs[small_col] = IGS_and_guide_seq + ribo_seq
-            IGS_and_guide_seqs[small_col] = IGS_and_guide_seq
             IGSes[small_col] = IGS
             guides[small_col] = guide
             indexes[small_col] = i + 1  # we're adding 1 to the idx because of 0 based indexing
 
             small_col += 1
-        data[col] = [name, sequ, (IGS_and_ribo_seqs, IGS_and_guide_seqs, IGSes, guides, indexes)]
+        data[col] = [name, sequ, (IGSes, guides, indexes)]
         col += 1
     # now remove entries with no viable sites
     # from https://www.geeksforgeeks.org/python-remove-none-values-from-list/
@@ -189,7 +197,7 @@ def find_cat_sites(target_names_and_seqs, ribo_seq, igs_length: int, guide_lengt
 def align_to_ref(data, ref_name_and_seq, base_to_find='U'):
     # align_to_ref will first align each target sequence to a reference sequence, find all catalytic site indexes, and
     # return a list of all the data analyzed with their new indexes, with one entry per target sequence as below:
-    # [name, sequ, (ribozyme_seq, IGS_and_guide_seq, IGS, guide_seq, og_idx, ref_idx)]
+    # [name, sequ, (IGS, guide_seq, og_idx, ref_idx)]
     # will also return a dictionary of dictionaries (one inner dictionary for each target sequence) containing the
     # index of each catalytic site to match it with its reference index site.
     # the dictionary will have the form: conversion_dicts = {name: {original_idx: reference_idx}}
@@ -222,18 +230,16 @@ def align_to_ref_loop(name, sequ, cat_site_info, ref_name_and_seq, base_to_find)
     idx_seq_a = find(seq_a, base_to_find)
 
     # initialize lists
-    temp_ribozyme_sequences = [None] * len(cat_site_info[4])
-    temp_IGS_and_guide_sequences = [None] * len(cat_site_info[4])
-    temp_IGSes = [None] * len(cat_site_info[4])
-    temp_guide_sequences = [None] * len(cat_site_info[4])
-    temp_og_and_ref_idexes = [None] * len(cat_site_info[4])
+    temp_IGSes = [None] * len(cat_site_info[-1])
+    temp_guide_sequences = [None] * len(cat_site_info[-1])
+    temp_og_and_ref_idexes = [None] * len(cat_site_info[-1])
 
     small_col = 0
 
     for idx in idx_seq_a:
-        if small_col >= len(cat_site_info[4]):
+        if small_col >= len(cat_site_info[-1]):
             break
-        og_idx = cat_site_info[4][small_col]
+        og_idx = cat_site_info[2][small_col]
         seq_a_idx = len(seq_a[:idx].replace('-', '')) + 1
         if seq_a_idx != og_idx:
             continue
@@ -246,15 +252,12 @@ def align_to_ref_loop(name, sequ, cat_site_info, ref_name_and_seq, base_to_find)
         # where each entry is a list
 
         # fill lists with data
-        temp_ribozyme_sequences[small_col] = cat_site_info[0][small_col]
-        temp_IGS_and_guide_sequences[small_col] = cat_site_info[1][small_col]
-        temp_IGSes[small_col] = cat_site_info[2][small_col]
-        temp_guide_sequences[small_col] = cat_site_info[3][small_col]
+        temp_IGSes[small_col] = cat_site_info[0][small_col]
+        temp_guide_sequences[small_col] = cat_site_info[1][small_col]
         temp_og_and_ref_idexes[small_col] = (og_idx, ref_idx)
         small_col += 1
 
-    new_data = [name, sequ, (temp_ribozyme_sequences, temp_IGS_and_guide_sequences, temp_IGSes,
-                             temp_guide_sequences, temp_og_and_ref_idexes)]
+    new_data = [name, sequ, (temp_IGSes, temp_guide_sequences, temp_og_and_ref_idexes)]
     return new_data
 
 
@@ -296,20 +299,115 @@ def transcribe_seq_file(seq_file: str):
     return out_seq
 
 
-def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
+def filter_for_targets(new_data: list, background_sequences_data: list, guide_length: int, ribo_seq: str,
+                       ref_name_and_seq, optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False,
+                       folder_to_save='', score_type='quantitative', msa_fast=False, keep_single_targets=False):
+    # Takes a list full of aligned target sequences and another with the background sequences which we do not want.
+    # new_data items are formatted as: [name, sequ, (IGSes, guides, (og_idx, ref_idx))]
+    # background_sequences_data items are formatted as: [name, sequ, (IGSes, guides, og_indexes)]
+
+    # Find IGSes that only occur in new_data regardless of position
+    # Extract IGSes
+    print('Now attempting to find IGSes that only occur in background sequences...\n')
+    target_igs_list = [set(cat_site_data[0]) for (_, _, cat_site_data) in new_data]
+    background_igs_list = [set(cat_site_data[0]) for (_, _, cat_site_data) in background_sequences_data]
+    ideal_target_igs_list = set(target_igs_list).difference(background_igs_list)
+
+    # If there are IGSes that occur only in targeted sequences, then awesome those are highest priority! check if they
+    # meet our min_true_cov.
+    # Keep track of how many targets don't have an IGS in the list. It's possible that we can skip to the next check
+    # without having to call prep_for_optimizing yet.
+    if ideal_target_igs_list:
+        out_data = filter_for_targets_loop(new_data, ideal_target_igs_list, guide_length, ribo_seq, optimize,
+                                           min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
+                                           msa_fast, keep_single_targets)
+        if out_data:
+            return out_data
+
+    # If not, find IGSes that occur only in targeted sequences at the same position.
+    # find the position of background sequence IGSes:
+    aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
+    target_igs_list = [{cat_site_data[0], cat_site_data[2][1]} for (_, _, cat_site_data) in new_data]
+    background_igs_list = [{cat_site_data[0], cat_site_data[2][1]} for (_, _, cat_site_data) in aligned_background_sequences]
+    ideal_target_igs_list = set(target_igs_list).difference(background_igs_list)
+
+    if ideal_target_igs_list:
+        out_data = filter_for_targets_loop(new_data, ideal_target_igs_list, guide_length, ribo_seq, optimize,
+                                           min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
+                                           msa_fast, keep_single_targets)
+        if out_data:
+            return out_data
+
+    # If still not, find IGSes with the most occurences in the targeted sequences and the least occurences in the
+    # background sequences.
+    return
+
+
+def filter_for_targets_loop(new_data: list, ideal_target_igs_list:list, guide_length: int, ribo_seq: str,
+                            optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
+                            score_type='quantitative', msa_fast=False, keep_single_targets=False):
+    print('Found candidate IGSes! Now checking for minimum coverage requirements...\n')
+    no_matches = len(new_data)
+    filtered_data = []
+    for name, sequ, target_data in new_data:
+        igs_list_temp = []
+        guide_list_temp = []
+        idx_list_temp = []
+        for igs, guide, indexes in target_data:
+            if len(ideal_target_igs_list[0]) == 1:
+                if igs in ideal_target_igs_list:
+                    igs_list_temp.extend(igs)
+                    guide_list_temp.extend(guide)
+                    idx_list_temp.extend(indexes)
+            else:
+                if {igs, indexes[1]} in ideal_target_igs_list:
+                    igs_list_temp.extend(igs)
+                    guide_list_temp.extend(guide)
+                    idx_list_temp.extend(indexes)
+
+        if igs_list_temp:
+            filtered_data.append([name, sequ, (igs_list_temp, guide_list_temp, idx_list_temp)])
+        else:
+            # If the target did not contain the igs, then track that
+            no_matches -= 1
+            if no_matches / len(new_data) < min_true_cov:
+                return None
+
+    if optimize:
+        to_optimize, to_keep_single_targets = prep_for_optimizing(filtered_data, min_true_cov=min_true_cov,
+                                                                  accept_single_targets=keep_single_targets)
+        if to_optimize:
+            opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
+                                           fileout=fileout, file=folder_to_save, score_type=score_type,
+                                           msa_fast=msa_fast)
+            return opti_seqs
+        elif to_keep_single_targets:
+            print('Only found single targets.')
+        else:
+            print('No candidate IGSes meet minimum coverage requirements. Continuing to search...')
+            return None
+    ranked_sorted_IGS = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
+    if ranked_sorted_IGS:
+        return ranked_sorted_IGS
+    else:
+        print('No candidate IGSes meet minimum coverage requirements. Continuing to search...')
+        return None
+
+
+def prep_for_optimizing(new_data, min_true_cov=0.0, accept_single_targets=True):
     # recall that new_data is a list of lists with one entry per target sequence where each entry is of the form:
-    # [name, sequ, (ribozyme_sequences, IGS_and_guide_sequences, IGSes, guide_sequences, (og_idx, ref_idx))]
+    # [name, sequ, (IGSes, guide_sequences, (og_idx, ref_idx))]
     big_repeats = []
-    start = time.time()
+    start = time.perf_counter()
     print('Finding repeat subsets...')
 
-    igs_subsets = [set(cat_site_data[2]) for i, (_, _, cat_site_data) in enumerate(new_data)]
+    igs_subsets = [set(cat_site_data[0]) for i, (_, _, cat_site_data) in enumerate(new_data)]
     # igs_subsets_pairs = [(igs_subsets[i], igs_subsets[i+1:]) for i in range(len(igs_subsets) -1)]
 
     for i, igs_data_a in enumerate(igs_subsets):
         if i == len(igs_subsets):
             break
-        for igs_data_b in igs_subsets[i+1:]:
+        for igs_data_b in igs_subsets[i + 1:]:
             # make a subset of second column of unique IGS values
             # and find the shared values between sets with no duplicates
             no_dupes = igs_data_a & igs_data_b
@@ -318,7 +416,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
             if repeats:
                 big_repeats.extend(repeats)
 
-    print(f'Time taken: {time.time() - start}s\n')
+    print(f'Time taken: {time.perf_counter() - start}s\n')
     print('Found repeat subsets. Now analyzing sequences...')
 
     # remove duplicates of all IGSes found
@@ -334,7 +432,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
         coverage_count = 0  # this will track how many target sequences contain the IGS
         col = 0
         for org, sequ, cat_site_data in new_data:  # in each target sequence (target seq is org)
-            pos = [i for i, e in enumerate(cat_site_data[2]) if e == IGS_sequ]  # extract positions of matching IGSes
+            pos = [i for i, e in enumerate(cat_site_data[0]) if e == IGS_sequ]  # extract positions of matching IGSes
 
             if not pos:  # if not in this particular seq, try next seq
                 col += 1
@@ -351,7 +449,7 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
                 target_num = len(pos)
 
                 for p in pos:
-                    ref_pos = cat_site_data[4][p][1]
+                    ref_pos = cat_site_data[2][p][1]
                     if on_target_count[ref_pos]:
                         on_target_count[ref_pos] += 1
                     else:
@@ -359,9 +457,9 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
 
                     guide_id = str(IGS_sequ) + str(
                         ref_pos)  # save a guide ID that is the IGS sequence and the reference position
-                    temp_list.append([IGS_sequ, None, None, None, org, target_num, cat_site_data[4][p][0],
-                                      ref_pos, cat_site_data[3][p], cat_site_data[1][p],
-                                      cat_site_data[0][p], sequ, guide_id])
+                    temp_list.append([IGS_sequ, None, None, None, org, target_num, cat_site_data[2][p][0],
+                                      ref_pos, cat_site_data[1][p], sequ, guide_id])
+
                 coverage_count += 1
             col += 1
 
@@ -377,10 +475,92 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
             # if the true % coverage is above min_true_cov, and more than one sequence, mark this IGS for optimization
             if true_coverage >= min_true_cov and on_target_count[item[7]] > 1:
                 # save the IGS sequence AND the matching index in the reference sequence
-                to_optimize[item[12]].append(item)
+                to_optimize[item[10]].append(item)
             # Else if the true % coverage is above min_true_cov but only one sequence still keep but will not optimize
-            elif true_coverage >= min_true_cov:
-                to_keep_single_targets[item[12]].append(item)
+            elif true_coverage >= min_true_cov and accept_single_targets:
+                to_keep_single_targets[item[10]].append(item)
+
+    return to_optimize, to_keep_single_targets
+
+
+def find_repeat_targets(new_data, ribo_seq, fileout=False, file=''):
+    # recall that new_data is a list of lists with one entry per target sequence where each entry is of the form:
+    # [name, sequ, (IGSes, guide_sequences, (og_idx, ref_idx))]
+    big_repeats = []
+    start = time.perf_counter()
+    print('Finding repeat subsets...')
+
+    igs_subsets = [set(cat_site_data[0]) for i, (_, _, cat_site_data) in enumerate(new_data)]
+    # igs_subsets_pairs = [(igs_subsets[i], igs_subsets[i+1:]) for i in range(len(igs_subsets) -1)]
+
+    for i, igs_data_a in enumerate(igs_subsets):
+        if i == len(igs_subsets):
+            break
+        for igs_data_b in igs_subsets[i+1:]:
+            # make a subset of second column of unique IGS values
+            # and find the shared values between sets with no duplicates
+            no_dupes = igs_data_a & igs_data_b
+            # remove any nans
+            repeats = [item for item in no_dupes if str(item) != 'nan']
+            if repeats:
+                big_repeats.extend(repeats)
+
+    print(f'Time taken: {time.perf_counter() - start}s\n')
+    print('Found repeat subsets. Now analyzing sequences...')
+
+    # remove duplicates of all IGSes found
+    filtered_list = list(set(big_repeats))
+
+    # Now find the IGS sequences in the original target sequences and extract matching data
+    big_temp_list = []
+    for IGS_sequ in filtered_list:  # for each IGS sequence
+        temp_list = []
+        coverage_count = 0  # this will track how many target sequences contain the IGS
+        col = 0
+        for org, sequ, cat_site_data in new_data:  # in each target sequence (target seq is org)
+            pos = [i for i, e in enumerate(cat_site_data[0]) if e == IGS_sequ]  # extract positions of matching IGSes
+
+            if not pos:  # if not in this particular seq, try next seq
+                col += 1
+                continue
+            else:  # if the IGS is found in the target seq, get all the data we want
+                # To calculate whether a particular IGS is in the same position in multiple targets or not I am making a
+                # HUGE assumption: as the sequences are already aligned to a single reference sequence, any base
+                # position will have EXACTLY the same position numbering. This allows my code to use dictionaries to
+                # determine whether something is or is not on target as the position must match exactly. If we want some
+                # tolerance in how many base pairs away a position can be to be considered on-target I will need to find
+                # another way to calculate this which would probably use a LOT more computational power.
+                if coverage_count == 0:
+                    on_target_count = defaultdict(list)
+                target_num = len(pos)
+
+                for p in pos:
+                    ref_pos = cat_site_data[2][p][1]
+                    if on_target_count[ref_pos]:
+                        on_target_count[ref_pos] += 1
+                    else:
+                        on_target_count[ref_pos] = 1
+
+                    guide_id = str(IGS_sequ) + str(
+                        ref_pos)  # save a guide ID that is the IGS sequence and the reference position
+
+                    guide_and_igs = cat_site_data[1][p] + 'G' + IGS_sequ
+                    full_design = guide_and_igs + ribo_seq
+                    temp_list.append([IGS_sequ, None, None, None, org, target_num, cat_site_data[2][p][0],
+                                      ref_pos, cat_site_data[1][p], guide_and_igs,
+                                      full_design, sequ, guide_id])
+                coverage_count += 1
+            col += 1
+
+        # if the IGS sequence wasn't found in enough target seqs, add to list of seqs to filter
+        perc_coverage = coverage_count / len(new_data)
+
+        for item in temp_list:
+            item[1] = perc_coverage
+            item[2] = on_target_count[item[7]] / coverage_count  # out of all organisms with this IGS at this position
+            true_coverage = on_target_count[item[7]] / len(new_data)
+            item[3] = true_coverage
+            big_temp_list.append(list(item))
 
     # Make dataframes for excel ig
     ranked_IGS = pd.DataFrame(data=big_temp_list, index=None,
@@ -398,27 +578,15 @@ def find_repeat_targets(new_data, min_true_cov=0, fileout=False, file=''):
         if os.path.exists(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv'):
             os.remove(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv')
 
-        # # Save as csv
-        # with open(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv', 'w') as f:
-        #     f.write('IGS sequence,% coverage,% on target in targets covered,True % coverage,Target name,Occurrences in '
-        #             'Target Sequence,Index of Splice Site,Equivalent Reference Index of Splice Site,Just Guide,Guide + G + '
-        #             'IGS,Ribozyme Design,Original sequence,ID\n')
-        #     for item in big_temp_list:
-        #         f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{item[7]},{item[8]},'
-        #                 f'{item[9]},{item[10]},{item[11]},{item[12]}\n')
         ranked_sorted_IGS.to_csv(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv',
                                  index=False)
 
-        # # don't currently need this, but maybe in the future will need?
-        # new_data_df = pd.DataFrame.from_records(new_data).T
-        # new_data_df.to_csv(f'{file}/All catalytic U data unsorted.csv', index=True)
 
-    return big_temp_list, to_optimize, filtered_list, ranked_IGS, ranked_sorted_IGS, to_keep_single_targets
+    return ranked_sorted_IGS
 
 
 def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_targets, fileout=False, file='',
-                       score_type='quantitative',
-                       gaps_allowed=True, msa_fast=False):
+                       score_type='quantitative', gaps_allowed=True, msa_fast=False):
     print(f'Optimizing {len(to_optimize)} guide sequences...')
 
     in_data = [(key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast) for key in to_optimize]
@@ -453,17 +621,6 @@ def optimize_sequences(to_optimize, thresh, guide_length: int, ribo_seq, single_
                 list_for_csv = str(item[6]).replace(',', '|')
                 f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{list_for_csv},{item[7]},{item[8]},'
                         f'{item[9]}\n')
-
-    # sorted_opti_seqs = pd.DataFrame(data=opti_seqs, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
-    #                                                                      '% on target', 'True % cov',
-    #                                                                      '(Target name, Target idx, Other '
-    #                                                                      'occurrences of IGS in target sequence)',
-    #                                                                      'Optimized guide',
-    #                                                                      'Optimized guide + G + IGS',
-    #                                                                      'Full Ribozyme design'],
-    #                                 dtype=object).sort_values(by=['True % cov', 'Score'], ascending=[False, False])
-    # sorted_opti_seqs.to_csv(
-    #     f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', index=False)
 
     print('All guide sequences optimized.')
     return opti_seqs
