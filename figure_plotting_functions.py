@@ -1,4 +1,4 @@
-from RiboDesigner import RiboDesigner, read_fasta_folder, read_fasta, find_cat_sites, find
+from RiboDesigner import RiboDesigner, read_fasta, find_cat_sites, find
 from Bio.Seq import Seq
 from Bio import pairwise2
 import re
@@ -100,8 +100,9 @@ def align_to_ref(n, file, barcode_seq_file, ribobody_file, target_path, ref_path
     # riboscore_test is a Boolean that tells if we also want to dcompare NGS vs. RiboDesigner scores
 
     # variable regions V1-V9 (start, end) 1-based indexing:
-    var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156),
-                (1243, 1295), (1435, 1465)]
+    default_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
+                        (1243, 1294), (1435, 1465)]  # https://www.sciencedirect.com/science/article/pii/S0167701207000565
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2562909/#:~:text=Bacterial%2016S%20ribosomal%20RNA%20(rRNA,assays%20and%20other%20scientific%20investigations.
 
     # set up plots to look pretty
     custom_params = {"axes.spines.right": False, "axes.spines.top": False}
@@ -135,7 +136,7 @@ def align_to_ref(n, file, barcode_seq_file, ribobody_file, target_path, ref_path
     minlen = n
 
     # import original sequences
-    target_names, target_seqs = read_fasta_folder(target_path)
+    target_names, target_seqs = read_fasta(target_path)
 
     # run ribodesigner but get the final raw list
     ############## UPDATE THIS!!! ##############
@@ -380,12 +381,12 @@ def set_params_for_plots(figsize, context):
 
 def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path, file_name,
                            file_type='svg'):
-    # ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
-    m = ribodesigner_settings[0]
-    n = ribodesigner_settings[1]
-    minlen = ribodesigner_settings[2]
-    barcode_seq_file = ribodesigner_settings[3]
-    ribobody_file = ribodesigner_settings[4]
+    # ribodesigner_settings = [barcode_seq_file, ribobody_file, m, n, minlen, 0, 0.7, True]
+    barcode_seq_file = ribodesigner_settings[0]
+    ribobody_file = ribodesigner_settings[1]
+    m = ribodesigner_settings[2]
+    n = ribodesigner_settings[3]
+    minlen = ribodesigner_settings[4]
     min_true_cov = ribodesigner_settings[5]
     identity_thresh = ribodesigner_settings[6]
     msa_fast = ribodesigner_settings[7]
@@ -405,14 +406,14 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
         target_sequences_folder = datasets_path + datasets[i]
         org_nums = len(read_fasta(target_sequences_folder))
         if org_nums == 0:
-            org_nums = len(read_fasta_folder(target_sequences_folder))
+            org_nums = len(read_fasta(target_sequences_folder))
 
         if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) < 1:
             if os.path.isdir(output_path_folder) is False:
                 os.mkdir(output_path_folder)
 
-            out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
-                                    min_true_cov=0, identity_thresh=0.7, ref_sequence_file=ref_path,
+            out_data = RiboDesigner(target_sequences_folder, barcode_seq_file, ribobody_file, m, n, minlen,
+                                    min_true_cov=min_true_cov, identity_thresh=identity_thresh, ref_sequence_file=ref_path,
                                     fileout=True, folder_to_save=output_path_folder, msa_fast=msa_fast)
             out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
                                                                            '% on target', 'True % cov',
@@ -503,19 +504,20 @@ def score_vs_true_coverage(datasets, datasets_path, output_path, ribodesigner_se
 
 def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_settings, ref_path, file_name, big_df=[],
                           file_type='svg', var_regs_override=[]):
-    # ribodesigner_settings = [m, n, minlen, barcode_seq_file, ribobody_file, 0, 0.7, True]
-    m = ribodesigner_settings[0]
-    n = ribodesigner_settings[1]
-    minlen = ribodesigner_settings[2]
-    barcode_seq_file = ribodesigner_settings[3]
-    ribobody_file = ribodesigner_settings[4]
+    # ribodesigner_settings = [barcode_seq_file, ribobody_file, m, n, minlen, 0, 0.7, True, True]
+    barcode_seq_file = ribodesigner_settings[0]
+    ribobody_file = ribodesigner_settings[1]
+    m = ribodesigner_settings[2]
+    n = ribodesigner_settings[3]
+    minlen = ribodesigner_settings[4]
     min_true_cov = ribodesigner_settings[5]
     identity_thresh = ribodesigner_settings[6]
     msa_fast = ribodesigner_settings[7]
 
     # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
-    default_var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156), (1243, 1295),
-                (1435, 1465)]
+    default_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
+                        (1243, 1294), (1435, 1465)]  # https://www.sciencedirect.com/science/article/pii/S0167701207000565
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2562909/#:~:text=Bacterial%2016S%20ribosomal%20RNA%20(rRNA,assays%20and%20other%20scientific%20investigations.
 
     if var_regs_override:
         var_regs = var_regs_override
@@ -534,15 +536,15 @@ def plot_for_16s_coverage(datasets, datasets_path, output_path, ribodesigner_set
 
             output_path_folder = output_path + datasets[i].replace('.fasta', '') + '_results'
             target_sequences_folder = datasets_path + datasets[i]
-            org_nums = len(read_fasta_folder(target_sequences_folder))
+            org_nums = len(read_fasta(target_sequences_folder))
 
             if os.path.isdir(output_path_folder) is False or len(os.listdir(output_path_folder)) < 1:
                 if os.path.isdir(output_path_folder) is False:
                     os.mkdir(output_path_folder)
 
                 # Same as before, but we have a reference sequence now (E. coli) to plot variable regions
-                out_data = RiboDesigner(m, n, minlen, barcode_seq_file, ribobody_file, target_sequences_folder,
-                                    ref_sequence_file=ref_path, min_true_cov=0, identity_thresh=0.7, fileout=True,
+                out_data = RiboDesigner(target_sequences_folder, barcode_seq_file, ribobody_file, m, n, minlen,
+                                    ref_sequence_file=ref_path, min_true_cov=min_true_cov, identity_thresh=identity_thresh, fileout=True,
                                     folder_to_save=output_path_folder, msa_fast=msa_fast)
 
                 out_data_df = pd.DataFrame(data=out_data, index=None, columns=['IGS', 'Reference index', 'Score', '% cov',
@@ -615,8 +617,10 @@ def plot_for_16s_coverage_multipanel(above_coverage, dataset_names, output_path,
     # want to use the default E. coli variable regions
 
     # variable regions V1-V9 (start, end) 1-based indexing on E. coli:
-    default_var_regs = [(68, 100), (137, 226), (440, 496), (590, 650), (829, 856), (999, 1037), (1119, 1156),
-                        (1243, 1295), (1435, 1465)]
+    default_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
+                        (1243, 1294), (1435, 1465)]  # https://www.sciencedirect.com/science/article/pii/S0167701207000565
+    # https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2562909/#:~:text=Bacterial%2016S%20ribosomal%20RNA%20(rRNA,assays%20and%20other%20scientific%20investigations.
+
     var_regs = []
     if var_regs_overrides is not None:
         for indexes in var_regs_overrides:

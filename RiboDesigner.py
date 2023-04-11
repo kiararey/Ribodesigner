@@ -23,59 +23,52 @@ from math import exp, log
 from multiprocessing import Pool
 import time
 with warnings.catch_warnings():
+    # I know pairwise2 is being deprecated but I need to get this to work properly before attempting an update that
+    # may break the program entirely.
     warnings.simplefilter('ignore')
     from Bio import SeqIO, pairwise2, AlignIO
 
 
-def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_seq_file: str, ribobody_file: str,
-                 target_sequences_folder: str, ref_sequence_file=None, targeted: bool = False,
-                 background_sequences_folder: str = '', optimize_seq: bool = True,
-                 min_true_cov: float = 0.7, identity_thresh: float = 0.7, fileout: bool = False,
-                 folder_to_save: str = '', score_type: str = 'quantitative', msa_fast: bool = False,
-                 keep_single_targets: bool = False):
+def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_file: str, igs_length: int = 5,
+                 guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, targeted: bool = False,
+                 background_sequences_folder: str = '', optimize_seq: bool = True, min_true_cov: float = 0.7,
+                 identity_thresh: float = 0.7, fileout: bool = False, folder_to_save: str = '',
+                 score_type: str = 'quantitative', msa_fast: bool = False, keep_single_targets: bool = False):
     """Generates ribozyme designs to target a set of sequences.
 
-    :param igs_length:
-    :param guide_length:
-    :param min_length: minimum guide sequence length from 3' end. Must be smaller than guide_length
     :param barcode_seq_file: file containing the desired insertion barcode sequence (5' -> 3')
     :param ribobody_file: file containing the ribozyme sequence to use as the body template (5' -> 3')
-    :param target_sequences_folder:
+    :param target_sequences_folder: folder containing all the sequences you want to design ribozymes for. Can be either
+    a folder of fasta files or a single fasta file.
+    :param igs_length: how long you want your IGS to be in base pairs. Default is 5 bp.
+    :param guide_length: how long you want your guide sequence to be in base pairs. Default is 5 bp.
+    :param min_length: minimum guide sequence length from 3' end. Must be smaller or equal to guide_length.
+    Default is 35 bp. Ex: if you want your guide sequence to bind to at least 35 nt at the 3' end of the target
+    sequence, set min_length = 35.
     :param ref_sequence_file:
-    :param optimize_seq:
-    :param min_true_cov:
+    :param targeted:
+    :param background_sequences_folder: folder containing all the sequences you do NOT want to design ribozymes for.
+    Can be either a folder of fasta files or a single fasta file.
+    :param optimize_seq: recommended. Uses MUSCLE multiple sequence alignment to generate optimized designs for several
+    target sequences.
+    :param min_true_cov: minimum percentage of targets you want to hit at a conserved location with a single optimized
+    design. Default is 0.7 (70% of targets).
     :param identity_thresh:
-    :param fileout:
-    :param folder_to_save:
+    :param fileout: whether we want a csv file output or not. Default is False.
+    :param folder_to_save: the path where the folder we will save our outputs in if fileout = True
     :param score_type:
-    :param msa_fast:
+    :param msa_fast: whether to use super5 MUSCLE MSA or just regular MUSCLE MSA. Recommended for large datasets (over
+    300 sequences) for faster data processing.
+    :param keep_single_targets:
     """
-    # RiboDesigner is a function that generates Ribozyme designs to target a set of sequences (target_seqs)
-
-    # target_seqs: list of seqs, containing the target RNA sequences to target (5' -> 3'). Generate with read_fasta or
-    # read_fasta_folder
-    # target_names: list of strings, containing the corresponding names to target_seqs. Generate with read_fasta or
-    # read_fasta_folder
-    # ribobody: string, containing the Ribozyme sequence to use as the body template (5' -> 3')
-    # bar_seq: string, with the desired insertion barcode sequence (5' -> 3')
-    # min_length: int, must be smaller than guide_length. nucleotide tolerance at 3' end of target sequence
-    #   (a.k.a. minimum guide sequence length from 3' end) ex: if you want your guide sequence to
-    #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
-    # fileout: boolean, whether we want a csv file output or not (default True)
-    # file_name: string, the path where the folder we will save our outputs in if fileout = True
-    # background_sequences_folder: the sequences we do NOT want to target
 
     start = time.perf_counter()
-
     # Make the Ribozyme sequence by combining the main body and the barcode
     barcode_seq = transcribe_seq_file(barcode_seq_file)
     ribobody = transcribe_seq_file(ribobody_file)
     ribo_seq = ribobody + barcode_seq
 
-    if target_sequences_folder[-6:] == '.fasta':
-        target_names_and_seqs = read_fasta(target_sequences_folder)
-    else:
-        target_names_and_seqs = read_fasta_folder(target_sequences_folder)
+    target_names_and_seqs = read_fasta(target_sequences_folder)
 
     try:
         target_names_and_seqs[0]
@@ -115,19 +108,19 @@ def RiboDesigner(igs_length: int, guide_length: int, min_length: int, barcode_se
         print('Now finding targeted designs...')
         time1 = time.perf_counter()
         # get all background sequences
-        if target_sequences_folder[-6:] == '.fasta':
-            background_names_and_seqs = read_fasta(background_sequences_folder)
-        else:
-            background_names_and_seqs = read_fasta_folder(background_sequences_folder)
+        background_names_and_seqs = read_fasta(background_sequences_folder)
 
         # first find the IGSes and locations of the background sequences. We do not want to hit these.
         background_sequences_data = find_cat_sites(background_names_and_seqs, igs_length,
                                                    guide_length, min_length)
 
         # Then, use these data to only keep the designs that are least likely to work in background seqs
-        out_data = filter_for_targets(new_data, background_sequences_data, guide_length, ribo_seq, optimize_seq,
-                                      min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
-                                      msa_fast, keep_single_targets, ref_name_and_seq)
+
+        out_data = filter_for_targets(new_data=new_data, background_sequences_data=background_sequences_data,
+                                      guide_length=guide_length, ribo_seq=ribo_seq, ref_name_and_seq=ref_name_and_seq,
+                                      optimize=optimize_seq, min_true_cov=min_true_cov, identity_thresh=identity_thresh,
+                                      fileout=fileout, folder_to_save=folder_to_save, score_type=score_type,
+                                      msa_fast=msa_fast, keep_single_targets=keep_single_targets)
 
         time2 = time.perf_counter()
         print(f'Time taken: {time2 - time1}s\n')
@@ -240,7 +233,7 @@ def align_to_ref(data, ref_name_and_seq, base_to_find: str = 'U'):
 
     in_data = [(name, sequ, cat_site_info, ref_name_and_seq, base_to_find) for name, sequ, cat_site_info in data]
 
-    print(f'Now re-indexing target sequences to reference {ref_name_and_seq[0].replace("_", " ")}...')
+    print(f'Now re-indexing sequences to reference {ref_name_and_seq[0].replace("_", " ")}...')
     with Pool() as pool:
         new_data = pool.starmap(align_to_ref_loop, in_data)
 
@@ -303,41 +296,28 @@ def align_to_ref_loop(name, sequ, cat_site_info, ref_name_and_seq, base_to_find)
     return new_data
 
 
-def read_fasta_folder(path: str, file_type: str = 'fasta') -> list[tuple]:
-    """
-    Reads in two or more .fasta files from directory
-
-    :param path: filepath to directory of .fasta files
-    :param file_type: file extension
-    :return: A list of tuples formatted as (ID, sequence)
-    """
-    # for now, filepath is where we are keeping all the .FASTA files
-    # will return a list of tuples as (ID, sequence)
-
-    target_seqs_and_names = []
-    for filename in glob.glob(os.path.join(path, '*.' + file_type)):
-        fasta_iter = SeqIO.parse(filename, file_type)
-        for record in fasta_iter:
-            target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
-    return target_seqs_and_names
-
-
 def read_fasta(in_file: str, file_type: str = 'fasta') -> list[tuple]:
     """
-    Reads in a single .fasta file
+    Reads in a single .fasta file or several fasta files from a directory
 
-    :param in_file: file path to single .fasta file
+    :param in_file: file path to single .fasta file or directory of .fasta files
     :param file_type: file extension
     :return: A list of tuples formatted as (ID, sequence)
     """
-    # filepath here is a fasta file
-    # will return a list of tuples as (ID, sequence)
-
     target_seqs_and_names = []
-    fasta_iter = SeqIO.parse(in_file, file_type)
-    for record in fasta_iter:
-        target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
-    return target_seqs_and_names
+    if in_file[-6:] == f'.{file_type}':
+        # filepath here is a fasta file
+        # will return a list of tuples as (ID, sequence)
+        fasta_iter = SeqIO.parse(in_file, file_type)
+        for record in fasta_iter:
+            target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
+        return target_seqs_and_names
+    else:
+        for filename in glob.glob(os.path.join(in_file, '*.' + file_type)):
+            fasta_iter = SeqIO.parse(filename, file_type)
+            for record in fasta_iter:
+                target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
+        return target_seqs_and_names
 
 
 def find(string_to_analyze: str, char_to_find: str) -> list[int, str]:
@@ -367,24 +347,25 @@ def transcribe_seq_file(seq_file: str) -> Seq:
 
 def filter_for_targets(new_data: list[list], background_sequences_data: list[list], guide_length: int, ribo_seq: str,
                        ref_name_and_seq, optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False,
-                       folder_to_save='', score_type='quantitative', msa_fast=False, keep_single_targets=False):
+                       folder_to_save='', score_type='quantitative', msa_fast=False, keep_single_targets=False,
+                       max_off_target=0.1):
     # Takes a list full of aligned target sequences and another with the background sequences which we do not want.
     # new_data items are formatted as: [name, sequ, (IGSes, guides, (og_idx, ref_idx))]
     # background_sequences_data items are formatted as: [name, sequ, (IGSes, guides, og_indexes)]
 
     # Find IGSes that only occur in new_data regardless of position
     # Extract IGSes
-    print('Now attempting to find IGSes that only occur in background sequences...\n')
-    target_igs_list = [set(cat_site_data[0]) for (_, _, cat_site_data) in new_data]
-    background_igs_list = [set(cat_site_data[0]) for (_, _, cat_site_data) in background_sequences_data]
-    ideal_target_igs_list = set(target_igs_list).difference(background_igs_list)
+    print('First attempting to find IGSes that only occur in target sequences...')
+    target_igs_set = {y for (_, _, cat_site_data) in new_data for y in cat_site_data[0]}
+    background_igs_set = {y for (_, _, cat_site_data) in background_sequences_data for y in cat_site_data[0]}
+    ideal_target_igs_set = target_igs_set.difference(background_igs_set)
 
     # If there are IGSes that occur only in targeted sequences, then awesome those are highest priority! check if they
     # meet our min_true_cov.
     # Keep track of how many targets don't have an IGS in the list. It's possible that we can skip to the next check
     # without having to call prep_for_optimizing yet.
-    if ideal_target_igs_list:
-        out_data = filter_for_targets_loop(new_data, ideal_target_igs_list, guide_length, ribo_seq, optimize,
+    if ideal_target_igs_set:
+        out_data = filter_for_targets_loop(new_data, ideal_target_igs_set, guide_length, ribo_seq, True, optimize,
                                            min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
                                            msa_fast, keep_single_targets)
         if out_data:
@@ -392,24 +373,46 @@ def filter_for_targets(new_data: list[list], background_sequences_data: list[lis
 
     # If not, find IGSes that occur only in targeted sequences at the same position.
     # find the position of background sequence IGSes:
+    print('\nChecking for IGSes that occur only in targeted sequences at the same position... ')
     aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
-    target_igs_list = [{cat_site_data[0], cat_site_data[2][1]} for (_, _, cat_site_data) in new_data]
-    background_igs_list = [{cat_site_data[0], cat_site_data[2][1]} for (_, _, cat_site_data) in aligned_background_sequences]
-    ideal_target_igs_list = set(target_igs_list).difference(background_igs_list)
+    target_igs_set = {(y, x) for (_, _, cat_site_data) in new_data for y, x in zip(cat_site_data[0], cat_site_data[2][1])}
+    background_igs_set = {(y, x) for (_, _, cat_site_data) in aligned_background_sequences for y, x
+                          in zip(cat_site_data[0], cat_site_data[2][1])}
 
-    if ideal_target_igs_list:
-        out_data = filter_for_targets_loop(new_data, ideal_target_igs_list, guide_length, ribo_seq, optimize,
+    ideal_target_igs_set = target_igs_set.difference(background_igs_set)
+
+    if ideal_target_igs_set:
+        out_data = filter_for_targets_loop(new_data, ideal_target_igs_set, guide_length, ribo_seq, False, optimize,
                                            min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
                                            msa_fast, keep_single_targets)
         if out_data:
             return out_data
 
-    # If still not, find IGSes with the most occurences in the targeted sequences and the least occurences in the
+    # If still not, find IGSes with the most occurrences in the targeted sequences and the least occurrences in the
     # background sequences.
-    return
+
+    if optimize:
+        print('Could not find targets that do not hit background sequences. Finding targets with the least occurrences '
+              'in background sequences...')
+        new_data.extend(aligned_background_sequences)
+        to_optimize, to_keep_single_targets = prep_for_optimizing(new_data, min_true_cov=min_true_cov,
+                                                                  accept_single_targets=keep_single_targets)
+        # Here add a step that goes through designs and finds those that occur mostly in target sequences
 
 
-def filter_for_targets_loop(new_data: list, ideal_target_igs_list:list, guide_length: int, ribo_seq: str,
+        opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
+                                       fileout=fileout, file=folder_to_save, score_type=score_type,
+                                       msa_fast=msa_fast)
+        return opti_seqs
+
+    else:
+        print('Could not find targets that do not hit background sequences. Consider optimizing to find targets with '
+              'the least occurrences in background sequences.\nNow finding single targets...')
+        out_data = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
+        return out_data
+
+
+def filter_for_targets_loop(new_data: list, ideal_target_igs_set: set, guide_length: int, ribo_seq: str, testing_round_1: bool,
                             optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
                             score_type='quantitative', msa_fast=False, keep_single_targets=False):
     print('Found candidate IGSes! Now checking for minimum coverage requirements...\n')
@@ -419,27 +422,30 @@ def filter_for_targets_loop(new_data: list, ideal_target_igs_list:list, guide_le
         igs_list_temp = []
         guide_list_temp = []
         idx_list_temp = []
-        for igs, guide, indexes in target_data:
-            if len(ideal_target_igs_list[0]) == 1:
-                if igs in ideal_target_igs_list:
-                    igs_list_temp.extend(igs)
-                    guide_list_temp.extend(guide)
-                    idx_list_temp.extend(indexes)
+        igs_candidates, guide_candidates, indexes_candidates = target_data
+        for igs, guide, indexes in zip(igs_candidates, guide_candidates, indexes_candidates):
+            if testing_round_1:
+                if igs in ideal_target_igs_set:
+                    igs_list_temp.append(igs)
+                    guide_list_temp.append(guide)
+                    idx_list_temp.append(indexes)
             else:
-                if {igs, indexes[1]} in ideal_target_igs_list:
-                    igs_list_temp.extend(igs)
-                    guide_list_temp.extend(guide)
-                    idx_list_temp.extend(indexes)
+                if (igs, indexes[1]) in ideal_target_igs_set:
+                    igs_list_temp.append(igs)
+                    guide_list_temp.append(guide)
+                    idx_list_temp.append(indexes)
 
         if igs_list_temp:
             filtered_data.append([name, sequ, (igs_list_temp, guide_list_temp, idx_list_temp)])
         else:
-            # If the target did not contain the igs, then track that
+            # If the target did not contain any igs, then track that
             no_matches -= 1
             if no_matches / len(new_data) < min_true_cov:
+                print('No candidates within the minimum true coverage were found.')
                 return None
 
     if optimize:
+        print('Candidates within minimum true coverage found! Now optimizing...')
         to_optimize, to_keep_single_targets = prep_for_optimizing(filtered_data, min_true_cov=min_true_cov,
                                                                   accept_single_targets=keep_single_targets)
         if to_optimize:
@@ -449,15 +455,22 @@ def filter_for_targets_loop(new_data: list, ideal_target_igs_list:list, guide_le
             return opti_seqs
         elif to_keep_single_targets:
             print('Only found single targets.')
+            return to_keep_single_targets
         else:
             print('No candidate IGSes meet minimum coverage requirements. Continuing to search...')
             return None
+    print('Candidates within minimum true coverage found! Now ranking...')
     ranked_sorted_IGS = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
     if ranked_sorted_IGS:
         return ranked_sorted_IGS
     else:
         print('No candidate IGSes meet minimum coverage requirements. Continuing to search...')
         return None
+
+def ribochecker(opti_seqs, bad_seqs):
+
+
+    return
 
 
 def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_single_targets: bool = True):
@@ -687,7 +700,6 @@ def optimize_sequences(to_optimize, thresh: float, guide_length: int, ribo_seq: 
 
     in_data = [(key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast) for key in to_optimize]
 
-    # opti_seqs = optimize_sequences_loop('ACUAA1126', to_optimize['ACUAA1126'], thresh, score_type, gaps_allowed, guide_length, ribo_seq)
     with Pool() as pool:
         opti_seqs = pool.starmap(optimize_sequences_loop, in_data)
 
@@ -1028,6 +1040,17 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
         sorted_opti_seqs.to_csv(f'{file}/Shannon entropy of aligned sequences.csv', index=False)
 
     return shannon_entropy_list, xaxis_list, yaxis_list
+
+
+    def ribo_checker(designs, target_sequences):
+        """Checks generated designs against a set of sequences to either find how well they align to a given dataset.
+        Will return a set of sequences that match for each design as well as a score showing how well they matched.
+        :param target_sequences:
+        :param designs:
+        """
+    #     find IGSes
+
+    return
 
 # def ambiguity_consensus(summary_align, threshold=0.7, gaps_allowed=False):
 #     # I've made a modified version of BioPython'string_to_analyze dumb consensus that will allow IUPAC ambiguity codes
