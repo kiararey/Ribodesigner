@@ -16,6 +16,7 @@ import warnings
 from Bio.Seq import Seq
 import re
 import pandas as pd
+import numpy as np
 from collections import defaultdict
 import subprocess
 from Bio.Align import AlignInfo
@@ -104,28 +105,6 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     print(f'Time taken: {time2 - time1}s\n')
     time1 = time.perf_counter()
 
-    if targeted:
-        print('Now finding targeted designs...')
-        time1 = time.perf_counter()
-        # get all background sequences
-        background_names_and_seqs = read_fasta(background_sequences_folder)
-
-        # first find the IGSes and locations of the background sequences. We do not want to hit these.
-        background_sequences_data = find_cat_sites(background_names_and_seqs, igs_length,
-                                                   guide_length, min_length)
-
-        # Then, use these data to only keep the designs that are least likely to work in background seqs
-
-        out_data = filter_for_targets(new_data=new_data, background_sequences_data=background_sequences_data,
-                                      guide_length=guide_length, ribo_seq=ribo_seq, ref_name_and_seq=ref_name_and_seq,
-                                      optimize=optimize_seq, min_true_cov=min_true_cov, identity_thresh=identity_thresh,
-                                      fileout=fileout, folder_to_save=folder_to_save, score_type=score_type,
-                                      msa_fast=msa_fast, keep_single_targets=keep_single_targets)
-
-        time2 = time.perf_counter()
-        print(f'Time taken: {time2 - time1}s\n')
-        return out_data
-
     # Now, we can optimize each sequence
     if optimize_seq:
 
@@ -139,8 +118,23 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
                                        fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast)
         time2 = time.perf_counter()
-        end = time.perf_counter()
         print(f'Time taken: {time2 - time1}s\n')
+
+        time1 = time.perf_counter()
+        if targeted:
+            background_names_and_seqs = read_fasta(background_sequences_folder)
+
+            # first find the IGSes and locations of the background sequences. We do not want to hit these.
+            background_sequences_data = find_cat_sites(background_names_and_seqs, igs_length,
+                                                       guide_length, min_length)
+            aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
+
+            designs_and_background_scores = ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]))
+
+        time2 = time.perf_counter()
+        print(f'Time taken: {time2 - time1}s\n')
+
+        end = time.perf_counter()
         print(f'Time taken overall: {end - start}s\n')
         print('########################################################\n')
         return opti_seqs
@@ -345,132 +339,84 @@ def transcribe_seq_file(seq_file: str) -> Seq:
     return out_seq
 
 
-def filter_for_targets(new_data: list[list], background_sequences_data: list[list], guide_length: int, ribo_seq: str,
-                       ref_name_and_seq, optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False,
-                       folder_to_save='', score_type='quantitative', msa_fast=False, keep_single_targets=False,
-                       max_off_target=0.1):
-    # Takes a list full of aligned target sequences and another with the background sequences which we do not want.
-    # new_data items are formatted as: [name, sequ, (IGSes, guides, (og_idx, ref_idx))]
-    # background_sequences_data items are formatted as: [name, sequ, (IGSes, guides, og_indexes)]
-
-    # Find IGSes that only occur in new_data regardless of position
-    # Extract IGSes
-    print('First attempting to find IGSes that only occur in target sequences...')
-    target_igs_set = {y for (_, _, cat_site_data) in new_data for y in cat_site_data[0]}
-    background_igs_set = {y for (_, _, cat_site_data) in background_sequences_data for y in cat_site_data[0]}
-    ideal_target_igs_set = target_igs_set.difference(background_igs_set)
-
-    # If there are IGSes that occur only in targeted sequences, then awesome those are highest priority! check if they
-    # meet our min_true_cov.
-    # Keep track of how many targets don't have an IGS in the list. It's possible that we can skip to the next check
-    # without having to call prep_for_optimizing yet.
-    if ideal_target_igs_set:
-        out_data = filter_for_targets_loop(new_data, ideal_target_igs_set, guide_length, ribo_seq, True, optimize,
-                                           min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
-                                           msa_fast, keep_single_targets)
-        if out_data:
-            return out_data
-
-    # If not, find IGSes that occur only in targeted sequences at the same position.
-    # find the position of background sequence IGSes:
-    print('\nChecking for IGSes that occur only in targeted sequences at the same position... ')
-    aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
-    target_igs_set = {(y, x) for (_, _, cat_site_data) in new_data for y, x in zip(cat_site_data[0], cat_site_data[2][1])}
-    background_igs_set = {(y, x) for (_, _, cat_site_data) in aligned_background_sequences for y, x
-                          in zip(cat_site_data[0], cat_site_data[2][1])}
-
-    ideal_target_igs_set = target_igs_set.difference(background_igs_set)
-
-    if ideal_target_igs_set:
-        out_data = filter_for_targets_loop(new_data, ideal_target_igs_set, guide_length, ribo_seq, False, optimize,
-                                           min_true_cov, identity_thresh, fileout, folder_to_save, score_type,
-                                           msa_fast, keep_single_targets)
-        if out_data:
-            return out_data
-
-    # If still not, find IGSes with the most occurrences in the targeted sequences and the least occurrences in the
-    # background sequences.
-
-    if optimize:
-        print('Could not find targets that do not hit background sequences. Finding targets with the least occurrences '
-              'in background sequences...')
-        new_data.extend(aligned_background_sequences)
-        to_optimize, to_keep_single_targets = prep_for_optimizing(new_data, min_true_cov=min_true_cov,
-                                                                  accept_single_targets=keep_single_targets)
-        # Here add a step that goes through designs and finds those that occur mostly in target sequences
+def ribo_checker(designs, aligned_target_sequences, ref_seq_len):
+    """Checks generated designs against a set of sequences to either find how well they align to a given dataset.
+    Will return a set of sequences that match for each design as well as a score showing how well they matched.
+    :param designs:
+    :param target_sequences:
+    """
+    # extract all design IGSes and guides.
+    # This will be a list: [igs, guide, ref_idx, id(igs+ref_idx)]
+    igs_and_guides_designs = [(str(design[0]), design[7], design[1], str(design[0]) + str(design[1])) for design in designs]
 
 
-        opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
-                                       fileout=fileout, file=folder_to_save, score_type=score_type,
-                                       msa_fast=msa_fast)
-        return opti_seqs
+    # Is there a U at each position for each design at each target sequence?
+    designed_idxs = np.array(list({design[2] - 1 for design in igs_and_guides_designs}))
+    uracil_sites_targets = np.zeros((len(aligned_target_sequences), ref_seq_len))
+    uracil_sites_targets[:, designed_idxs] = 1
+    for i, target_data in enumerate(aligned_target_sequences):
+        temp_uracil_indexes = np.array([ref_idx - 1 for _, ref_idx in target_data[2][2]])
+        # everything that is a 2 is a U that appears in both the designs and the target sequence
+        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2
 
-    else:
-        print('Could not find targets that do not hit background sequences. Consider optimizing to find targets with '
-              'the least occurrences in background sequences.\nNow finding single targets...')
-        out_data = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
-        return out_data
+    # for histogram
+    values, counts = np.unique(uracil_sites_targets, return_counts=True)
+    print(f'There are {dict(zip(values, counts))[2]} conserved Us and {dict(zip(values, counts))[1]} not conserved.')
 
+    # What is the conservation of IGSes at a particular position for each design?
+    # Keep only the sites that are conserved for later
+    igs_sites_targets = np.array(np.clip(uracil_sites_targets-1, 0, 1), copy=True, dtype=str)
+    conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
 
-def filter_for_targets_loop(new_data: list, ideal_target_igs_set: set, guide_length: int, ribo_seq: str, testing_round_1: bool,
-                            optimize=True, min_true_cov=0.7, identity_thresh=0.7, fileout=False, folder_to_save='',
-                            score_type='quantitative', msa_fast=False, keep_single_targets=False):
-    print('Found candidate IGSes! Now checking for minimum coverage requirements...\n')
-    no_matches = len(new_data)
-    filtered_data = []
-    for name, sequ, target_data in new_data:
-        igs_list_temp = []
-        guide_list_temp = []
-        idx_list_temp = []
-        igs_candidates, guide_candidates, indexes_candidates = target_data
-        for igs, guide, indexes in zip(igs_candidates, guide_candidates, indexes_candidates):
-            if testing_round_1:
-                if igs in ideal_target_igs_set:
-                    igs_list_temp.append(igs)
-                    guide_list_temp.append(guide)
-                    idx_list_temp.append(indexes)
-            else:
-                if (igs, indexes[1]) in ideal_target_igs_set:
-                    igs_list_temp.append(igs)
-                    guide_list_temp.append(guide)
-                    idx_list_temp.append(indexes)
+    for target_number, ref_idx in conserved_u_sites:
+        # extract IGS there:
+        index_of_target_data = np.argwhere(np.array(aligned_target_sequences[target_number][2][2])[:, 1] == ref_idx+1)[0, 0]
+        igs_sites_targets[target_number, ref_idx] = str(aligned_target_sequences[target_number][2][0][index_of_target_data])
 
-        if igs_list_temp:
-            filtered_data.append([name, sequ, (igs_list_temp, guide_list_temp, idx_list_temp)])
+    # Now find how many conserved IGSes there are!
+    conserved_igs_perc_coverage = {}
+    for igs, _, ref_idx, igs_id in igs_and_guides_designs:
+        check = np.argwhere(igs_sites_targets == igs)
+        if len(check) > 0:
+            conserved_igs_perc_coverage[igs_id] = sum(check[:, 1] == ref_idx - 1)/len(aligned_target_sequences)
         else:
-            # If the target did not contain any igs, then track that
-            no_matches -= 1
-            if no_matches / len(new_data) < min_true_cov:
-                print('No candidates within the minimum true coverage were found.')
-                return None
+            conserved_igs_perc_coverage[igs_id] = 0
 
-    if optimize:
-        print('Candidates within minimum true coverage found! Now optimizing...')
-        to_optimize, to_keep_single_targets = prep_for_optimizing(filtered_data, min_true_cov=min_true_cov,
-                                                                  accept_single_targets=keep_single_targets)
-        if to_optimize:
-            opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
-                                           fileout=fileout, file=folder_to_save, score_type=score_type,
-                                           msa_fast=msa_fast)
-            return opti_seqs
-        elif to_keep_single_targets:
-            print('Only found single targets.')
-            return to_keep_single_targets
-        else:
-            print('No candidate IGSes meet minimum coverage requirements. Continuing to search...')
-            return None
-    print('Candidates within minimum true coverage found! Now ranking...')
-    ranked_sorted_IGS = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
-    if ranked_sorted_IGS:
-        return ranked_sorted_IGS
-    else:
-        print('No candidate IGSes meet minimum coverage requirements. Continuing to search...')
-        return None
+    print('hi')
 
-def ribochecker(opti_seqs, bad_seqs):
+    # What is the guide score at a given location for each target sequence for any given design?
+
+
+    # # For each generated design, compare against the aligned target sequences. Basically find if there is an IGS at the
+    # # same position anywhere.
+    # for i, design in enumerate(designs):
+    #     igs = design[0]
+    #     guide = design[7]
+    #     ref_idx = design[1]
+    #     # id is igs + reference position number
+    #     guide_id = str(igs) + str(design[1])
+    #     score = 0
+
+
+    # Then, check IGS off target effects and how bad those are
+
+    # do a pairwise alignment of all good designs with matching IGS to see if they are good
+
+    return
+
+
+
+def compare_targeted_sequences(good_designs_and_scores, bad_designs_and_scores, min_delta):
+    """
+    Will generate a delta score between good and bad designs. Those with the largest difference are good!
+    :param good_designs_and_scores:
+    :param bad_designs_and_scores:
+    :return:
+    """
 
 
     return
+
 
 
 def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_single_targets: bool = True):
@@ -1040,17 +986,6 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
         sorted_opti_seqs.to_csv(f'{file}/Shannon entropy of aligned sequences.csv', index=False)
 
     return shannon_entropy_list, xaxis_list, yaxis_list
-
-
-    def ribo_checker(designs, target_sequences):
-        """Checks generated designs against a set of sequences to either find how well they align to a given dataset.
-        Will return a set of sequences that match for each design as well as a score showing how well they matched.
-        :param target_sequences:
-        :param designs:
-        """
-    #     find IGSes
-
-    return
 
 # def ambiguity_consensus(summary_align, threshold=0.7, gaps_allowed=False):
 #     # I've made a modified version of BioPython'string_to_analyze dumb consensus that will allow IUPAC ambiguity codes
