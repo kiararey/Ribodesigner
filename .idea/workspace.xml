@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high...">
       <change afterPath="$PROJECT_DIR$/ribochecker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -366,14 +367,7 @@
       <workItem from="1679431928013" duration="3942000" />
       <workItem from="1679691075281" duration="22584000" />
       <workItem from="1680555562972" duration="7144000" />
-      <workItem from="1680798553720" duration="34728000" />
-    </task>
-    <task id="LOCAL-00005" summary="Removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!&#10;&#10;Still need to fix unique and narrow sequences so they work with the new code, and test the indexing, but this should be able to find common sequences in a dataset now.">
-      <created>1653590386576</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1653590386576</updated>
+      <workItem from="1680798553720" duration="36028000" />
     </task>
     <task id="LOCAL-00006" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info">
       <created>1655229211489</created>
@@ -711,7 +705,14 @@
       <option name="project" value="LOCAL" />
       <updated>1681842663809</updated>
     </task>
-    <option name="localTasksCounter" value="54" />
+    <task id="LOCAL-00054" summary="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high...">
+      <created>1681850938109</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1681850938109</updated>
+    </task>
+    <option name="localTasksCounter" value="55" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -848,12 +849,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>136</line>
+          <line>135</line>
           <option name="timeStamp" value="253" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>445</line>
+          <line>444</line>
           <option name="timeStamp" value="256" />
         </line-breakpoint>
       </breakpoints>
@@ -878,7 +879,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1681842325484" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1681851953764" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />

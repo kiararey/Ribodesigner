@@ -131,8 +131,7 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
 
             is_u_conserved, conserved_igs_true_perc_coverage, delta_scores = ribo_checker(
                 opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]), identity_thresh=identity_thresh,
-                guide_length=guide_length,  fileout = False, file = '', score_type= score_type,
-                 gaps_allowed=True, msa_fast= False)
+                guide_length=guide_length, score_type= score_type, gaps_allowed=True, msa_fast= False)
 
         time2 = time.perf_counter()
         print(f'Time taken: {time2 - time1}s\n')
@@ -343,8 +342,7 @@ def transcribe_seq_file(seq_file: str) -> Seq:
 
 
 def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh: float, guide_length: int,
-                 fileout: bool = False, file: str = '', score_type: str = 'quantitative',
-                 gaps_allowed: bool = True, msa_fast: bool = False):
+                 score_type: str = 'quantitative', gaps_allowed: bool = True, msa_fast: bool = False):
     """
     Checks generated designs against a set of sequences to either find how well they align to a given dataset.
     Will return a set of sequences that match for each design as well as a score showing how well they matched.
@@ -362,9 +360,9 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     """
     # extract all design IGSes and guides.
     # This will be a list: [igs, guide, ref_idx (0 base indexing), guide_id(igs+ref_idx)]
-    igs_and_guides_designs = [(str(design[0]), design[7], design[1] - 1, str(design[0]) + str(design[1]))
+    igs_and_guides_designs = [(str(design[0]), design[8], design[1] - 1, str(design[0]) + str(design[1]))
                               for design in designs]
-    igs_and_guides_initial_scores = {str(design[0]) + str(design[1]): design[2] for design in designs}
+    igs_and_guides_initial_comp_scores = {str(design[0]) + str(design[1]): design[6] for design in designs}
 
 
     # Is there a U at each position for each design at each target sequence?
@@ -419,31 +417,32 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                 to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
                                          guides_to_optimize, designed_guide]
             else:
-                opti_seqs.append([igs, ref_idx + 1, 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
-                                  Seq(guides_to_optimize[0]), designed_guide])
+                opti_seqs.append([igs, ref_idx + 1, 1, perc_cov, perc_on_target, true_perc_cov, 1 * true_perc_cov,
+                                  names_and_stuff, Seq(guides_to_optimize[0]), designed_guide])
         else:
             conserved_igs_true_perc_coverage[guide_id] = 0
 
     # Do an MSA
     opti_seqs.extend(optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
-                       fileout=False, file=file, score_type=score_type, msa_fast=msa_fast, for_comparison=True))
+                                        score_type=score_type, msa_fast=msa_fast, for_comparison=True))
 
-    # Now do a fake MSA aka it's pairwise but we
-    pairwise_scores = {}
+    # Now do a fake MSA aka it's pairwise but we use MSA for the scoring
+    pairwise_composite_scores = {}
     for key, seqs in zip(to_optimize, opti_seqs):
-        _, pairwise_scores[key] = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
+        _, pairwise_score = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
                                                    score_type=score_type, gaps_allowed=False, msa_fast=False)
+        pairwise_composite_scores[key] = pairwise_score * seqs[6]  # convert to composite score
 
-    delta_scores = {}
-    for key, good_score in igs_and_guides_initial_scores.items():
+    delta_composite_scores = {}
+    for key, good_score in igs_and_guides_initial_comp_scores.items():
         try:
-            bad_score = pairwise_scores[key]
+            bad_score = pairwise_composite_scores[key]
 
         except:
             bad_score = 0
-        delta_scores[key] = good_score - bad_score
+        delta_composite_scores[key] = good_score - bad_score
 
-    return is_u_conserved, conserved_igs_true_perc_coverage, delta_scores
+    return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores
 
 
 
@@ -705,7 +704,7 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
 
             # set score to nan
             opti_seqs.append([single_targets[key][0][0], single_targets[key][0][7], 1, single_targets[key][0][1],
-                              single_targets[key][0][2], single_targets[key][0][3],
+                              single_targets[key][0][2], single_targets[key][0][3], 1 * single_targets[key][0][3],
                               [(target[4], target[6], target[5] - 1) for target in single_targets[key]], guide,
                               design_sequence, ribo_design])
 
@@ -714,12 +713,12 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
             os.remove(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv')
 
         with open(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', 'w') as f:
-            f.write('IGS,Reference index,Score,% cov,% on target,True % cov,(Target name| Target idx| Other occurrences '
+            f.write('IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,(Target name| Target idx| Other occurrences '
                     'of IGS in target sequence),Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_seqs:
-                list_for_csv = str(item[6]).replace(',', '|')
-                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{list_for_csv},{item[7]},{item[8]},'
-                        f'{item[9]}\n')
+                list_for_csv = str(item[7]).replace(',', '|')
+                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{list_for_csv},'
+                        f'{item[8]},{item[9]},{item[10]}\n')
 
     print('All guide sequences optimized.')
     return opti_seqs
@@ -739,19 +738,21 @@ def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide
     truncated_guide = opti_seq[-guide_length:]
 
     # store these designs and score
-    # store the data as follows: IGS, reference idx, score, % cov, % on target, true % cov, [(target name, target idx,
-    # occurrences of IGS in target)], truncated_guide, design_sequence, ribo_design
+    # store the data as follows: IGS, reference idx, ribozyme score, % cov, % on target, true % cov, composite score
+    # (ribozyme score * true % cov), [(target name, target idx, occurrences of IGS in target)], truncated_guide,
+    # design_sequence, ribo_design
     if not for_comparison:
         # Now make an actual full design with the length needed
         design_sequence = truncated_guide + 'G' + re.sub(r'\d+', '',
                                                          name)  # our ID is the IGS and the ref index so remove the index
         ribo_design = design_sequence + ribo_seq
 
-        opti_seqs = [items[0][0], items[0][7], score, items[0][1], items[0][2], items[0][3],
+        opti_seqs = [items[0][0], items[0][7], score, items[0][1], items[0][2], items[0][3], score * items[0][3],
                      [(target[4], target[6], target[5] - 1) for target in items], truncated_guide, design_sequence,
                      ribo_design]
     else:
-        opti_seqs = [items[0], items[1], score, items[2], items[3], items[4], items[5], truncated_guide, items[-1]]
+        opti_seqs = [items[0], items[1], score, items[2], items[3], items[4], score * items[4], items[5],
+                     truncated_guide, items[-1]]
 
     return opti_seqs
 
