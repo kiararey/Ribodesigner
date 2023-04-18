@@ -396,6 +396,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
 
     # Now find how many conserved IGSes there are!
     to_optimize = {}
+    opti_seqs = []
 
     conserved_igs_true_perc_coverage = {}
     for igs, designed_guide, ref_idx, guide_id in igs_and_guides_designs:  # base 0 indexing
@@ -405,7 +406,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
         if on_target_count > 0:
             true_perc_cov = on_target_count/len(aligned_target_sequences)
             orgs_with_igs, counts = np.unique(check[:, 0], return_counts=True)
-            perc_cov = len(orgs_with_igs)
+            perc_cov = len(orgs_with_igs)/len(aligned_target_sequences)
             perc_on_target = true_perc_cov/perc_cov
             conserved_igs_true_perc_coverage[guide_id] = true_perc_cov
             all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
@@ -414,21 +415,24 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                                   target, index_of_target_data in zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
             names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
                                for target, ig_idx, occurs_in_target in zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
-
-            to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
-                                     guides_to_optimize, designed_guide]
+            if len(guides_to_optimize) > 1:
+                to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
+                                         guides_to_optimize, designed_guide]
+            else:
+                opti_seqs.append([igs, ref_idx + 1, 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
+                                  Seq(guides_to_optimize[0]), designed_guide])
         else:
             conserved_igs_true_perc_coverage[guide_id] = 0
 
     # Do an MSA
-    opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
-                       fileout=fileout, file=file, score_type=score_type, msa_fast=msa_fast, for_comparison=True)
+    opti_seqs.extend(optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
+                       fileout=False, file=file, score_type=score_type, msa_fast=msa_fast, for_comparison=True))
 
     # Now do a fake MSA aka it's pairwise but we
     pairwise_scores = {}
     for key, seqs in zip(to_optimize, opti_seqs):
-        _, pairwise_scores[key] = msa_and_optimize(name=key, to_optimize=[seqs[-1], seqs[-2]], identity_thresh=1,
-                                                   score_type=score_type, gaps_allowed=False, msa_fast=False, for_comparison=True)
+        _, pairwise_scores[key] = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
+                                                   score_type=score_type, gaps_allowed=False, msa_fast=False)
 
     delta_scores = {}
     for key, good_score in igs_and_guides_initial_scores.items():
