@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Adding ways of quantifying U conservation and IGS conservation and guide conservation. There's a bug when I try to get the final pairwise score so I'll have to fix that, but otherwise seems to be working?">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high...">
       <change afterPath="$PROJECT_DIR$/ribochecker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -367,14 +366,7 @@
       <workItem from="1679431928013" duration="3942000" />
       <workItem from="1679691075281" duration="22584000" />
       <workItem from="1680555562972" duration="7144000" />
-      <workItem from="1680798553720" duration="32907000" />
-    </task>
-    <task id="LOCAL-00004" summary="Works now but make makes ugly files&#10;&#10;Also removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!">
-      <created>1653512513124</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1653512513124</updated>
+      <workItem from="1680798553720" duration="34728000" />
     </task>
     <task id="LOCAL-00005" summary="Removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!&#10;&#10;Still need to fix unique and narrow sequences so they work with the new code, and test the indexing, but this should be able to find common sequences in a dataset now.">
       <created>1653590386576</created>
@@ -712,7 +704,14 @@
       <option name="project" value="LOCAL" />
       <updated>1681837257337</updated>
     </task>
-    <option name="localTasksCounter" value="53" />
+    <task id="LOCAL-00053" summary="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high...">
+      <created>1681842663809</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1681842663809</updated>
+    </task>
+    <option name="localTasksCounter" value="54" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -742,7 +741,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)" />
     <MESSAGE value="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
     <MESSAGE value="Condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
     <MESSAGE value="Fixed a bug that was not treating the reference file" />
@@ -767,7 +765,8 @@
     <MESSAGE value="About to redo the targeted ribozymes completely, saving this in case I really screw it up!" />
     <MESSAGE value="Adding ways of quantifying U conservation and IGS conservation. Will work on guide conservation tomorrow." />
     <MESSAGE value="Adding ways of quantifying U conservation and IGS conservation and guide conservation. There's a bug when I try to get the final pairwise score so I'll have to fix that, but otherwise seems to be working?" />
-    <option name="LAST_COMMIT_MESSAGE" value="Adding ways of quantifying U conservation and IGS conservation and guide conservation. There's a bug when I try to get the final pairwise score so I'll have to fix that, but otherwise seems to be working?" />
+    <MESSAGE value="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high..." />
+    <option name="LAST_COMMIT_MESSAGE" value="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high..." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -854,13 +853,8 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>441</line>
+          <line>445</line>
           <option name="timeStamp" value="256" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>428</line>
-          <option name="timeStamp" value="268" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -884,7 +878,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1681837301473" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1681842325484" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
