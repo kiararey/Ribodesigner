@@ -137,7 +137,7 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
             is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores = \
                 ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
                              identity_thresh=identity_thresh, guide_length=guide_length, score_type=score_type,
-                             gaps_allowed=True, msa_fast=False, flexible_igs=True)
+                             gaps_allowed=True, msa_fast=msa_fast, flexible_igs=True)
 
             opti_target_seqs = compare_targeted_sequences(opti_seqs, is_u_conserved, conserved_igs_true_perc_coverage,
                                                           delta_composite_scores, guide_composite_scores,
