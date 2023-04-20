@@ -23,6 +23,10 @@ from Bio.Align import AlignInfo
 from math import exp, log
 from multiprocessing import Pool
 import time
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scipy
+
 with warnings.catch_warnings():
     # I know pairwise2 is being deprecated but I need to get this to work properly before attempting an update that
     # may break the program entirely.
@@ -32,11 +36,13 @@ with warnings.catch_warnings():
 
 def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_file: str, igs_length: int = 5,
                  guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, targeted: bool = False,
-                 background_sequences_folder: str = '', optimize_seq: bool = True, min_true_cov: float = 0.7,
-                 identity_thresh: float = 0.7, fileout: bool = False, folder_to_save: str = '',
-                 score_type: str = 'quantitative', msa_fast: bool = False, keep_single_targets: bool = False):
+                 background_sequences_folder: str = '', min_delta: float = 0.7, optimize_seq: bool = True,
+                 min_true_cov: float = 0.7, identity_thresh: float = 0.7, fileout: bool = False,
+                 folder_to_save: str = '', score_type: str = 'quantitative', msa_fast: bool = False,
+                 keep_single_targets: bool = False):
     """Generates ribozyme designs to target a set of sequences.
 
+    :param min_delta:
     :param barcode_seq_file: file containing the desired insertion barcode sequence (5' -> 3')
     :param ribobody_file: file containing the ribozyme sequence to use as the body template (5' -> 3')
     :param target_sequences_folder: folder containing all the sequences you want to design ribozymes for. Can be either
@@ -113,7 +119,6 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
         time2 = time.perf_counter()
         print(f'Time taken: {time2 - time1}s\n')
 
-
         time1 = time.perf_counter()
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
                                        fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast)
@@ -129,12 +134,22 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                                                        guide_length, min_length)
             aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
 
-            is_u_conserved, conserved_igs_true_perc_coverage, delta_scores = ribo_checker(
-                opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]), identity_thresh=identity_thresh,
-                guide_length=guide_length, score_type= score_type, gaps_allowed=True, msa_fast= False)
+            is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores = \
+                ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
+                             identity_thresh=identity_thresh, guide_length=guide_length, score_type=score_type,
+                             gaps_allowed=True, msa_fast=False, flexible_igs=True)
 
-        time2 = time.perf_counter()
-        print(f'Time taken: {time2 - time1}s\n')
+            opti_target_seqs = compare_targeted_sequences(opti_seqs, is_u_conserved, conserved_igs_true_perc_coverage,
+                                                          delta_composite_scores, guide_composite_scores,
+                                                          min_delta=min_delta, file_out=fileout, file=folder_to_save)
+            time2 = time.perf_counter()
+            print(f'Time taken to calculate targeting scores: {time2 - time1}s\n')
+
+            end = time.perf_counter()
+            print(f'Time taken overall: {end - start}s\n')
+            print('########################################################\n')
+
+            return opti_target_seqs
 
         end = time.perf_counter()
         print(f'Time taken overall: {end - start}s\n')
@@ -342,7 +357,8 @@ def transcribe_seq_file(seq_file: str) -> Seq:
 
 
 def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh: float, guide_length: int,
-                 score_type: str = 'quantitative', gaps_allowed: bool = True, msa_fast: bool = False):
+                 score_type: str = 'quantitative', gaps_allowed: bool = True, msa_fast: bool = False,
+                 flexible_igs: bool = False):
     """
     Checks generated designs against a set of sequences to either find how well they align to a given dataset.
     Will return a set of sequences that match for each design as well as a score showing how well they matched.
@@ -355,6 +371,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     :param file:
     :param score_type:
     :param gaps_allowed:
+    :param flexible_igs:
     :param msa_fast:
     :return:
     """
@@ -364,21 +381,22 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                               for design in designs]
     igs_and_guides_initial_comp_scores = {str(design[0]) + str(design[1]): design[6] for design in designs}
 
-
     # Is there a U at each position for each design at each target sequence?
     designed_idxs = np.array(list({design[2] for design in igs_and_guides_designs}))  # base 0 indexing
     uracil_sites_targets = np.zeros((len(aligned_target_sequences), ref_seq_len))
     uracil_sites_targets[:, designed_idxs] = 1
     for i, target_data in enumerate(aligned_target_sequences):  # base 1 indexing
         temp_uracil_indexes = np.array([ref_idx - 1 for _, ref_idx in target_data[2][2]])  # convert to base 0 indexing
-        # everything that is a 2 is a U that appears in both the designs and the target sequence
-        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2  # base 0 indexing
+        # everything that is a 2 is a U that appears in both the designs and the target sequence,
+        # a 1 is a U in the design
+        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[
+                                                           i, temp_uracil_indexes] * 2  # base 0 indexing
 
     # for histogram
     u_values, u_counts = np.unique(uracil_sites_targets, return_counts=True)  # base 0 indexing
-    is_u_conserved = dict(zip([False, True], u_counts[1:]))
-    print(f'There are {dict(zip(u_values, u_counts))[2]} conserved Us and {dict(zip(u_values, u_counts))[1]} not conserved.')
-
+    is_u_conserved = [[False, True], u_counts[1:]]
+    print(
+        f'There are {is_u_conserved[0][1]} conserved Us and {is_u_conserved[0][0]} not conserved.')
 
     # What is the conservation of IGSes at a particular position for each design?
     # Keep only the sites that are conserved for later.
@@ -390,29 +408,42 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
         index_of_target_data = np.argwhere(np.array(aligned_target_sequences[target_number]
                                                     [2][2])[:, 1] == ref_idx + 1)[0, 0]  # convert to base 1 indexing
         igs_sites_targets[target_number, ref_idx] = str(aligned_target_sequences[target_number][2][0]
-                                                            [index_of_target_data])
+                                                        [index_of_target_data])
 
     # Now find how many conserved IGSes there are!
     to_optimize = {}
     opti_seqs = []
 
     conserved_igs_true_perc_coverage = {}
+
     for igs, designed_guide, ref_idx, guide_id in igs_and_guides_designs:  # base 0 indexing
         check = np.argwhere(igs_sites_targets == igs)
         orgs_with_igs_on_target = check[np.argwhere(check[:, 1] == ref_idx)][:, 0, 0]
         on_target_count = len(orgs_with_igs_on_target)
         if on_target_count > 0:
-            true_perc_cov = on_target_count/len(aligned_target_sequences)
+            true_perc_cov = on_target_count / len(aligned_target_sequences)
             orgs_with_igs, counts = np.unique(check[:, 0], return_counts=True)
-            perc_cov = len(orgs_with_igs)/len(aligned_target_sequences)
-            perc_on_target = true_perc_cov/perc_cov
+            perc_cov = len(orgs_with_igs) / len(aligned_target_sequences)
+            perc_on_target = true_perc_cov / perc_cov
             conserved_igs_true_perc_coverage[guide_id] = true_perc_cov
-            all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
-                                                      == ref_idx + 1)[0, 0] for target in orgs_with_igs_on_target] # convert to base 1 indexing
-            guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
-                                  target, index_of_target_data in zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
+            if not flexible_igs:
+                all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
+                                                          == ref_idx + 1)[0, 0] for target in
+                                              orgs_with_igs_on_target]  # convert to base 1 indexing
+                guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
+                                      target, index_of_target_data in
+                                      zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
+            else:
+                orgs_with_u_on_target = conserved_u_sites[np.where(conserved_u_sites[:, 1] == ref_idx)][:, 0]
+                all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
+                                                          == ref_idx + 1)[0, 0] for target in
+                                              orgs_with_u_on_target]  # convert to base 1 indexing
+                guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
+                                      target, index_of_target_data in
+                                      zip(orgs_with_u_on_target, all_indexes_of_target_data)]
             names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
-                               for target, ig_idx, occurs_in_target in zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
+                               for target, ig_idx, occurs_in_target in
+                               zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
             if len(guides_to_optimize) > 1:
                 to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
                                          guides_to_optimize, designed_guide]
@@ -430,33 +461,84 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     pairwise_composite_scores = {}
     for key, seqs in zip(to_optimize, opti_seqs):
         _, pairwise_score = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
-                                                   score_type=score_type, gaps_allowed=False, msa_fast=False)
+                                             score_type=score_type, gaps_allowed=False, msa_fast=False)
         pairwise_composite_scores[key] = pairwise_score * seqs[6]  # convert to composite score
 
     delta_composite_scores = {}
+    guide_composite_scores = {}
     for key, good_score in igs_and_guides_initial_comp_scores.items():
         try:
             bad_score = pairwise_composite_scores[key]
 
         except:
             bad_score = 0
+        guide_composite_scores[key] = bad_score
         delta_composite_scores[key] = good_score - bad_score
 
-    return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores
+    return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores
 
 
-
-def compare_targeted_sequences(good_designs_and_scores, bad_designs_and_scores, min_delta):
+def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_igs_true_perc_coverage: dict,
+                               delta_composite_scores: dict, guide_composite_scores: dict, min_delta: float = 0.7,
+                               file_out: bool = False, file: str = ''):
     """
     Will generate a delta score between good and bad designs. Those with the largest difference are good!
-    :param good_designs_and_scores:
-    :param bad_designs_and_scores:
+    :param guide_composite_scores:
+    :param opti_seqs:
+    :param is_u_conserved:
+    :param conserved_igs_true_perc_coverage:
+    :param delta_composite_scores:
+    :param min_delta:
+    :param file_out:
+    :param file:
     :return:
     """
+    # Extract good designs to return from opti_seqs
+    opti_target_seqs = []
 
+    # If needed, write a file with good designs
 
-    return
+    # Also give me a histogram of trends
+    sns.set_theme(style='white', rc={"axes.spines.right": False, "axes.spines.top": False})
+    fig, axs = plt.subplots(3, 1, layout='constrained')
+    # axs[0].bar(x=is_u_conserved[1], height=is_u_conserved[1])
+    # axs[0].set_xticks(is_u_conserved[0], labels=['No', 'Yes'])
+    sns.histplot(x=['No', 'Yes'], weights=is_u_conserved[1], ax=axs[0])
+    axs[0].set_xlabel('Is the U conserved?')
+    axs[0].set_title('Conserved U sites between targeted designs and background sequences')
 
+    sns.histplot(conserved_igs_true_perc_coverage, kde=True, ax=axs[1])
+    axs[1].set_xlabel('True percent coverage in background sequences')
+    axs[1].set_title('Distribution of conserved IGS sites in background sequences')
+
+    sns.histplot(delta_composite_scores, kde=True, ax=axs[2])
+    axs[2].set_xlabel(u'Δ composite scores (design - background)')
+    axs[2].set_title(u'Δ Composite scores of generated guides with conserved IGS on background sequences')
+
+    if file_out:
+        plt.savefig(f'{file}/targeted designs vs background general stats.svg', transparent=False)
+    plt.show()
+
+    igs_true_cov_vs_guide_comp_score_dict = {key: (int(key[5:]), conserved_igs_true_perc_coverage[key],
+                                                   guide_composite_scores[key])
+                                             for key in conserved_igs_true_perc_coverage}
+    igs_vs_guide_df = pd.DataFrame(igs_true_cov_vs_guide_comp_score_dict,
+                                   index=['Index', 'IGS true percent coverage',
+                                          'Guide composite score at U site']).T
+
+    slope, intercept, r, p, sterr = scipy.stats.linregress(x=igs_vs_guide_df['IGS true percent coverage'],
+                                                           y=igs_vs_guide_df['Guide composite score at U site'])
+    reg_plot = sns.jointplot(igs_vs_guide_df, x='IGS true percent coverage', y='Guide composite score at U site',
+                             kind='reg', line_kws={'color': 'plum'}, xlim=(-0.1, 1.1), ylim=(-0.1, 1.1))
+    reg_plot.ax_joint.annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
+
+    if file_out:
+        plt.savefig(f'{file}/targeted designs vs background scoring correlations.svg', transparent=False)
+    plt.show()
+
+    # With more targets, make sure to graph location vs. scores (igs and guide) and the std dev per position
+
+    return opti_target_seqs
 
 
 def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_single_targets: bool = True):
@@ -576,7 +658,7 @@ def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = Fal
     for i, igs_data_a in enumerate(igs_subsets):
         if i == len(igs_subsets):
             break
-        for igs_data_b in igs_subsets[i+1:]:
+        for igs_data_b in igs_subsets[i + 1:]:
             # make a subset of second column of unique IGS values
             # and find the shared values between sets with no duplicates
             no_dupes = igs_data_a & igs_data_b
@@ -661,7 +743,6 @@ def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = Fal
         ranked_sorted_IGS.to_csv(f'{file}/Ranked Ribozyme Designs with Raw Guide Sequence Designs.csv',
                                  index=False)
 
-
     return ranked_sorted_IGS
 
 
@@ -688,7 +769,9 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
     """
     print(f'Optimizing {len(to_optimize)} guide sequences...')
 
-    in_data = [(key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast, for_comparison) for key in to_optimize]
+    in_data = [
+        (key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast, for_comparison) for
+        key in to_optimize]
 
     with Pool() as pool:
         opti_seqs = pool.starmap(optimize_sequences_loop, in_data)
@@ -713,8 +796,9 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
             os.remove(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv')
 
         with open(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', 'w') as f:
-            f.write('IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,(Target name| Target idx| Other occurrences '
-                    'of IGS in target sequence),Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
+            f.write(
+                'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,(Target name| Target idx| Other occurrences '
+                'of IGS in target sequence),Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_seqs:
                 list_for_csv = str(item[7]).replace(',', '|')
                 f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{list_for_csv},'
