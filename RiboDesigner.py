@@ -26,6 +26,7 @@ import time
 import seaborn as sns
 import matplotlib.pyplot as plt
 import scipy
+from numpy.random import default_rng
 
 with warnings.catch_warnings():
     # I know pairwise2 is being deprecated but I need to get this to work properly before attempting an update that
@@ -39,9 +40,16 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                  background_sequences_folder: str = '', min_delta: float = 0.7, optimize_seq: bool = True,
                  min_true_cov: float = 0.7, identity_thresh: float = 0.7, fileout: bool = False,
                  folder_to_save: str = '', score_type: str = 'quantitative', msa_fast: bool = False,
-                 keep_single_targets: bool = False):
+                 keep_single_targets: bool = False, gaps_allowed: bool = True, percent_of_target_seqs_used: float = 1.0,
+                 percent_of_background_seqs_used: float = 1, seed_target: int = 1, seed_background: int = 0):
     """Generates ribozyme designs to target a set of sequences.
 
+    :param seed: seed to use for random sampling for reproducibility
+    :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
+    sequences used without replacement
+    :param percent_of_target_seqs_used: In case target data is very large we can get a random sample of the sequences used
+    without replacement
+    :param gaps_allowed:
     :param min_delta:
     :param barcode_seq_file: file containing the desired insertion barcode sequence (5' -> 3')
     :param ribobody_file: file containing the ribozyme sequence to use as the body template (5' -> 3')
@@ -95,74 +103,93 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     else:
         ref_name_and_seq = read_fasta(ref_sequence_file)[0]
 
-    print(f'Found {len(target_names_and_seqs)} total sequences to analyze.')
+    print(f'Found {len(target_names_and_seqs)} total target sequences to analyze.')
+
+    if percent_of_target_seqs_used < 1:
+        array = np.array(target_names_and_seqs, dtype=tuple)
+        rng = default_rng(seed=seed_target)
+        target_names_and_seqs = rng.choice(array, size=round(len(target_names_and_seqs) * percent_of_target_seqs_used), replace=False)
+        print(f'Randomly sampling {len(target_names_and_seqs)} sequences to analyze.\n')
 
     # find all catalytic U sites
     # Remember: data has one tuple per target sequence, the third entry is a tuple for each catalytic U site
     time1 = time.perf_counter()
     data = find_cat_sites(target_names_and_seqs, igs_length, guide_length, min_length)
     time2 = time.perf_counter()
-    print(f'Time taken: {time2 - time1}s\n')
+    round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding catalytic sites')
 
     # Now align sequences to reference sequences and get the conversion dictionaries for each
     time1 = time.perf_counter()
     new_data = align_to_ref(data, ref_name_and_seq)
     time2 = time.perf_counter()
-    print(f'Time taken: {time2 - time1}s\n')
-    time1 = time.perf_counter()
+    round_convert_time(start=time1, end=time2, round_to=4, task_timed='indexing sequences')
 
+    time1 = time.perf_counter()
     # Now, we can optimize each sequence
     if optimize_seq:
 
         to_optimize, to_keep_single_targets = prep_for_optimizing(new_data, min_true_cov=min_true_cov,
                                                                   accept_single_targets=keep_single_targets)
         time2 = time.perf_counter()
-        print(f'Time taken: {time2 - time1}s\n')
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='prepping sequences for optimization')
 
         time1 = time.perf_counter()
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
-                                       fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast)
+                                       fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast,
+                                       gaps_allowed=gaps_allowed)
         time2 = time.perf_counter()
-        print(f'Time taken: {time2 - time1}s\n')
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
         time1 = time.perf_counter()
         if targeted:
             background_names_and_seqs = read_fasta(background_sequences_folder)
+            print(f'Found {len(background_names_and_seqs)} total background sequences to analyze.')
 
+            if percent_of_background_seqs_used < 1:
+                array = np.array(background_names_and_seqs, dtype=tuple)
+                rng = default_rng(seed=seed_background)
+                background_names_and_seqs = rng.choice(
+                    array, size=round(len(background_names_and_seqs) * percent_of_background_seqs_used), replace=False)
+                print(f'Randomly sampling {len(background_names_and_seqs)} background sequences to analyze.\n')
             # first find the IGSes and locations of the background sequences. We do not want to hit these.
             background_sequences_data = find_cat_sites(background_names_and_seqs, igs_length,
                                                        guide_length, min_length)
-            aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
 
+            time1 = time.perf_counter()
+            aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
+            time2 = time.perf_counter()
+            round_convert_time(start=time1, end=time2, round_to=4, task_timed='indexing background sequences')
+
+            print('Now applying designed ribozymes with background sequences and getting statistics...')
             is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores = \
                 ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
                              identity_thresh=identity_thresh, guide_length=guide_length, score_type=score_type,
-                             gaps_allowed=True, msa_fast=msa_fast, flexible_igs=True)
+                             gaps_allowed=gaps_allowed, msa_fast=msa_fast, flexible_igs=True)
 
             opti_target_seqs = compare_targeted_sequences(opti_seqs, is_u_conserved, conserved_igs_true_perc_coverage,
                                                           delta_composite_scores, guide_composite_scores,
                                                           min_delta=min_delta, file_out=fileout, file=folder_to_save)
             time2 = time.perf_counter()
-            print(f'Time taken to calculate targeting scores: {time2 - time1}s\n')
+            round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
+                                                                              'sequences')
 
             end = time.perf_counter()
-            print(f'Time taken overall: {end - start}s\n')
-            print('########################################################\n')
+            round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
 
             return opti_target_seqs
 
         end = time.perf_counter()
-        print(f'Time taken overall: {end - start}s\n')
+        round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
         print('########################################################\n')
         return opti_seqs
 
     else:
         ranked_sorted_IGS = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
         time2 = time.perf_counter()
-        print(f'Time taken: {time2 - time1}s\n')
         print('All guide sequences generated.')
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating designs')
         end = time.perf_counter()
-        print(f'Time taken overall: {end - start}s\n')
+        round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
         print('########################################################\n')
         return ranked_sorted_IGS
 
@@ -396,7 +423,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     u_values, u_counts = np.unique(uracil_sites_targets, return_counts=True)  # base 0 indexing
     is_u_conserved = [[False, True], u_counts[1:]]
     print(
-        f'There are {is_u_conserved[0][1]} conserved Us and {is_u_conserved[0][0]} not conserved.')
+        f'There are {is_u_conserved[1][1]} conserved Us and {is_u_conserved[1][0]} not conserved.')
 
     # What is the conservation of IGSes at a particular position for each design?
     # Keep only the sites that are conserved for later.
@@ -433,6 +460,9 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                 guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
                                       target, index_of_target_data in
                                       zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
+                names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
+                                   for target, ig_idx, occurs_in_target in
+                                   zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
             else:
                 orgs_with_u_on_target = conserved_u_sites[np.where(conserved_u_sites[:, 1] == ref_idx)][:, 0]
                 all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
@@ -441,9 +471,9 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                 guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
                                       target, index_of_target_data in
                                       zip(orgs_with_u_on_target, all_indexes_of_target_data)]
-            names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
-                               for target, ig_idx, occurs_in_target in
-                               zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
+                names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
+                                   for target, ig_idx, occurs_in_target in
+                                   zip(orgs_with_u_on_target, all_indexes_of_target_data, counts)]
             if len(guides_to_optimize) > 1:
                 to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
                                          guides_to_optimize, designed_guide]
@@ -458,11 +488,23 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                                         score_type=score_type, msa_fast=msa_fast, for_comparison=True))
 
     # Now do a fake MSA aka it's pairwise but we use MSA for the scoring
+    print('\nNow scoring ribozyme designs against background sequences...')
+    start = time.perf_counter()
     pairwise_composite_scores = {}
-    for key, seqs in zip(to_optimize, opti_seqs):
-        _, pairwise_score = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
-                                             score_type=score_type, gaps_allowed=False, msa_fast=False)
-        pairwise_composite_scores[key] = pairwise_score * seqs[6]  # convert to composite score
+
+    in_data = [(key, [seqs[-1], seqs[-2]], 1, score_type, gaps_allowed, False, True, seqs[6])
+               for key, seqs in zip(to_optimize, opti_seqs)]
+
+    with Pool() as pool:
+        names_and_scores = pool.starmap(msa_and_optimize, in_data)
+
+    for name, score, cov in names_and_scores:
+        pairwise_composite_scores[name] = score * cov
+
+    # for key, seqs in zip(to_optimize, opti_seqs):
+    #     _, pairwise_score = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
+    #                                          score_type=score_type, gaps_allowed=False, msa_fast=False)
+    #     pairwise_composite_scores[key] = pairwise_score * seqs[6]  # convert to composite score
 
     delta_composite_scores = {}
     guide_composite_scores = {}
@@ -474,6 +516,8 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
             bad_score = 0
         guide_composite_scores[key] = bad_score
         delta_composite_scores[key] = good_score - bad_score
+    round_convert_time(start=start, end=time.perf_counter(), round_to=4,
+                       task_timed='scoring against background sequences')
 
     return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores
 
@@ -552,7 +596,7 @@ def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_si
     # [name, sequ, (IGSes, guide_sequences, (og_idx, ref_idx))]
     big_repeats = []
     start = time.perf_counter()
-    print('Finding repeat subsets...')
+    print('Finding repeat IGSes...')
 
     igs_subsets = [set(cat_site_data[0]) for i, (_, _, cat_site_data) in enumerate(new_data)]
     # igs_subsets_pairs = [(igs_subsets[i], igs_subsets[i+1:]) for i in range(len(igs_subsets) -1)]
@@ -569,8 +613,8 @@ def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_si
             if repeats:
                 big_repeats.extend(repeats)
 
-    print(f'Time taken: {time.perf_counter() - start}s\n')
-    print('Found repeat subsets. Now analyzing sequences...')
+    round_convert_time(start=start, end=time.perf_counter(), round_to=4, task_timed=' finding repeat IGSes')
+    print('Now analyzing sequences...')
 
     # remove duplicates of all IGSes found
     filtered_list = list(set(big_repeats))
@@ -650,7 +694,7 @@ def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = Fal
     # [name, sequ, (IGSes, guide_sequences, (og_idx, ref_idx))]
     big_repeats = []
     start = time.perf_counter()
-    print('Finding repeat subsets...')
+    print('Finding repeat IGSes...')
 
     igs_subsets = [set(cat_site_data[0]) for i, (_, _, cat_site_data) in enumerate(new_data)]
     # igs_subsets_pairs = [(igs_subsets[i], igs_subsets[i+1:]) for i in range(len(igs_subsets) -1)]
@@ -667,8 +711,9 @@ def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = Fal
             if repeats:
                 big_repeats.extend(repeats)
 
-    print(f'Time taken: {time.perf_counter() - start}s\n')
-    print('Found repeat subsets. Now analyzing sequences...')
+    round_convert_time(start=start, end=time.perf_counter(), round_to=4, task_timed=' finding repeat IGSes')
+
+    print('Now analyzing sequences...')
 
     # remove duplicates of all IGSes found
     filtered_list = list(set(big_repeats))
@@ -751,6 +796,7 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
                        gaps_allowed: bool = True, msa_fast: bool = False, for_comparison=False):
     """
 
+    :param for_comparison:
     :param to_optimize: key is guide ID (IGS + ref_pos), each entry is a list of lists: [IGS, % coverage, % on target,
     true % cov (% cov * % on target), org (name of sequence where this guide came from), target_num (how many times does
     this IGS appear at all in this sequence in any position), position in og sequence, position in reference sequence,
@@ -767,7 +813,10 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
     :param msa_fast:
     :return:
     """
-    print(f'Optimizing {len(to_optimize)} guide sequences...')
+    if for_comparison:
+        print(f'Checking {len(to_optimize)} background guide sequences...')
+    else:
+        print(f'Optimizing {len(to_optimize)} guide sequences...')
 
     in_data = [
         (key, to_optimize[key], thresh, score_type, gaps_allowed, guide_length, ribo_seq, msa_fast, for_comparison) for
@@ -803,8 +852,10 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
                 list_for_csv = str(item[7]).replace(',', '|')
                 f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{list_for_csv},'
                         f'{item[8]},{item[9]},{item[10]}\n')
-
-    print('All guide sequences optimized.')
+    if for_comparison:
+        print(f'All background guide sequences analyzed.')
+    else:
+        print('All guide sequences optimized.')
     return opti_seqs
 
 
@@ -842,9 +893,11 @@ def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide
 
 
 def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str = 'quantitative',
-                     gaps_allowed: bool = True, msa_fast: bool = False):
+                     gaps_allowed: bool = True, msa_fast: bool = False, return_name=False, extra_data=None):
     """
-
+    :param extra_data: any extra things to return to make pooling simpler
+    :param return_name: Returns the name of the sequence instead of the optimized sequence. Exclusively for use with
+    targeted ribozymes pairwise scoring
     :param name:
     :param seqs_to_align:
     :param thresh:
@@ -945,7 +998,12 @@ def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str =
         score, opti_seq = get_quantitative_score(msa, count_gaps=gaps_allowed)
 
     # return optimized_guide, score
-    return opti_seq, score
+    if return_name and extra_data:
+        return name, score, extra_data
+    elif return_name:
+        return name, score
+    else:
+        return opti_seq, score
 
 
 def get_quantitative_score(msa, thresh: float = 0.7, chars_to_ignore: list[str] = None,
@@ -1125,6 +1183,19 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
 
     return shannon_entropy_list, xaxis_list, yaxis_list
 
+
+def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: str = ''):
+    time_to_round = abs(end - start)
+
+    if time_to_round / 3600 > 1:
+        text = f'Time taken {task_timed}: {round(time_to_round / 3600, round_to)} hrs\n'
+    elif time_to_round / 60 > 1:
+        text = f'Time taken {task_timed}: {round(time_to_round / 60, round_to)} min\n'
+    else:
+        text = f'Time taken {task_timed}: {round(time_to_round, round_to)} sec\n'
+
+    print(text)
+    return
 # def ambiguity_consensus(summary_align, threshold=0.7, gaps_allowed=False):
 #     # I've made a modified version of BioPython'string_to_analyze dumb consensus that will allow IUPAC ambiguity codes
 #

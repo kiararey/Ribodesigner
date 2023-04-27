@@ -1,6 +1,7 @@
 import os
 import numpy as np
-np.random.seed(1)
+from numpy.random import default_rng
+seed = 1
 # This is a very poorly written script, but it does the job and I am too tired to make it more efficient.
 
 # Determine at what taxonomic level we want the datasets. This must match one of the filenames from SequencePrepper.py:
@@ -70,8 +71,10 @@ for i, genus in enumerate(fasta_file_names):
     idx_used = []  # sequences we already used, ideally we won't reuse any of these but
     while j < num_of_datasets:
         # take 5 sequences randomly
-        lines_to_take = np.random.randint(0, len(target_seqs_and_names), 5)
-        sequences_taken = [target_seqs_and_names[num] for num in lines_to_take]
+        array = np.array(target_seqs_and_names, dtype=tuple)
+        rng = default_rng(seed=seed)
+        sequences_taken = rng.choice(array, 5, replace=False)
+
         # check that all sequences are of unique species
         species_of_sequences_taken_set = set(sequence.give_taxonomy('Species') for sequence in sequences_taken)
 
