@@ -19,7 +19,8 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 import subprocess
-from Bio.Align import AlignInfo
+from Bio.Align import AlignInfo, MultipleSeqAlignment
+from Bio.Align.Applications import MuscleCommandline
 from math import exp, log
 from multiprocessing import Pool
 import time
@@ -460,9 +461,9 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                 guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
                                       target, index_of_target_data in
                                       zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
-                names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
-                                   for target, ig_idx, occurs_in_target in
-                                   zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
+                # names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
+                #                    for target, ig_idx, occurs_in_target in
+                #                    zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
             else:
                 orgs_with_u_on_target = conserved_u_sites[np.where(conserved_u_sites[:, 1] == ref_idx)][:, 0]
                 all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
@@ -471,9 +472,10 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                 guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
                                       target, index_of_target_data in
                                       zip(orgs_with_u_on_target, all_indexes_of_target_data)]
-                names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
-                                   for target, ig_idx, occurs_in_target in
-                                   zip(orgs_with_u_on_target, all_indexes_of_target_data, counts)]
+                # names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
+                #                    for target, ig_idx, occurs_in_target in
+                #                    zip(orgs_with_u_on_target, all_indexes_of_target_data, counts)]
+            names_and_stuff = len(guides_to_optimize)
             if len(guides_to_optimize) > 1:
                 to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
                                          guides_to_optimize, designed_guide]
@@ -599,19 +601,17 @@ def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_si
     print('Finding repeat IGSes...')
 
     igs_subsets = [set(cat_site_data[0]) for i, (_, _, cat_site_data) in enumerate(new_data)]
-    # igs_subsets_pairs = [(igs_subsets[i], igs_subsets[i+1:]) for i in range(len(igs_subsets) -1)]
 
     for i, igs_data_a in enumerate(igs_subsets):
+        # If we've gone through all columns, end the loop
         if i == len(igs_subsets):
             break
         for igs_data_b in igs_subsets[i + 1:]:
             # make a subset of second column of unique IGS values
             # and find the shared values between sets with no duplicates
             no_dupes = igs_data_a & igs_data_b
-            # remove any nans
-            repeats = [item for item in no_dupes if str(item) != 'nan']
-            if repeats:
-                big_repeats.extend(repeats)
+            if no_dupes:
+                big_repeats.extend(no_dupes)
 
     round_convert_time(start=start, end=time.perf_counter(), round_to=4, task_timed=' finding repeat IGSes')
     print('Now analyzing sequences...')
@@ -837,8 +837,7 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
             # set score to nan
             opti_seqs.append([single_targets[key][0][0], single_targets[key][0][7], 1, single_targets[key][0][1],
                               single_targets[key][0][2], single_targets[key][0][3], 1 * single_targets[key][0][3],
-                              [(target[4], target[6], target[5] - 1) for target in single_targets[key]], guide,
-                              design_sequence, ribo_design])
+                              len(single_targets[key]), guide, design_sequence, ribo_design])
 
     if fileout:
         if os.path.exists(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv'):
@@ -846,8 +845,7 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
 
         with open(f'{file}/Ranked Ribozyme Designs with Optimized Guide Sequence Designs {score_type}.csv', 'w') as f:
             f.write(
-                'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,(Target name| Target idx| Other occurrences '
-                'of IGS in target sequence),Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
+                'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,number of species targeted,Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_seqs:
                 list_for_csv = str(item[7]).replace(',', '|')
                 f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{list_for_csv},'
@@ -883,7 +881,7 @@ def optimize_sequences_loop(name, items, thresh, score_type, gaps_allowed, guide
         ribo_design = design_sequence + ribo_seq
 
         opti_seqs = [items[0][0], items[0][7], score, items[0][1], items[0][2], items[0][3], score * items[0][3],
-                     [(target[4], target[6], target[5] - 1) for target in items], truncated_guide, design_sequence,
+                     len(items), truncated_guide, design_sequence,
                      ribo_design]
     else:
         opti_seqs = [items[0], items[1], score, items[2], items[3], items[4], score * items[4], items[5],
@@ -912,44 +910,30 @@ def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str =
         for line in range(len(seqs_to_align)):
             f.write('>seq' + str(line) + '\n' + str(seqs_to_align[line]) + '\n')
 
+    # # Below is the shame of me not being able to figure out how to get MUSCLE to work without writing an external file
+    #
+    # seqs_str = '\n'.join(f'>seq{i}\n{str(seq)}\n' for i, seq in enumerate(seqs_to_align))
+    #
+    # if msa_fast:
+    #     muscle_exe = ['muscle5', '-super5', '-']
+    # else:
+    #     muscle_exe = ['muscle5', '-align', '-']
+    #
+    # with subprocess.Popen(muscle_exe, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    #                       universal_newlines=True) as muscle_aln:
+    #     stdout, stderr = muscle_aln.communicate(seqs_str)
+    #     print(line for line in stdout)
+    #
+    # msa = [Seq(line.strip()) for line in stdout.split('\n') if not line.startswith((' ', '\t', '>'))]
+    # print(msa)
+
     muscle_exe = 'muscle5'
 
-    seqs_str = ''
-    for i, seq in enumerate(seqs_to_align):
-        seqs_str += f'>seq{i}\n{str(seqs_to_align[i])}\n'
-
-    # seqs_str_write = (SeqRecord(seq, id=f'seq{i}', name='_', description='_') for i, seq in enumerate(seqs_to_align))
-    #
-    # # now align the sequences.
-    # with subprocess.Popen([muscle_exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    #                       universal_newlines=True) as child:
-    #
-    #     SeqIO.write(seqs_str_write, child.stdin, 'fasta')
-    #     msa = AlignIO.read(child.stdout, 'fasta')
-    #     print(msa)
-    #
-    #     child.stdin.write(seqs_str)
-    #     child_out = StringIO(child.communicate()[0])
-    #     print(child_out)
-    #     seqs_aligned = list(SeqIO.parse(child_out, format='fasta'))
-    #     print(seqs_aligned)
-    #     msa = AlignIO.read(child_out, 'fasta')
-    #     print(msa)
-    # # msa = AlignIO.read(seqs_aligned, format='fasta')
-    # # msa = AlignIO.read(child_out, 'fasta')
-    # # print(msa)
-    # summary_align = AlignInfo.SummaryInfo(msa)
-    # print(summary_align.gap_consensus(threshold=thresh, ambiguous='N'))
-    # child = subprocess.check_output([muscle_exe, "-align"],
-    #                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    # child.stdin.write(seqs_str.encode())
-    # child_out = child.communicate()[0].decode('utf8')
-
     if msa_fast:
-        subprocess.check_output([muscle_exe, "-super5", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
+        subprocess.check_output([muscle_exe, '-super5', f'to_align_{name}.fasta', '-output', f'aln_{name}.afa'],
                                 stderr=subprocess.DEVNULL)
     else:
-        subprocess.check_output([muscle_exe, "-align", f'to_align_{name}.fasta', "-output", f'aln_{name}.afa'],
+        subprocess.check_output([muscle_exe, '-align', f'to_align_{name}.fasta', '-output', f'aln_{name}.afa'],
                                 stderr=subprocess.DEVNULL)
 
     msa = AlignIO.read(open(f'aln_{name}.afa'), 'fasta')
@@ -1187,10 +1171,17 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
 def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: str = ''):
     time_to_round = abs(end - start)
 
-    if time_to_round / 3600 > 1:
-        text = f'Time taken {task_timed}: {round(time_to_round / 3600, round_to)} hrs\n'
-    elif time_to_round / 60 > 1:
-        text = f'Time taken {task_timed}: {round(time_to_round / 60, round_to)} min\n'
+    # Hours
+    hours = time_to_round / 3600
+    # Min
+    min = hours % 1 * 60
+    # Sec
+    sec = min % 1 * 60
+
+    if hours > 1:
+        text = f'Time taken {task_timed}: {int(hours)} hrs, {int(min)} min, {round(sec, round_to)} sec\n'
+    elif min > 1:
+        text = f'Time taken {task_timed}: {int(min)} min, {round(sec, round_to)} sec\n'
     else:
         text = f'Time taken {task_timed}: {round(time_to_round, round_to)} sec\n'
 
