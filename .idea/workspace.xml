@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
@@ -44,34 +44,38 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectId" id="27tPcs0al7nYowZSPa9qHnT3XET" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_directory_selection&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
-    &quot;two.files.diff.last.used.file&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_directory_selection": "/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All",
+    "last_opened_file_path": "/Users/kiarareyes/PycharmProjects/RiboDesigner",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "run.code.analysis.last.selected.profile": "aDefault",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "two.files.diff.last.used.file": "/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
-      &quot;Python&quot;
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/Datasets_used/SILVA_squished_datasets" />
@@ -369,21 +373,7 @@
       <workItem from="1679691075281" duration="22584000" />
       <workItem from="1680555562972" duration="7144000" />
       <workItem from="1680798553720" duration="66367000" />
-      <workItem from="1682352740136" duration="23916000" />
-    </task>
-    <task id="LOCAL-00010" summary="Fixed SequencePrepper.py and made a new script, PullSequences.py, that will convert some metagenomic data into a format compatible with RiboChecker">
-      <created>1656448443323</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1656448443323</updated>
-    </task>
-    <task id="LOCAL-00011" summary="Added a new function, findReferenceIdx, that should allow us to align a list of sequences to a reference sequence then give us the new indexes as well as a conversion dictionary for catalytic sites (convert from original sequence index to reference sequence index numbering). &#10;&#10;Also preparing new optimization strategy without recursion: optimizeToRefSequence. If more than one IGS, pairwise align to reference and only take the closest index to the average index. Hopefully this is faster/ less computationally intensive.">
-      <created>1659398292083</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1659398292083</updated>
+      <workItem from="1682352740136" duration="48265000" />
     </task>
     <task id="LOCAL-00012" summary="Making big changes to generate figure B and make the code more efficient. It ran so much faster this time around!">
       <created>1660689107010</created>
@@ -714,7 +704,21 @@
       <option name="project" value="LOCAL" />
       <updated>1682612678180</updated>
     </task>
-    <option name="localTasksCounter" value="59" />
+    <task id="LOCAL-00059" summary="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol">
+      <created>1682714879672</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1682714879672</updated>
+    </task>
+    <task id="LOCAL-00060" summary="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol">
+      <created>1682714988620</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1682714988620</updated>
+    </task>
+    <option name="localTasksCounter" value="61" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -744,7 +748,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Fixed a bug that was not treating the reference file correctly." />
     <MESSAGE value="Making my code better by adding f-strings. Soon will attempt to vectorize everything" />
     <MESSAGE value="Creating SILVA database datasets" />
     <MESSAGE value="Creating SILVA database datasets and making figure code" />
@@ -769,7 +772,8 @@
     <MESSAGE value="Ok added a new scoring metric that takes into account both the guide conservation in the MSA as well as the coverage of the IGS itself. I'm calling this the composite score, and it's defined as the guide score * the true percent coverage of a design." />
     <MESSAGE value="In matplotlib/ seaborn hell" />
     <MESSAGE value="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively" />
-    <option name="LAST_COMMIT_MESSAGE" value="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively" />
+    <MESSAGE value="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol" />
+    <option name="LAST_COMMIT_MESSAGE" value="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -846,13 +850,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>828</line>
-          <option name="timeStamp" value="300" />
+          <line>958</line>
+          <option name="timeStamp" value="304" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>616</line>
-          <option name="timeStamp" value="303" />
+          <line>143</line>
+          <option name="timeStamp" value="307" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -876,7 +880,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1682714728572" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1683319141142" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />

@@ -198,13 +198,13 @@ if __name__ == '__main__':
                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                  background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
                  ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=0.1, percent_of_background_seqs_used=0.1)
+                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30)
     print('Dataset 1 compplete.\n')
 
     RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                  background_sequences_folder=enterobacterales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
                  ref_sequence_file=ref_path, folder_to_save=output_path_p, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=0.1, percent_of_background_seqs_used=0.1)
+                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30)
 
     playsound('/System/Library/Sounds/Pop.aiff')

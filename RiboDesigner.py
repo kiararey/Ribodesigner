@@ -14,6 +14,7 @@ import os
 import random
 import warnings
 from Bio.Seq import Seq
+import Bio.motifs
 import re
 import pandas as pd
 import numpy as np
@@ -21,6 +22,7 @@ from collections import defaultdict
 import subprocess
 from Bio.Align import AlignInfo, MultipleSeqAlignment
 from Bio.Align.Applications import MuscleCommandline
+from collections import Counter
 from math import exp, log
 from multiprocessing import Pool
 import time
@@ -195,7 +197,8 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
         return ranked_sorted_IGS
 
 
-def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int, guide_length: int, min_length: int):
+def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int = 5, guide_length: int = 50,
+                   min_length: int = 35):
     """
     Finds all instances of a U or T in a set of sequences and creates ribozyme designs for these sites.
 
@@ -706,10 +709,8 @@ def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = Fal
             # make a subset of second column of unique IGS values
             # and find the shared values between sets with no duplicates
             no_dupes = igs_data_a & igs_data_b
-            # remove any nans
-            repeats = [item for item in no_dupes if str(item) != 'nan']
-            if repeats:
-                big_repeats.extend(repeats)
+            if no_dupes:
+                big_repeats.extend(no_dupes)
 
     round_convert_time(start=start, end=time.perf_counter(), round_to=4, task_timed=' finding repeat IGSes')
 
@@ -834,7 +835,7 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
             design_sequence = guide + 'G' + re.sub(r'\d+', '', key)
             ribo_design = design_sequence + ribo_seq
 
-            # set score to nan
+            # set score to 1 because perfect alignment to one sequence, but penalize it in the composite score
             opti_seqs.append([single_targets[key][0][0], single_targets[key][0][7], 1, single_targets[key][0][1],
                               single_targets[key][0][2], single_targets[key][0][3], 1 * single_targets[key][0][3],
                               len(single_targets[key]), guide, design_sequence, ribo_design])
@@ -945,40 +946,42 @@ def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str =
         os.remove(f'to_align_{name}.fasta')
 
     # if needed at this point, get alignment
+    # thanks to https://github.com/mdehoon for telling me about .degenerate_consensus!!!
     if score_type != 'quantitative':
-        summary_align = AlignInfo.SummaryInfo(msa)
         if gaps_allowed:
-            opti_seq = summary_align.gap_consensus(threshold=thresh, ambiguous='N')
+            alignments = [record.seq for record in AlignInfo.SummaryInfo(msa).alignment]
+            opti_seq = Bio.motifs.create(alignments, alphabet='GAUCRYWSMKHBVDN-').degenerate_consensus
         else:
-            opti_seq = summary_align.dumb_consensus(threshold=thresh, ambiguous='N')
+            alignments = [record.seq.replace('-', 'N') for record in AlignInfo.SummaryInfo(msa).alignment]
+            opti_seq = Bio.motifs.create(alignments, alphabet='GAUCRYWSMKHBVDN').degenerate_consensus
         n = len(opti_seq)
 
-    if score_type == 'naive':
-        # Naively tell me what the percent identity is: 1- ambiguity codons/ length
-        score = 1 - str(opti_seq).count('N') / n
+        if score_type == 'naive':
+            # Naively tell me what the percent identity is: 1- ambiguity codons/ length
+            score = 1 - str(opti_seq).count('N') / n
 
-    elif score_type == 'weighted':
-        # prepare scoring matrix a(x) (currently only uses N and gap)
-        a = {
-            'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1,
-            'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-            'H': 0.3, 'B': 0.3, 'D': 0.3, 'V': 0.3,
-            'N': 0, '-': 0
-        }
+        elif score_type == 'weighted':
+            # prepare scoring matrix a(x) (currently only uses N and gap)
+            a = {
+                'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1,
+                'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
+                'H': 0.3, 'B': 0.3, 'D': 0.3, 'V': 0.3,
+                'N': 0, '-': 0
+            }
 
-        # score based on extended identity and position of the bases
-        weight_sum = 0
-        weight_score_sum = 0
-        i = 0  # first position
+            # score based on extended identity and position of the bases
+            weight_sum = 0
+            weight_score_sum = 0
+            i = 0  # first position
 
-        for x in str(opti_seq):
-            w = exp(n - i)  # Calculate weight based on proximity to IGS
-            weight_sum += w
-            weight_score_sum += w * a[x]
-            i += 1  # move downstream
-        score = weight_score_sum / weight_sum
+            for x in str(opti_seq):
+                w = exp(n - i)  # Calculate weight based on proximity to IGS
+                weight_sum += w
+                weight_score_sum += w * a[x]
+                i += 1  # move downstream
+            score = weight_score_sum / weight_sum
 
-    elif score_type == 'quantitative':
+    else:
         score, opti_seq = get_quantitative_score(msa, count_gaps=gaps_allowed)
 
     # return optimized_guide, score
@@ -1044,7 +1047,9 @@ def get_quantitative_score(msa, thresh: float = 0.7, chars_to_ignore: list[str] 
 
         sum_probabilities += pos_prob / seq_num
 
-    opti_seq = left_seq.strip('-')
+    alignments = [record.seq for record in AlignInfo.SummaryInfo(msa).alignment]
+    opti_seq = Bio.motifs.create(alignments, alphabet='GAUCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+
     score = sum_probabilities / len(left_seq)
 
     return score, opti_seq
@@ -1187,49 +1192,6 @@ def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: 
 
     print(text)
     return
-# def ambiguity_consensus(summary_align, threshold=0.7, gaps_allowed=False):
-#     # I've made a modified version of BioPython'string_to_analyze dumb consensus that will allow IUPAC ambiguity codes
-#
-#     consensus = ''
-#
-#     # find the length of the consensus we are creating
-#     con_len = summary_align.alignment.get_alignment_length()
-#
-#     # go through each seq item
-#     for guide_length in range(con_len):
-#         # keep track of the counts of the different atoms we get
-#         atom_dict = Counter()
-#         num_atoms = 0
-#
-#         for record in summary_align.alignment:
-#             # make sure we haven't run past the end of any sequences
-#             # if they are of different lengths
-#             try:
-#                 c = record[guide_length]
-#             except IndexError:
-#                 continue
-#             if c != '-' and c != '.':
-#                 atom_dict[c] += 1
-#
-#                 num_atoms += 1
-#
-#         max_atoms = []
-#         max_size = 0
-#
-#         for atom in atom_dict:
-#             if atom_dict[atom] > max_size:
-#                 max_atoms = [atom]
-#                 max_size = atom_dict[atom]
-#             elif atom_dict[atom] == max_size:
-#                 max_atoms.append(atom)
-#
-#         # Here is where I will change the code. Instead of looking at a threshold, we'll try to find the ambiguity code
-#         # that matches the sequence
-#         if (len(max_atoms) == 1) and (
-#                 (float(max_size) / float(num_atoms)) >= threshold):
-#             consensus += max_atoms[0]
-#         else:
-#             # Check whether it matches ambiguous codons
-#             consensus += ambiguous
-#
-#     return Seq(consensus)
+
+
+
