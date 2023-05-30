@@ -47,6 +47,11 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                  percent_of_background_seqs_used: float = 1, seed_target: int = 1, seed_background: int = 0):
     """Generates ribozyme designs to target a set of sequences.
 
+    :param generate_summary: this will generate a summary graph of the target sequences showing the IGS true percent
+    coverage distribution vs. the guide score distribution. Keep in mind that setting this to True will SIGNIFICANTLY
+    increase computational load, because in essence the program would have to calculate guide scores for any possible
+    location regardless of min_true_cov. Only recommended for small datasets, very fast computers, or computers with a
+    lot of memory owned by people with a lot of patience.
     :param seed: seed to use for random sampling for reproducibility
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
     sequences used without replacement
@@ -77,10 +82,14 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     :param score_type:
     :param msa_fast: whether to use super5 MUSCLE MSA or just regular MUSCLE MSA. Recommended for large datasets (over
     300 sequences) for faster data processing.
-    :param keep_single_targets:
+    :param keep_single_targets: whether we want to get designs that only hit one target sequence. This is overriden by
+    min_true_cov - i.e. if min_true_cov is higher than the equivalent of one sequence then the program will not keep
+    single targets.
     """
 
     start = time.perf_counter()
+
+
     # Make the Ribozyme sequence by combining the main body and the barcode
     barcode_seq = transcribe_seq_file(barcode_seq_file)
     ribobody = transcribe_seq_file(ribobody_file)
@@ -111,8 +120,13 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     if percent_of_target_seqs_used < 1:
         array = np.array(target_names_and_seqs, dtype=tuple)
         rng = default_rng(seed=seed_target)
-        target_names_and_seqs = rng.choice(array, size=round(len(target_names_and_seqs) * percent_of_target_seqs_used), replace=False)
+        target_names_and_seqs = rng.choice(array, size=round(len(target_names_and_seqs) * percent_of_target_seqs_used),
+                                           replace=False)
         print(f'Randomly sampling {len(target_names_and_seqs)} sequences to analyze.\n')
+
+    if keep_single_targets and min_true_cov > 1 / len(target_names_and_seqs):
+        # If we only want to get more than a certain percentage, override keep_single_targets
+        keep_single_targets = False
 
     # find all catalytic U sites
     # Remember: data has one tuple per target sequence, the third entry is a tuple for each catalytic U site
@@ -123,27 +137,27 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
 
     # Now align sequences to reference sequences and get the conversion dictionaries for each
     time1 = time.perf_counter()
-    new_data = align_to_ref(data, ref_name_and_seq)
+    aligned_seqs = align_to_ref(data, ref_name_and_seq)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='indexing sequences')
 
     time1 = time.perf_counter()
     # Now, we can optimize each sequence
     if optimize_seq:
-
-        to_optimize, to_keep_single_targets = prep_for_optimizing(new_data, min_true_cov=min_true_cov,
+        to_optimize, to_keep_single_targets = prep_for_optimizing(aligned_seqs, min_true_cov=min_true_cov,
                                                                   accept_single_targets=keep_single_targets)
+
+
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='prepping sequences for optimization')
 
         time1 = time.perf_counter()
         opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
                                        fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast,
-                                       gaps_allowed=gaps_allowed)
+                                       gaps_allowed=gaps_allowed, min_true_cov=min_true_cov)
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
-        time1 = time.perf_counter()
         if targeted:
             background_names_and_seqs = read_fasta(background_sequences_folder)
             print(f'Found {len(background_names_and_seqs)} total background sequences to analyze.')
@@ -187,7 +201,7 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
         return opti_seqs
 
     else:
-        ranked_sorted_IGS = find_repeat_targets(new_data, ribo_seq, fileout=fileout, file=folder_to_save)
+        ranked_sorted_IGS = find_repeat_targets(aligned_seqs, ribo_seq, fileout=fileout, file=folder_to_save)
         time2 = time.perf_counter()
         print('All guide sequences generated.')
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating designs')
@@ -420,8 +434,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
         temp_uracil_indexes = np.array([ref_idx - 1 for _, ref_idx in target_data[2][2]])  # convert to base 0 indexing
         # everything that is a 2 is a U that appears in both the designs and the target sequence,
         # a 1 is a U in the design
-        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[
-                                                           i, temp_uracil_indexes] * 2  # base 0 indexing
+        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2  # base 0 index
 
     # for histogram
     u_values, u_counts = np.unique(uracil_sites_targets, return_counts=True)  # base 0 indexing
@@ -548,6 +561,14 @@ def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_
     # If needed, write a file with good designs
 
     # Also give me a histogram of trends
+    generate_summary_graphs(is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, file_out, file)
+    generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage, guide_composite_scores, file_out, file)
+
+    return opti_target_seqs
+
+
+def generate_summary_graphs(is_u_conserved: list, conserved_igs_true_perc_coverage: dict,
+                                     delta_composite_scores: dict,file_out: bool = False, file: str = ''):
     sns.set_theme(style='white', rc={"axes.spines.right": False, "axes.spines.top": False})
     fig, axs = plt.subplots(3, 1, layout='constrained')
     # axs[0].bar(x=is_u_conserved[1], height=is_u_conserved[1])
@@ -568,6 +589,14 @@ def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_
         plt.savefig(f'{file}/targeted designs vs background general stats.svg', transparent=False)
     plt.show()
 
+    # With more targets, make sure to graph location vs. scores (igs and guide) and the std dev per position
+
+    return
+
+
+def generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage: dict, guide_composite_scores: dict,
+                                file_out: bool = False, file: str = '', title: str = 'targeted designs vs background'):
+
     igs_true_cov_vs_guide_comp_score_dict = {key: (int(key[5:]), conserved_igs_true_perc_coverage[key],
                                                    guide_composite_scores[key])
                                              for key in conserved_igs_true_perc_coverage}
@@ -582,12 +611,10 @@ def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_
     reg_plot.ax_joint.annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
 
     if file_out:
-        plt.savefig(f'{file}/targeted designs vs background scoring correlations.svg', transparent=False)
+        plt.savefig(f'{file}/{title} scoring correlations.svg', transparent=False)
     plt.show()
+    return
 
-    # With more targets, make sure to graph location vs. scores (igs and guide) and the std dev per position
-
-    return opti_target_seqs
 
 
 def prep_for_optimizing(new_data: list[list], min_true_cov: float = 0, accept_single_targets: bool = True):
@@ -794,7 +821,8 @@ def find_repeat_targets(new_data: list[list], ribo_seq: str, fileout: bool = Fal
 
 def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo_seq: str, single_targets,
                        fileout: bool = False, file: str = '', score_type: str = 'quantitative',
-                       gaps_allowed: bool = True, msa_fast: bool = False, for_comparison=False):
+                       gaps_allowed: bool = True, msa_fast: bool = False, for_comparison: bool = False,
+                       min_true_cov: float = 0):
     """
 
     :param for_comparison:
@@ -848,9 +876,10 @@ def optimize_sequences(to_optimize: dict, thresh: float, guide_length: int, ribo
             f.write(
                 'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,number of species targeted,Optimized guide,Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_seqs:
-                list_for_csv = str(item[7]).replace(',', '|')
-                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{list_for_csv},'
-                        f'{item[8]},{item[9]},{item[10]}\n')
+                if item[5] >= min_true_cov:
+                    list_for_csv = str(item[7]).replace(',', '|')
+                    f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{list_for_csv},'
+                            f'{item[8]},{item[9]},{item[10]}\n')
     if for_comparison:
         print(f'All background guide sequences analyzed.')
     else:
