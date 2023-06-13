@@ -87,7 +87,7 @@ if __name__ == '__main__':
                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                             background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
                             fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=0.75, score_type='quantitative')
+                            percent_of_background_seqs_used=0.75, score_type='weighted')
 
     playsound('/System/Library/Sounds/Pop.aiff')
     print(f'Test data done!\n########################################################\n')
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     # playsound('/System/Library/Sounds/Pop.aiff')
 
     ########################################################
-    # Targeted designs order level
+    # # Targeted designs order level
     enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
     pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
     output_path_e = 'SILVA_output_files_Super5/for_paper/targets_enterobacterales'
@@ -199,7 +199,7 @@ if __name__ == '__main__':
                  background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
                  ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
                  percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30)
-    print('Dataset 1 compplete.\n')
+    print('Dataset 1 complete.\n')
 
     RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,

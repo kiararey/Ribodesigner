@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="figured out how to use motifs to get consensus sequence! will work on an updated quantitative/ weighted scoring method next.">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Small edits added for efficiency">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
@@ -373,14 +373,7 @@
       <workItem from="1679691075281" duration="22584000" />
       <workItem from="1680555562972" duration="7144000" />
       <workItem from="1680798553720" duration="66367000" />
-      <workItem from="1682352740136" duration="67699000" />
-    </task>
-    <task id="LOCAL-00013" summary="working on optimize_sequences: need to do the following:&#10;&#10;- Determine all cases of indexing to consider&#10;- maybe even a case where we take all of the cases then use the old ribodesigner function --&gt; can do this for later versions&#10;- figure out how best to implement the mode --&gt; something something with take the closest my braIn is mush so i will think better tomorrow&#10;&#10;- then finally add scoriiiing">
-      <created>1660776508490</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1660776508491</updated>
+      <workItem from="1682352740136" duration="101267000" />
     </task>
     <task id="LOCAL-00014" summary="I've added a calculation for &quot;true percent coverage&quot;, which uses the information of on-target counts to determine if the IGS is at the same location in all organisms covered. &#10;&#10;true percent coverage = percent coverage * percent on target">
       <created>1660851062172</created>
@@ -718,7 +711,14 @@
       <option name="project" value="LOCAL" />
       <updated>1683319885209</updated>
     </task>
-    <option name="localTasksCounter" value="62" />
+    <task id="LOCAL-00062" summary="Small edits added for efficiency">
+      <created>1685476243345</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1685476243345</updated>
+    </task>
+    <option name="localTasksCounter" value="63" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -748,7 +748,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Creating SILVA database datasets" />
     <MESSAGE value="Creating SILVA database datasets and making figure code" />
     <MESSAGE value="Creating SILVA database datasets and making figure code. &#10;&#10;I'm also fixing up a new version of some old figure plotting functions to be compatible with this repo" />
     <MESSAGE value="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference." />
@@ -773,7 +772,8 @@
     <MESSAGE value="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively" />
     <MESSAGE value="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol" />
     <MESSAGE value="figured out how to use motifs to get consensus sequence! will work on an updated quantitative/ weighted scoring method next." />
-    <option name="LAST_COMMIT_MESSAGE" value="figured out how to use motifs to get consensus sequence! will work on an updated quantitative/ weighted scoring method next." />
+    <MESSAGE value="Small edits added for efficiency" />
+    <option name="LAST_COMMIT_MESSAGE" value="Small edits added for efficiency" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -819,11 +819,6 @@
           <option name="timeStamp" value="165" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>67</line>
-          <option name="timeStamp" value="170" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/oldribodesigner.py</url>
           <line>248</line>
           <option name="timeStamp" value="173" />
@@ -844,14 +839,14 @@
           <option name="timeStamp" value="224" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>92</line>
-          <option name="timeStamp" value="227" />
+          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
+          <line>528</line>
+          <option name="timeStamp" value="334" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>1000</line>
-          <option name="timeStamp" value="304" />
+          <line>537</line>
+          <option name="timeStamp" value="335" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -875,7 +870,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1683837375592" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1686680475664" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
