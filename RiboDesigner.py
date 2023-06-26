@@ -177,13 +177,13 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
             round_convert_time(start=time1, end=time2, round_to=4, task_timed='indexing background sequences')
 
             print('Now applying designed ribozymes with background sequences and getting statistics...')
-            is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
+            average_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
             igs_and_guides_comp_scores = \
                 ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
                              identity_thresh=identity_thresh, guide_length=guide_length, score_type=score_type,
                              gaps_allowed=gaps_allowed, msa_fast=msa_fast, flexible_igs=True)
 
-            opti_target_seqs = compare_targeted_sequences(opti_seqs, is_u_conserved, conserved_igs_true_perc_coverage,
+            opti_target_seqs = compare_targeted_sequences(opti_seqs, average_conserved, conserved_igs_true_perc_coverage,
                                                           background_guide_scores, delta_composite_scores,
                                                           igs_and_guides_comp_scores, min_delta=min_delta,
                                                           file_out=fileout, file=folder_to_save)
@@ -436,11 +436,21 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
         # a 1 is a U in the design
         uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2  # base 0 index
 
-    # for histogram
-    u_values, u_counts = np.unique(uracil_sites_targets, return_counts=True)  # base 0 indexing
-    is_u_conserved = [[False, True], u_counts[1:]]
-    print(
-        f'There are {is_u_conserved[1][1]} conserved Us and {is_u_conserved[1][0]} not conserved.')
+    average_conserved = []
+    num_of_targets = len(aligned_target_sequences)
+    for i in designed_idxs:
+        u_values, u_counts = np.unique(uracil_sites_targets[:, i], return_counts=True)
+        try:
+            percentage_of_cat_sites_conserved = u_counts[np.where(u_values == 2)[0][0]]/num_of_targets
+        except:
+            percentage_of_cat_sites_conserved = 0
+        average_conserved.append(percentage_of_cat_sites_conserved)
+
+    # # for histogram
+    # u_values, u_counts = np.unique(uracil_sites_targets, return_counts=True)  # base 0 indexing
+    # is_u_conserved = [[False, True], u_counts[1:]]
+    # print(
+    #     f'There are {is_u_conserved[1][1]} conserved Us and {is_u_conserved[1][0]} not conserved.')
 
     # What is the conservation of IGSes at a particular position for each design?
     # Keep only the sites that are conserved for later.
@@ -505,38 +515,27 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     opti_seqs.extend(optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
                                         score_type=score_type, msa_fast=msa_fast, for_comparison=True))
 
-    # Now reduce ambiguity
+    # Now reduce ambiguity and score
+    print('\nNow scoring ribozyme designs against background sequences...')
+    start = time.perf_counter()
     in_data = [(seqs[-1], seqs[-2], do_not_target_background, score_type, key, True, seqs[5]) for key, seqs in
                zip(to_optimize, opti_seqs)]
+
+    replace_ambiguity(in_data[0][0], in_data[0][1], in_data[0][2], in_data[0][3], in_data[0][4], in_data[0][5],
+                      in_data[0][6])
 
     with Pool() as pool:
         less_ambiguous_designs = pool.starmap(replace_ambiguity, in_data)
 
     in_data = []
-
-    for score, new_seq, background_sequence, key, true_perc_cov in less_ambiguous_designs:
-        in_data.append((key, [new_seq, background_sequence], 1, score_type, gaps_allowed, False, True,
-                        score * true_perc_cov))
-        # Update our scores with the new less ambiguous designs
-        igs_and_guides_comp_scores[key] = [score * true_perc_cov, new_seq]
-
-    # Now do a fake MSA aka it's pairwise but we use MSA for the scoring
-    print('\nNow scoring ribozyme designs against background sequences...')
-    start = time.perf_counter()
     pairwise_composite_scores = {}
     background_guide_scores = {}
 
-    with Pool() as pool:
-        names_and_scores = pool.starmap(msa_and_optimize, in_data)
-
-    for name, score, cov in names_and_scores:
-        pairwise_composite_scores[name] = score * cov
-        background_guide_scores[name] = score
-
-    # for key, seqs in zip(to_optimize, opti_seqs):
-    #     _, pairwise_score = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
-    #                                          score_type=score_type, gaps_allowed=False, msa_fast=False)
-    #     pairwise_composite_scores[key] = pairwise_score * seqs[6]  # convert to composite score
+    for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in less_ambiguous_designs:
+        # Update our scores with the new less ambiguous designs
+        igs_and_guides_comp_scores[key] = [new_seq_score * true_perc_cov, new_seq]
+        pairwise_composite_scores[key] = pairwise_score * true_perc_cov
+        background_guide_scores[key] = background_seq_score
 
     delta_composite_scores = {}
     for key, good_data in igs_and_guides_comp_scores.items():
@@ -549,11 +548,11 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     round_convert_time(start=start, end=time.perf_counter(), round_to=4,
                        task_timed='scoring against background sequences')
 
-    return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
+    return average_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
            igs_and_guides_comp_scores
 
 
-def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_igs_true_perc_coverage: dict,
+def compare_targeted_sequences(opti_seqs: list, average_conserved: list, conserved_igs_true_perc_coverage: dict,
                                background_guide_scores: dict, delta_composite_scores: dict,
                                igs_and_guides_comp_scores: dict, min_delta: float = 0, file_out: bool = False,
                                file: str = ''):
@@ -599,20 +598,21 @@ def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_
                         f'{item[-1]},{list_for_csv},{item[8]},{item[9]},{item[10]}\n')
 
     # Also give me a histogram of trends
-    generate_summary_graphs(is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, file_out, file)
+    generate_summary_graphs(average_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, file_out, file)
     generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage, background_guide_scores, file_out, file)
 
     return opti_target_seqs
 
 
-def generate_summary_graphs(is_u_conserved: list, conserved_igs_true_perc_coverage: dict,
+def generate_summary_graphs(average_conserved: list, conserved_igs_true_perc_coverage: dict,
                             delta_composite_scores: dict, file_out: bool = False, file: str = ''):
     sns.set_theme(style='white', rc={"axes.spines.right": False, "axes.spines.top": False})
     fig, axs = plt.subplots(3, 1, layout='constrained')
 
-    sns.histplot(x=['No', 'Yes'], weights=is_u_conserved[1], ax=axs[0], binrange=[0, 1])
-    axs[0].set_xlabel('Is the U conserved?')
-    axs[0].set_title('Conserved U sites between targeted designs and background sequences')
+    # sns.histplot(x=['No', 'Yes'], weights=is_u_conserved[1], ax=axs[0], binrange=[0, 1])
+    sns.histplot(average_conserved, kde=True, ax=axs[0])
+    axs[0].set_xlabel('Percent of background sequences with conserved Us to design')
+    axs[0].set_title('Average conserved U sites between targeted designs and background sequences')
 
     sns.histplot(conserved_igs_true_perc_coverage, kde=True, ax=axs[1])
     axs[1].set_xlabel('True percent coverage in background sequences')
@@ -1329,43 +1329,51 @@ def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_targe
 
         new_seq += new_base
 
+    # Now do a pairwise sequence with the target sequence to see the delta score:
+    pairwise_comparison_consensus = Bio.motifs.create([new_seq, background_sequence],
+                                                      alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
+
     if score_type == 'quantitative':
         if score_params:
             params = [new_seq].extend(score_params)
-            score = map(get_quantitative_score, params)
+            new_seq_score = map(get_quantitative_score, params)
+            back_params = [background_sequence].extend(score_params)
+            background_seq_score = map(get_quantitative_score, back_params)
+            pairwise_params = [pairwise_comparison_consensus].extend(score_params)
+            pairwise_score = map(get_quantitative_score, pairwise_params)
         else:
             print('Cannot do quantitative score without a list of alignments. Performing weighted score instead...')
-            score = get_weighted_score(new_seq)
+            new_seq_score = get_weighted_score(new_seq)
+            background_seq_score = get_weighted_score(background_sequence)
+            pairwise_score = get_weighted_score(pairwise_comparison_consensus)
     elif score_type == 'weighted':
-        score = get_weighted_score(new_seq)
+        new_seq_score = get_weighted_score(new_seq)
+        background_seq_score = get_weighted_score(background_sequence)
+        pairwise_score = get_weighted_score(pairwise_comparison_consensus)
+        if new_seq_score < get_weighted_score(good_sequence):
+            print('uh-oh')
     elif score_type == 'directional':
-        score = get_directional_score(new_seq)
+        new_seq_score = get_directional_score(new_seq)
+        background_seq_score = get_directional_score(background_sequence)
+        pairwise_score = get_directional_score(pairwise_comparison_consensus)
     elif score_type == 'naive':
-        score = get_naive_score(new_seq)
+        new_seq_score = get_naive_score(new_seq)
+        background_seq_score = get_naive_score(background_sequence)
+        pairwise_score = get_naive_score(pairwise_comparison_consensus)
+        if new_seq_score < get_naive_score(good_sequence):
+            print('uh-oh')
     else:
         print(f'Score type {score_type} is not supported. Please choose either weighted, quantitative, '
               f'or directional.')
         return -1
 
-    if key:
-        if return_background:
-            if extra_data:
-                return score, new_seq, background_sequence, key, extra_data
-            else:
-                return score, new_seq, background_sequence, key
-        else:
-            if extra_data:
-                return score, new_seq, key, extra_data
-            else:
-                return score, new_seq, key
+
+    if key and extra_data:
+        return new_seq, new_seq_score, background_seq_score, pairwise_score, key, extra_data
+    elif key:
+        return new_seq, new_seq_score, background_seq_score, pairwise_score, key
+    elif extra_data:
+        return new_seq, new_seq_score, background_seq_score, pairwise_score, extra_data
     else:
-        if return_background:
-            if extra_data:
-                return score, new_seq, background_sequence, extra_data
-            else:
-                return score, new_seq, background_sequence
-        else:
-            if extra_data:
-                return score, new_seq, extra_data
-            else:
-                return score, new_seq
+        return new_seq, new_seq_score, background_seq_score, pairwise_score
+

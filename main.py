@@ -87,13 +87,13 @@ if __name__ == '__main__':
                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                             background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
                             fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=0.75, score_type='weighted')
+                            percent_of_background_seqs_used=0.75, score_type='naive')
 
     out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                             background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
                             fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=0.75, score_type='naive')
+                            percent_of_background_seqs_used=0.75, score_type='weighted')
 
     # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
