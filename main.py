@@ -83,11 +83,23 @@ if __name__ == '__main__':
     good_targets = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
                    "Data files and Outputs/Ribozyme paper dataset/Original files"
     bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
-    out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    out_data_weighted = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                             background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
                             fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
                             percent_of_background_seqs_used=0.75, score_type='weighted')
+
+    out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+                            background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+                            percent_of_background_seqs_used=0.75, score_type='naive')
+
+    # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+    #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+    #                         percent_of_background_seqs_used=0.75, score_type='quantitative')
 
     playsound('/System/Library/Sounds/Pop.aiff')
     print(f'Test data done!\n########################################################\n')
@@ -198,14 +210,14 @@ if __name__ == '__main__':
                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                  background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
                  ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30)
+                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30, score_type='naive')
     print('Dataset 1 complete.\n')
 
     RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                  background_sequences_folder=enterobacterales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
                  ref_sequence_file=ref_path, folder_to_save=output_path_p, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30)
+                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30, score_type='naive')
 
     playsound('/System/Library/Sounds/Pop.aiff')
 

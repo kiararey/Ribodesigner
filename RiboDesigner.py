@@ -91,8 +91,8 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     start = time.perf_counter()
 
     # Make the Ribozyme sequence by combining the main body and the barcode
-    barcode_seq = transcribe_seq_file(barcode_seq_file)
-    ribobody = transcribe_seq_file(ribobody_file)
+    barcode_seq = back_transcribe_seq_file(barcode_seq_file)
+    ribobody = back_transcribe_seq_file(ribobody_file)
     ribo_seq = ribobody + barcode_seq
 
     target_names_and_seqs = read_fasta(target_sequences_folder)
@@ -177,15 +177,16 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
             round_convert_time(start=time1, end=time2, round_to=4, task_timed='indexing background sequences')
 
             print('Now applying designed ribozymes with background sequences and getting statistics...')
-            is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores, \
-            names_and_guide_scores = ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
-                                                  identity_thresh=identity_thresh, guide_length=guide_length,
-                                                  score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
-                                                  flexible_igs=True)
+            is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
+            igs_and_guides_comp_scores = \
+                ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
+                             identity_thresh=identity_thresh, guide_length=guide_length, score_type=score_type,
+                             gaps_allowed=gaps_allowed, msa_fast=msa_fast, flexible_igs=True)
 
             opti_target_seqs = compare_targeted_sequences(opti_seqs, is_u_conserved, conserved_igs_true_perc_coverage,
-                                                          delta_composite_scores, guide_composite_scores,
-                                                          min_delta=min_delta, file_out=fileout, file=folder_to_save)
+                                                          background_guide_scores, delta_composite_scores,
+                                                          igs_and_guides_comp_scores, min_delta=min_delta,
+                                                          file_out=fileout, file=folder_to_save)
             time2 = time.perf_counter()
             round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
                                                                               'sequences')
@@ -234,7 +235,7 @@ def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int = 5, guid
     # run function to find the index of all U residues of each sequence in target_seqs
     for name, sequ in target_names_and_seqs:
         # find all possible splice sites
-        idx = find(sequ, 'U')
+        idx = find(sequ, 'T')
         # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
         idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
 
@@ -248,9 +249,9 @@ def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int = 5, guid
         small_col = 0
         for i in idx_new:
             # generate complementary guide sequence guide_length residues *downstream* of U site
-            guide = sequ[i + 1:i + guide_length + 1].reverse_complement_rna()
+            guide = sequ[i + 1:i + guide_length + 1].reverse_complement()
             # generate complementary IGS sequence igs_length bases long *upstream* of U site
-            IGS = sequ[i - igs_length:i].reverse_complement_rna()
+            IGS = sequ[i - igs_length:i].reverse_complement()
 
             # now join IGS + G (where U site should be for wobble pair) + guide sequence and
             # append to ribozyme template
@@ -268,7 +269,7 @@ def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int = 5, guid
     return filtered_data
 
 
-def align_to_ref(data, ref_name_and_seq, base_to_find: str = 'U'):
+def align_to_ref(data, ref_name_and_seq, base_to_find: str = 'T'):
     """
     Aligns each target sequence to a reference sequence, finds all catalytic site indexes, and returns:
 
@@ -366,13 +367,13 @@ def read_fasta(in_file: str, file_type: str = 'fasta') -> list[tuple]:
         # will return a list of tuples as (ID, sequence)
         fasta_iter = SeqIO.parse(in_file, file_type)
         for record in fasta_iter:
-            target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
+            target_seqs_and_names.append((record.id, record.seq.upper().back_transcribe()))
         return target_seqs_and_names
     else:
         for filename in glob.glob(os.path.join(in_file, '*.' + file_type)):
             fasta_iter = SeqIO.parse(filename, file_type)
             for record in fasta_iter:
-                target_seqs_and_names.append((record.id, record.seq.upper().transcribe()))
+                target_seqs_and_names.append((record.id, record.seq.upper().back_transcribe()))
         return target_seqs_and_names
 
 
@@ -387,7 +388,7 @@ def find(string_to_analyze: str, char_to_find: str) -> list[int, str]:
     return [i for i, ltr in enumerate(string_to_analyze) if ltr == char_to_find]
 
 
-def transcribe_seq_file(seq_file: str) -> Seq:
+def back_transcribe_seq_file(seq_file: str) -> Seq:
     """
     Converts DNA sequences into RNA transcripts
 
@@ -397,13 +398,13 @@ def transcribe_seq_file(seq_file: str) -> Seq:
     # seq_file must be a .txt file
     with open(seq_file) as f:
         for i in f:
-            out_seq = Seq(i).upper().transcribe()
+            out_seq = Seq(i).upper().back_transcribe()
     return out_seq
 
 
 def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh: float, guide_length: int,
                  score_type: str = 'quantitative', gaps_allowed: bool = True, msa_fast: bool = False,
-                 flexible_igs: bool = False):
+                 flexible_igs: bool = False, do_not_target_background: bool = True):
     """
     Checks generated designs against a set of sequences to either find how well they align to a given dataset.
     Will return a set of sequences that match for each design as well as a score showing how well they matched.
@@ -412,8 +413,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     :param ref_seq_len:
     :param identity_thresh:
     :param guide_length:
-    :param fileout:
-    :param file:
+    :param do_not_target_background: boolean set to True if you want to further optimize the designs by reducing ambiguity
     :param score_type:
     :param gaps_allowed:
     :param flexible_igs:
@@ -424,7 +424,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     # This will be a list: [igs, guide, ref_idx (0 base indexing), guide_id(igs+ref_idx)]
     igs_and_guides_designs = [(str(design[0]), design[8], design[1] - 1, str(design[0]) + str(design[1]))
                               for design in designs]
-    igs_and_guides_initial_comp_scores = {str(design[0]) + str(design[1]): design[6] for design in designs}
+    igs_and_guides_comp_scores = {str(design[0]) + str(design[1]): [design[6], design[8]] for design in designs}
 
     # Is there a U at each position for each design at each target sequence?
     designed_idxs = np.array(list({design[2] for design in igs_and_guides_designs}))  # base 0 indexing
@@ -505,19 +505,33 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     opti_seqs.extend(optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
                                         score_type=score_type, msa_fast=msa_fast, for_comparison=True))
 
+    # Now reduce ambiguity
+    in_data = [(seqs[-1], seqs[-2], do_not_target_background, score_type, key, True, seqs[5]) for key, seqs in
+               zip(to_optimize, opti_seqs)]
+
+    with Pool() as pool:
+        less_ambiguous_designs = pool.starmap(replace_ambiguity, in_data)
+
+    in_data = []
+
+    for score, new_seq, background_sequence, key, true_perc_cov in less_ambiguous_designs:
+        in_data.append((key, [new_seq, background_sequence], 1, score_type, gaps_allowed, False, True,
+                        score * true_perc_cov))
+        # Update our scores with the new less ambiguous designs
+        igs_and_guides_comp_scores[key] = [score * true_perc_cov, new_seq]
+
     # Now do a fake MSA aka it's pairwise but we use MSA for the scoring
     print('\nNow scoring ribozyme designs against background sequences...')
     start = time.perf_counter()
     pairwise_composite_scores = {}
-
-    in_data = [(key, [seqs[-1], seqs[-2]], 1, score_type, gaps_allowed, False, True, seqs[6])
-               for key, seqs in zip(to_optimize, opti_seqs)]
+    background_guide_scores = {}
 
     with Pool() as pool:
         names_and_scores = pool.starmap(msa_and_optimize, in_data)
 
     for name, score, cov in names_and_scores:
         pairwise_composite_scores[name] = score * cov
+        background_guide_scores[name] = score
 
     # for key, seqs in zip(to_optimize, opti_seqs):
     #     _, pairwise_score = msa_and_optimize(name=key, seqs_to_align=[seqs[-1], seqs[-2]], thresh=1,
@@ -525,24 +539,24 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     #     pairwise_composite_scores[key] = pairwise_score * seqs[6]  # convert to composite score
 
     delta_composite_scores = {}
-    guide_composite_scores = {}
-    for key, good_score in igs_and_guides_initial_comp_scores.items():
+    for key, good_data in igs_and_guides_comp_scores.items():
         try:
             bad_score = pairwise_composite_scores[key]
-
         except:
             bad_score = 0
-        guide_composite_scores[key] = bad_score
-        delta_composite_scores[key] = good_score - bad_score
+            background_guide_scores[key] = 0
+        delta_composite_scores[key] = good_data[0] - bad_score
     round_convert_time(start=start, end=time.perf_counter(), round_to=4,
                        task_timed='scoring against background sequences')
 
-    return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, guide_composite_scores
+    return is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
+           igs_and_guides_comp_scores
 
 
 def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_igs_true_perc_coverage: dict,
-                               guide_composite_scores: dict, delta_composite_scores: dict, names_and_guide_scores: dict, min_delta: float = 0,
-                               file_out: bool = False, file: str = ''):
+                               background_guide_scores: dict, delta_composite_scores: dict,
+                               igs_and_guides_comp_scores: dict, min_delta: float = 0, file_out: bool = False,
+                               file: str = ''):
     """
     Will generate a delta score between good and bad designs. Those with the largest difference are good!
     :param names_and_guide_scores:
@@ -575,17 +589,18 @@ def compare_targeted_sequences(opti_seqs: list, is_u_conserved: list, conserved_
 
         with open(f'{file}/Targeted designs above threshold.csv', 'w') as f:
             f.write(
-                'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,Delta composite score vs '
-                'background,Number of species targeted,Optimized guide,Optimized guide + G + IGS,'
-                'Full Ribozyme design\n')
+                'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,Adjusted score vs. background,'
+                'Delta composite score vs background,Number of species targeted,Optimized guide,'
+                'Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_target_seqs:
+                adjusted_score = igs_and_guides_comp_scores[f'{item[0]}{item[1]}']
                 list_for_csv = str(item[7]).replace(',', '|')
-                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{item[-1]},'
-                        f'{list_for_csv},{item[8]},{item[9]},{item[10]}\n')
+                f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{adjusted_score},'
+                        f'{item[-1]},{list_for_csv},{item[8]},{item[9]},{item[10]}\n')
 
     # Also give me a histogram of trends
     generate_summary_graphs(is_u_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, file_out, file)
-    generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage, names_and_guide_scores, file_out, file)
+    generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage, background_guide_scores, file_out, file)
 
     return opti_target_seqs
 
@@ -594,22 +609,24 @@ def generate_summary_graphs(is_u_conserved: list, conserved_igs_true_perc_covera
                             delta_composite_scores: dict, file_out: bool = False, file: str = ''):
     sns.set_theme(style='white', rc={"axes.spines.right": False, "axes.spines.top": False})
     fig, axs = plt.subplots(3, 1, layout='constrained')
-    # axs[0].bar(x=is_u_conserved[1], height=is_u_conserved[1])
-    # axs[0].set_xticks(is_u_conserved[0], labels=['No', 'Yes'])
-    sns.histplot(x=['No', 'Yes'], weights=is_u_conserved[1], ax=axs[0])
+
+    sns.histplot(x=['No', 'Yes'], weights=is_u_conserved[1], ax=axs[0], binrange=[0, 1])
     axs[0].set_xlabel('Is the U conserved?')
     axs[0].set_title('Conserved U sites between targeted designs and background sequences')
 
     sns.histplot(conserved_igs_true_perc_coverage, kde=True, ax=axs[1])
     axs[1].set_xlabel('True percent coverage in background sequences')
     axs[1].set_title('Distribution of conserved IGS sites in background sequences')
+    axs[1].set_xlim(left=0, right=1)
 
-    sns.histplot(delta_composite_scores, kde=True, ax=axs[2])
+    sns.histplot(delta_composite_scores, kde=True, ax=axs[2], binrange=[0, 1])
     axs[2].set_xlabel(u'Δ composite scores (design - background)')
     axs[2].set_title(u'Δ Composite scores of generated guides with conserved IGS on background sequences')
+    axs[2].set_xlim(left=0, right=1)
 
     if file_out:
         plt.savefig(f'{file}/targeted designs vs background general stats.svg', transparent=False)
+        plt.savefig(f'{file}/targeted designs vs background general stats.png')
     plt.show()
 
     # With more targets, make sure to graph location vs. scores (igs and guide) and the std dev per position
@@ -634,6 +651,7 @@ def generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage: dict, names_an
 
     if file_out:
         plt.savefig(f'{file}/{title} scoring correlations.svg', transparent=False)
+        plt.savefig(f'{file}/{title} scoring correlations.png')
     plt.show()
     return
 
@@ -1003,14 +1021,14 @@ def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str =
     # thanks to https://github.com/mdehoon for telling me about .degenerate_consensus!!!
     if score_type != 'quantitative':
         if gaps_allowed:
-            opti_seq = Bio.motifs.create(alignments, alphabet='GAUCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+            opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
         else:
-            opti_seq = Bio.motifs.create(alignments, alphabet='GAUCRYWSMKHBVDN-').degenerate_consensus.strip(
+            opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip(
                 '-').replace('-', 'N')
 
         if score_type == 'naive':
             # Naively tell me what the percent identity is: 1- ambiguity codons/ length
-            score = 1 - str(opti_seq).count('N') / len(opti_seq)
+            score = get_naive_score(opti_seq)
 
         elif score_type == 'weighted':
             score = get_weighted_score(opti_seq)
@@ -1034,6 +1052,11 @@ def msa_and_optimize(name, seqs_to_align, thresh: float = 0.7, score_type: str =
         return opti_seq, score
 
 
+def get_naive_score(opti_seq):
+    score = 1 - str(opti_seq).count('N') / len(opti_seq)
+    return score
+
+
 def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = None, count_gaps: bool = True,
                            penalize_trailing_gaps: bool = False):
     """
@@ -1044,7 +1067,7 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
     :param penalize_trailing_gaps:
     :return:
     """
-    # a modified version of BioPython'string_to_analyze PSSM funtction that counts gaps by default and also gives us
+    # a modified version of BioPython'string_to_analyze PSSM function that counts gaps by default and also gives us
     # the quantitative score. This quantitative score is as follows:
 
     if chars_to_ignore is None:
@@ -1081,7 +1104,7 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
         sum_probabilities += pos_prob / seq_num
 
     # Replace gaps with N since we can't order gaps when ordering oligos
-    opti_seq = Bio.motifs.create(alignments, alphabet='GAUCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
+    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
                                                                                                                   'N')
     score = sum_probabilities / len(left_seq)
 
@@ -1091,7 +1114,7 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
 def get_weighted_score(opti_seq):
     # prepare scoring matrix a(x)
     a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-         'H': 0.3, 'B': 0.3, 'D': 0.3, 'V': 0.3, 'N': 0, '-': 0}
+         'H': 1/3, 'B': 1/3, 'D': 1/3, 'V': 1/3, 'N': 0, '-': 0}
     n = len(opti_seq)
 
     prelim_score = 0
@@ -1105,7 +1128,7 @@ def get_weighted_score(opti_seq):
 def get_directional_score(opti_seq):
     # prepare scoring matrix a(x)
     a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-         'H': 0.3, 'B': 0.3, 'D': 0.3, 'V': 0.3, 'N': 0, '-': 0}
+         'H': 1/3, 'B': 1/3, 'D': 1/3, 'V': 1/3, 'N': 0, '-': 0}
     n = len(opti_seq)
     # This is broken, have not fixed yet
     # score based on extended identity and position of the bases
@@ -1168,9 +1191,9 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
                 ref_string.replace('-', '')) - 1  # remember that the probs dictionary is in zero-based indexing
             if ref_idx < 0:  # if the sequence is bigger than the original sequence
                 continue
-            if nucleotide not in ['A', 'U', 'C', 'G', '-']:
-                if nucleotide == 'T':
-                    probs[ref_idx]['U'] += 1
+            if nucleotide not in ['A', 'T', 'C', 'G', '-']:
+                if nucleotide == 'U':
+                    probs[ref_idx]['T'] += 1
                 elif nucleotide == 'M':
                     probs[ref_idx]['A'] += 0.5
                     probs[ref_idx]['C'] += 0.5
@@ -1179,16 +1202,16 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
                     probs[ref_idx]['G'] += 0.5
                 elif nucleotide == 'W':
                     probs[ref_idx]['A'] += 0.5
-                    probs[ref_idx]['U'] += 0.5
+                    probs[ref_idx]['T'] += 0.5
                 elif nucleotide == 'S':
                     probs[ref_idx]['G'] += 0.5
                     probs[ref_idx]['C'] += 0.5
                 elif nucleotide == 'Y':
-                    probs[ref_idx]['U'] += 0.5
+                    probs[ref_idx]['T'] += 0.5
                     probs[ref_idx]['C'] += 0.5
                 elif nucleotide == 'K':
                     probs[ref_idx]['G'] += 0.5
-                    probs[ref_idx]['U'] += 0.5
+                    probs[ref_idx]['T'] += 0.5
                 elif nucleotide == 'V':
                     probs[ref_idx]['A'] += 1 / 3
                     probs[ref_idx]['C'] += 1 / 3
@@ -1196,19 +1219,19 @@ def calc_shannon_entropy(target_names_and_seqs, ref_name_and_seq, base: float = 
                 elif nucleotide == 'H':
                     probs[ref_idx]['A'] += 1 / 3
                     probs[ref_idx]['C'] += 1 / 3
-                    probs[ref_idx]['U'] += 1 / 3
+                    probs[ref_idx]['T'] += 1 / 3
                 elif nucleotide == 'D':
                     probs[ref_idx]['A'] += 1 / 3
                     probs[ref_idx]['G'] += 1 / 3
-                    probs[ref_idx]['U'] += 1 / 3
+                    probs[ref_idx]['T'] += 1 / 3
                 elif nucleotide == 'B':
                     probs[ref_idx]['C'] += 1 / 3
                     probs[ref_idx]['G'] += 1 / 3
-                    probs[ref_idx]['U'] += 1 / 3
+                    probs[ref_idx]['T'] += 1 / 3
                 elif nucleotide == 'N':
                     probs[ref_idx]['A'] += 0.25
                     probs[ref_idx]['C'] += 0.25
-                    probs[ref_idx]['U'] += 0.25
+                    probs[ref_idx]['T'] += 0.25
                     probs[ref_idx]['G'] += 0.25
             else:
                 probs[ref_idx][nucleotide] += 1
@@ -1260,8 +1283,9 @@ def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: 
     return
 
 
-def replace_ambiguity(good_sequence: Seq, bad_sequence: Seq, score_type: str = 'weighted', key: str = '',
-                      score_params: list = []):
+def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_target_background: bool = True,
+                      score_type: str = 'weighted', key: str = '', return_background: bool = True,
+                      extra_data: list = [], score_params: list = []):
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
                               'K': 'M', 'V': 'T', 'H': 'G', 'D': 'C', 'B': 'A', 'N': 'N'}
@@ -1273,21 +1297,30 @@ def replace_ambiguity(good_sequence: Seq, bad_sequence: Seq, score_type: str = '
     for i, base in enumerate(good_sequence):
         if base not in ['A', 'T', 'C', 'G']:
             # Get the base at that same position in the bad sequence
-            bad_base = bad_sequence[i]
+            background_base = background_sequence[i]
 
             # Easiest case: if there is total ambiguity, just get the opposite base from the bad sequence
             if base == 'N':
-                # Replace that base here with the antinucleotide
-                new_base = anti_iupac_nucleotides[bad_base]
+                if do_not_target_background:
+                    # Replace that base here with the antinucleotide
+                    new_base = anti_iupac_nucleotides[background_base]
+                else:
+                    new_base = background_base
 
             # Harder case: try to remove some ambiguity by narrowing down the potential opposite bases
             else:
-                bad_extended_bases = iupac_ambiguity_nucleotides[bad_base]
+                background_extended_bases = iupac_ambiguity_nucleotides[background_base]
                 good_extended_bases = iupac_ambiguity_nucleotides[base]
-                for remove_this_from_set in bad_extended_bases:
-                    # the set that only includes the bases in the good base
-                    good_extended_bases = good_extended_bases.strip(remove_this_from_set)
-                if good_extended_bases:
+                if do_not_target_background:
+                    for remove_this_from_set in background_extended_bases:
+                        # the set that only includes the bases in the good base
+                        good_extended_bases = good_extended_bases.replace(remove_this_from_set, '')
+                else:
+                    # the set that only includes bases in both background and good bases
+                    good_extended_bases = str(set(good_extended_bases) & set(background_extended_bases)).strip(
+                        '{\'').strip('\'}')
+                # Now check that we are actually reducing ambiguity. We don't want to increase ambiguity!
+                if good_extended_bases and len(good_extended_bases) < len(iupac_ambiguity_nucleotides[base]):
                     new_base = inv_iupac_ambiguity_nucleotides[good_extended_bases]
                 else:
                     new_base = base
@@ -1296,20 +1329,43 @@ def replace_ambiguity(good_sequence: Seq, bad_sequence: Seq, score_type: str = '
 
         new_seq += new_base
 
-        # Now get the new score:
-        if score_type == 'quantitative':
-            if score_params:
-                params = [new_seq].extend(score_params)
-                score = map(get_quantitative_score,params)
-            else:
-                print('Cannot do quantitative score without a list of alignments. Performing weighted score instead...')
-                score = get_weighted_score(new_seq)
-        elif score_type == 'weighted':
-            score = get_weighted_score(new_seq)
-        elif score_type == 'directional':
-            score = get_directional_score(new_seq)
-
-        if key:
-            return score, new_seq, key
+    if score_type == 'quantitative':
+        if score_params:
+            params = [new_seq].extend(score_params)
+            score = map(get_quantitative_score, params)
         else:
-            return score, new_seq
+            print('Cannot do quantitative score without a list of alignments. Performing weighted score instead...')
+            score = get_weighted_score(new_seq)
+    elif score_type == 'weighted':
+        score = get_weighted_score(new_seq)
+    elif score_type == 'directional':
+        score = get_directional_score(new_seq)
+    elif score_type == 'naive':
+        score = get_naive_score(new_seq)
+    else:
+        print(f'Score type {score_type} is not supported. Please choose either weighted, quantitative, '
+              f'or directional.')
+        return -1
+
+    if key:
+        if return_background:
+            if extra_data:
+                return score, new_seq, background_sequence, key, extra_data
+            else:
+                return score, new_seq, background_sequence, key
+        else:
+            if extra_data:
+                return score, new_seq, key, extra_data
+            else:
+                return score, new_seq, key
+    else:
+        if return_background:
+            if extra_data:
+                return score, new_seq, background_sequence, extra_data
+            else:
+                return score, new_seq, background_sequence
+        else:
+            if extra_data:
+                return score, new_seq, extra_data
+            else:
+                return score, new_seq
