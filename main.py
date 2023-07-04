@@ -78,31 +78,31 @@ if __name__ == '__main__':
     # playsound('/System/Library/Sounds/Pop.aiff')
     # print(f'Test data done!\n########################################################\n')
 
-    ########################################################
-    # test data targeted
-    good_targets = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
-                   "Data files and Outputs/Ribozyme paper dataset/Original files"
-    bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
-    out_data_weighted = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
-                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                            background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
-                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=0.75, score_type='naive')
-
-    out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
-                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                            background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
-                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=0.75, score_type='weighted')
-
-    # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    # ########################################################
+    # # test data targeted
+    # good_targets = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
+    #                "Data files and Outputs/Ribozyme paper dataset/Original files"
+    # bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
+    # out_data_weighted = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
     #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
     #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-    #                         percent_of_background_seqs_used=0.75, score_type='quantitative')
-
-    playsound('/System/Library/Sounds/Pop.aiff')
-    print(f'Test data done!\n########################################################\n')
+    #                         percent_of_background_seqs_used=0.75, score_type='naive')
+    #
+    # out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+    #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+    #                         percent_of_background_seqs_used=0.75, score_type='weighted')
+    #
+    # # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    # #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    # #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+    # #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+    # #                         percent_of_background_seqs_used=0.75, score_type='quantitative')
+    #
+    # playsound('/System/Library/Sounds/Pop.aiff')
+    # print(f'Test data done!\n########################################################\n')
 
     # ########################################################
     # # Score vs. True Coverage graphs
@@ -201,41 +201,106 @@ if __name__ == '__main__':
 
     ########################################################
     # # Targeted designs order level
+    # enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
+    # pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
+    # output_path_e = 'SILVA_output_files_Super5/for_paper/targets_enterobacterales_0.2_per_threshold'
+    # output_path_p = 'SILVA_output_files_Super5/for_paper/targets_pseudomondales_0.2_per_threshold'
+    #
+    # RiboDesigner(target_sequences_folder=enterobacterales, barcode_seq_file=barcode_seq_file,
+    #              ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #              background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
+    #              ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
+    #              percent_of_target_seqs_used=.002, percent_of_background_seqs_used=.05, score_type='naive')
+    # print('Dataset 1 complete.\n')
+    #
+    # RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
+    #              ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #              background_sequences_folder=enterobacterales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
+    #              ref_sequence_file=ref_path, folder_to_save=output_path_p, msa_fast=True, gaps_allowed=False,
+    #              percent_of_target_seqs_used=.002, percent_of_background_seqs_used=.05, score_type='naive')
+    #
+    # playsound('/System/Library/Sounds/Pop.aiff')
+    #
+    # output_path_e = 'SILVA_output_files_Super5/for_paper/targets_enterobacterales_weighted_0.2_per_threshold'
+    # output_path_p = 'SILVA_output_files_Super5/for_paper/targets_pseudomondales_weighted_0.2_per_threshold'
+    #
+    # RiboDesigner(target_sequences_folder=enterobacterales, barcode_seq_file=barcode_seq_file,
+    #              ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #              background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
+    #              ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
+    #              percent_of_target_seqs_used=.002, percent_of_background_seqs_used=.05, score_type='weighted')
+    # print('Dataset 1 compplete.\n')
+    #
+    # RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
+    #              ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #              background_sequences_folder=enterobacterales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
+    #              ref_sequence_file=ref_path, folder_to_save=output_path_p, msa_fast=True, gaps_allowed=False,
+    #              percent_of_target_seqs_used=.002, percent_of_background_seqs_used=.05, score_type='weighted')
+    #
+    # playsound('/System/Library/Sounds/Pop.aiff')
+
+    ########################################################
+    # Targeted designs by order level: run many times and simulate
     enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
     pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
-    output_path_e = 'SILVA_output_files_Super5/for_paper/targets_enterobacterales'
-    output_path_p = 'SILVA_output_files_Super5/for_paper/targets_pseudomondales'
 
-    RiboDesigner(target_sequences_folder=enterobacterales, barcode_seq_file=barcode_seq_file,
-                 ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                 background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
-                 ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30, score_type='naive')
-    print('Dataset 1 complete.\n')
+    iters = 10
 
-    RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
-                 ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                 background_sequences_folder=enterobacterales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
-                 ref_sequence_file=ref_path, folder_to_save=output_path_p, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30, score_type='naive')
+    e_designs = []
+    e_by_idx = {}
+    p_designs = []
+    p_by_idx = {}
+    # First run many times and save results
+    for i in range(0, iters):
+
+        e_out = RiboDesigner(target_sequences_folder=enterobacterales, barcode_seq_file=barcode_seq_file,
+                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
+                             targeted=True, background_sequences_folder=pseudomonadales, min_true_cov=0.7,
+                             identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path, msa_fast=True,
+                             gaps_allowed=False, min_delta=0.4, percent_of_target_seqs_used=.002,
+                             percent_of_background_seqs_used=.05, score_type='weighted', seed_target=i,
+                             seed_background=i)
+        e_designs.append(e_out)
+
+
+        for design in e_out:
+            # each design is saved as: 'IGS, Reference index, Score, % cov, % on target, True % cov, Composite score,
+            # Adjusted score vs. background, Number of species targeted,
+            # Optimized guide, Optimized guide + G + IGS, Full Ribozyme design, Delta composite score vs background
+            id_code = f'{design[0]}{design[1]}'
+            # Save for each design: id, Adjusted score vs. background, Delta composite score vs background, optimized guide
+            design_info = (id_code, design[7], design[8], design[10])
+
+            # Now separate by ref id
+            try:
+                to_extend = e_by_idx[design[1]]
+                e_by_idx[design[1]] = to_extend.extend(design_info)
+            except:
+                e_by_idx[design[1]] = [design_info]
+
+
+
+
+        p_out = RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
+                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
+                             targeted=True, background_sequences_folder=enterobacterales, min_true_cov=0.7,
+                             identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path, msa_fast=True,
+                             gaps_allowed=False, min_delta=0.4, percent_of_target_seqs_used=.002,
+                             percent_of_background_seqs_used=.05, score_type='weighted', seed_target=i,
+                             seed_background=i)
+        p_designs.append(p_out)
+
+    # Then, check results: order by reference index
+
+
+    # Graph counts per index on 16s rRNA
+
+    # Pick designs that happened the most frequently. Can you make a consensus sequence? (may make this worse but idk)
+
+
+    # Now, run these designs against all background sequences. Check how they do
 
     playsound('/System/Library/Sounds/Pop.aiff')
 
-    output_path_e = 'SILVA_output_files_Super5/for_paper/targets_enterobacterales_weighted'
-    output_path_p = 'SILVA_output_files_Super5/for_paper/targets_pseudomondales_weighted'
 
-    RiboDesigner(target_sequences_folder=enterobacterales, barcode_seq_file=barcode_seq_file,
-                 ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                 background_sequences_folder=pseudomonadales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
-                 ref_sequence_file=ref_path, folder_to_save=output_path_e, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30, score_type='weighted')
-    print('Dataset 1 compplete.\n')
-
-    RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
-                 ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                 background_sequences_folder=enterobacterales, min_true_cov=0.7, identity_thresh=0.7, fileout=True,
-                 ref_sequence_file=ref_path, folder_to_save=output_path_p, msa_fast=True, gaps_allowed=False,
-                 percent_of_target_seqs_used=.30, percent_of_background_seqs_used=.30, score_type='weighted')
-
-    playsound('/System/Library/Sounds/Pop.aiff')
-
+# then test in silico

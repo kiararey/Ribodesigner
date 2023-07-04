@@ -592,7 +592,7 @@ def compare_targeted_sequences(opti_seqs: list, average_conserved: list, conserv
                 'Delta composite score vs background,Number of species targeted,Optimized guide,'
                 'Optimized guide + G + IGS,Full Ribozyme design\n')
             for item in opti_target_seqs:
-                adjusted_score = igs_and_guides_comp_scores[f'{item[0]}{item[1]}']
+                adjusted_score = igs_and_guides_comp_scores[f'{item[0]}{item[1]}'][0]
                 list_for_csv = str(item[7]).replace(',', '|')
                 f.write(f'{item[0]},{item[1]},{item[2]},{item[3]},{item[4]},{item[5]},{item[6]},{adjusted_score},'
                         f'{item[-1]},{list_for_csv},{item[8]},{item[9]},{item[10]}\n')
@@ -1350,8 +1350,6 @@ def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_targe
         new_seq_score = get_weighted_score(new_seq)
         background_seq_score = get_weighted_score(background_sequence)
         pairwise_score = get_weighted_score(pairwise_comparison_consensus)
-        if new_seq_score < get_weighted_score(good_sequence):
-            print('uh-oh')
     elif score_type == 'directional':
         new_seq_score = get_directional_score(new_seq)
         background_seq_score = get_directional_score(background_sequence)
@@ -1360,8 +1358,6 @@ def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_targe
         new_seq_score = get_naive_score(new_seq)
         background_seq_score = get_naive_score(background_sequence)
         pairwise_score = get_naive_score(pairwise_comparison_consensus)
-        if new_seq_score < get_naive_score(good_sequence):
-            print('uh-oh')
     else:
         print(f'Score type {score_type} is not supported. Please choose either weighted, quantitative, '
               f'or directional.')
