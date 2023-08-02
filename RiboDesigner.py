@@ -30,6 +30,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import scipy
 from numpy.random import default_rng
+import itertools
 
 with warnings.catch_warnings():
     # I know pairwise2 is being deprecated but I need to get this to work properly before attempting an update that
@@ -44,9 +45,9 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                  min_true_cov: float = 0.7, identity_thresh: float = 0.7, fileout: bool = False,
                  folder_to_save: str = '', score_type: str = 'quantitative', msa_fast: bool = False,
                  keep_single_targets: bool = False, gaps_allowed: bool = True, percent_of_target_seqs_used: float = 1.0,
-                 percent_of_background_seqs_used: float = 1, seed_target: int = 1, seed_background: int = 0):
+                 percent_of_background_seqs_used: float = 1, seed_target: int = 1, seed_background: float = 1,
+                 n_limit: int = 0):
     """Generates ribozyme designs to target a set of sequences.
-
     :param generate_summary: this will generate a summary graph of the target sequences showing the IGS true percent
     coverage distribution vs. the guide score distribution. Keep in mind that setting this to True will SIGNIFICANTLY
     increase computational load, because in essence the program would have to calculate guide scores for any possible
@@ -86,6 +87,10 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     :param keep_single_targets: whether we want to get designs that only hit one target sequence. This is overriden by
     min_true_cov - i.e. if min_true_cov is higher than the equivalent of one sequence then the program will not keep
     single targets.
+    :param seed_target:
+    :param seed_background:
+    :param n_limit: What percentage of Ns are acceptable in the final design? This is applied when doing targeted
+    designs only for the time being.
     """
 
     start = time.perf_counter()
@@ -181,7 +186,7 @@ def RiboDesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
             igs_and_guides_comp_scores = \
                 ribo_checker(opti_seqs, aligned_background_sequences, len(ref_name_and_seq[1]),
                              identity_thresh=identity_thresh, guide_length=guide_length, score_type=score_type,
-                             gaps_allowed=gaps_allowed, msa_fast=msa_fast, flexible_igs=True)
+                             gaps_allowed=gaps_allowed, msa_fast=msa_fast, flexible_igs=True, n_limit=n_limit)
 
             opti_target_seqs = compare_targeted_sequences(opti_seqs, average_conserved, conserved_igs_true_perc_coverage,
                                                           background_guide_scores, delta_composite_scores,
@@ -404,7 +409,7 @@ def back_transcribe_seq_file(seq_file: str) -> Seq:
 
 def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh: float, guide_length: int,
                  score_type: str = 'quantitative', gaps_allowed: bool = True, msa_fast: bool = False,
-                 flexible_igs: bool = False, do_not_target_background: bool = True):
+                 flexible_igs: bool = False, do_not_target_background: bool = True, n_limit: int = 0):
     """
     Checks generated designs against a set of sequences to either find how well they align to a given dataset.
     Will return a set of sequences that match for each design as well as a score showing how well they matched.
@@ -418,6 +423,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     :param gaps_allowed:
     :param flexible_igs:
     :param msa_fast:
+    :param n_limit: what percentage of Ns are acceptable?
     :return:
     """
     # extract all design IGSes and guides.
@@ -518,7 +524,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     # Now reduce ambiguity and score
     print('\nNow scoring ribozyme designs against background sequences...')
     start = time.perf_counter()
-    in_data = [(seqs[-1], seqs[-2], do_not_target_background, score_type, key, True, seqs[5]) for key, seqs in
+    in_data = [(seqs[-1], seqs[-2], do_not_target_background, score_type, key, n_limit, seqs[5]) for key, seqs in
                zip(to_optimize, opti_seqs)]
 
     replace_ambiguity(in_data[0][0], in_data[0][1], in_data[0][2], in_data[0][3], in_data[0][4], in_data[0][5],
@@ -527,11 +533,12 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     with Pool() as pool:
         less_ambiguous_designs = pool.starmap(replace_ambiguity, in_data)
 
-    in_data = []
     pairwise_composite_scores = {}
     background_guide_scores = {}
 
-    for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in less_ambiguous_designs:
+    # for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in less_ambiguous_designs:
+    for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in itertools.filterfalse(lambda item: not item, less_ambiguous_designs):
+
         # Update our scores with the new less ambiguous designs
         igs_and_guides_comp_scores[key] = [new_seq_score * true_perc_cov, new_seq]
         pairwise_composite_scores[key] = pairwise_score * true_perc_cov
@@ -1284,7 +1291,7 @@ def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: 
 
 
 def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_target_background: bool = True,
-                      score_type: str = 'weighted', key: str = '', return_background: bool = True,
+                      score_type: str = 'weighted', key: str = '', n_limit: float = 1,
                       extra_data: list = [], score_params: list = []):
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
@@ -1294,6 +1301,7 @@ def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_targe
     inv_iupac_ambiguity_nucleotides = {v: k for k, v in iupac_ambiguity_nucleotides.items()}
 
     new_seq = ''
+    n_number = 0
     for i, base in enumerate(good_sequence):
         if base not in ['A', 'T', 'C', 'G']:
             # Get the base at that same position in the bad sequence
@@ -1326,6 +1334,10 @@ def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_targe
                     new_base = base
         else:
             new_base = base
+        if new_base == 'N':
+            n_number += 1
+            if n_number/len(good_sequence) > n_limit:
+                return -1
 
         new_seq += new_base
 

@@ -87,7 +87,7 @@ if __name__ == '__main__':
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
     #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
     #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-    #                         percent_of_background_seqs_used=0.75, score_type='naive')
+    #                         percent_of_background_seqs_used=0.75, score_type='naive', n_limit=0)
     #
     # out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
@@ -241,25 +241,39 @@ if __name__ == '__main__':
 
     ########################################################
     # Targeted designs by order level: run many times and simulate
-    enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
-    pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
+    output_path = 'SILVA_output_files_Super5/Targeted'
+    enterobacterales = f'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
+    pseudomonadales = f'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
 
-    iters = 10
+    background_seqs_no_entero = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/' \
+                                'Background_Bacteria_squished_no_entero.fasta'
+    background_seqs_no_pseudo = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/' \
+                                'Background_Bacteria_squished_no_pseudo.fasta'
+
+    # enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
+    # pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
+
+    e_datasets = np.array([file_name for file_name in os.listdir(enterobacterales) if '.fasta' in file_name])
+    p_datasets = np.array([file_name for file_name in os.listdir(pseudomonadales) if '.fasta' in file_name])
 
     e_designs = []
     e_by_idx = {}
     p_designs = []
     p_by_idx = {}
-    # First run many times and save results
-    for i in range(0, iters):
 
-        e_out = RiboDesigner(target_sequences_folder=enterobacterales, barcode_seq_file=barcode_seq_file,
+    i = 1
+    for e_set, p_set in zip(e_datasets, p_datasets):
+        e_out_folder = f'{output_path}/Enterobacterales_only_squished_{i}'
+        e_file = f'{enterobacterales}/{e_set}'
+        p_out_folder = f'{output_path}/Pseudomonadales_only_squished_{i}'
+        p_file = f'{pseudomonadales}/{p_set}'
+        i += 1
+
+        e_out = RiboDesigner(target_sequences_folder=e_file, barcode_seq_file=barcode_seq_file,
                              ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
-                             targeted=True, background_sequences_folder=pseudomonadales, min_true_cov=0.7,
-                             identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path, msa_fast=True,
-                             gaps_allowed=False, min_delta=0.4, percent_of_target_seqs_used=.002,
-                             percent_of_background_seqs_used=.05, score_type='weighted', seed_target=i,
-                             seed_background=i)
+                             targeted=True, background_sequences_folder=background_seqs_no_entero, min_true_cov=0.7,
+                             identity_thresh=0.7, fileout=True, folder_to_save=e_out_folder, ref_sequence_file=ref_path,
+                             msa_fast=True, gaps_allowed=False, min_delta=0, score_type='weighted', n_limit=2.0/50)
         e_designs.append(e_out)
 
 
@@ -279,16 +293,28 @@ if __name__ == '__main__':
                 e_by_idx[design[1]] = [design_info]
 
 
-
-
-        p_out = RiboDesigner(target_sequences_folder=pseudomonadales, barcode_seq_file=barcode_seq_file,
+        p_out = RiboDesigner(target_sequences_folder=p_file, barcode_seq_file=barcode_seq_file,
                              ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
-                             targeted=True, background_sequences_folder=enterobacterales, min_true_cov=0.7,
-                             identity_thresh=0.7, fileout=False, ref_sequence_file=ref_path, msa_fast=True,
-                             gaps_allowed=False, min_delta=0.4, percent_of_target_seqs_used=.002,
-                             percent_of_background_seqs_used=.05, score_type='weighted', seed_target=i,
-                             seed_background=i)
+                             targeted=True, background_sequences_folder=background_seqs_no_pseudo, min_true_cov=0.7,
+                             identity_thresh=0.7, fileout=True, folder_to_save=p_out_folder, ref_sequence_file=ref_path,
+                             msa_fast=True, gaps_allowed=False, min_delta=0, score_type='weighted', n_limit=2.0/50)
         p_designs.append(p_out)
+
+        for design in p_out:
+            # each design is saved as: 'IGS, Reference index, Score, % cov, % on target, True % cov, Composite score,
+            # Adjusted score vs. background, Number of species targeted,
+            # Optimized guide, Optimized guide + G + IGS, Full Ribozyme design, Delta composite score vs background
+            id_code = f'{design[0]}{design[1]}'
+            # Save for each design: id, Adjusted score vs. background, Delta composite score vs background, optimized guide
+            design_info = (id_code, design[7], design[8], design[10])
+
+            # Now separate by ref id
+            try:
+                to_extend = p_by_idx[design[1]]
+                p_by_idx[design[1]] = to_extend.extend(design_info)
+            except:
+                p_by_idx[design[1]] = [design_info]
+
 
     # Then, check results: order by reference index
 

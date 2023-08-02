@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Added a better way to get a pairwise score that does not involve making a fake msa. Also updated the output figures to show the average U conservation per design on all background sequences">
-      <change afterPath="$PROJECT_DIR$/silva_sequence_functions.py" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/generate_silva_datasets_code.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate_silva_datasets_code.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/silva_sequence_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/silva_sequence_functions.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,7 +85,7 @@
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.generate_silva_datasets_code">
+  <component name="RunManager" selected="Python.main">
     <configuration name="RiboDesigner" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -198,9 +200,6 @@
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -377,14 +376,7 @@
       <workItem from="1688512835003" duration="114000" />
       <workItem from="1688521293340" duration="594000" />
       <workItem from="1688595646118" duration="841000" />
-      <workItem from="1690820155493" duration="3329000" />
-    </task>
-    <task id="LOCAL-00017" summary="Made a formal ribozymer function. Will test with SILVA database soon.">
-      <created>1661376546643</created>
-      <option name="number" value="00017" />
-      <option name="presentableId" value="LOCAL-00017" />
-      <option name="project" value="LOCAL" />
-      <updated>1661376546643</updated>
+      <workItem from="1690820155493" duration="20812000" />
     </task>
     <task id="LOCAL-00018" summary="Testing with SILVA database!">
       <created>1661460323806</created>
@@ -722,7 +714,14 @@
       <option name="project" value="LOCAL" />
       <updated>1687806060517</updated>
     </task>
-    <option name="localTasksCounter" value="66" />
+    <task id="LOCAL-00066" summary="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier.">
+      <created>1690824031732</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1690824031732</updated>
+    </task>
+    <option name="localTasksCounter" value="67" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -752,7 +751,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="idk why these did not update on this branch" />
     <MESSAGE value="Added multiprocessing" />
     <MESSAGE value="Added more multiprocessing.&#10;&#10;Need to break up find_repeat_targets into more manageable chunks to effectively use my cpu" />
     <MESSAGE value="Checking time spent" />
@@ -777,7 +775,8 @@
     <MESSAGE value="Working on a function that reduces ambiguity!" />
     <MESSAGE value="Actually I'm going to fix the delta scoring method. Right now I am doing a fake alignment but we need something like a pairwise alignment, or even a Shannon entropy calculation?" />
     <MESSAGE value="Added a better way to get a pairwise score that does not involve making a fake msa. Also updated the output figures to show the average U conservation per design on all background sequences" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added a better way to get a pairwise score that does not involve making a fake msa. Also updated the output figures to show the average U conservation per design on all background sequences" />
+    <MESSAGE value="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier." />
+    <option name="LAST_COMMIT_MESSAGE" value="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -801,16 +800,6 @@
           <url>file://$APPLICATION_CONFIG_DIR$/scratches/statsondata.py</url>
           <line>3</line>
           <option name="timeStamp" value="143" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/generate_silva_datasets_code.py</url>
-          <line>133</line>
-          <option name="timeStamp" value="149" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/generate_silva_datasets_code.py</url>
-          <line>130</line>
-          <option name="timeStamp" value="150" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
@@ -838,29 +827,24 @@
           <option name="timeStamp" value="224" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>594</line>
-          <option name="timeStamp" value="375" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>302</line>
+          <line>328</line>
           <option name="timeStamp" value="376" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>584</line>
-          <option name="timeStamp" value="378" />
+          <url>file://$PROJECT_DIR$/silva_sequence_functions.py</url>
+          <line>199</line>
+          <option name="timeStamp" value="387" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>295</line>
+          <option name="timeStamp" value="392" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>581</line>
-          <option name="timeStamp" value="379" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/generate_silva_datasets_code.py</url>
-          <line>39</line>
-          <option name="timeStamp" value="380" />
+          <line>539</line>
+          <option name="timeStamp" value="397" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -884,7 +868,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1688414398965" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1691003541387" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
@@ -892,6 +876,6 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner__1_.coverage" NAME="RiboDesigner (1) Coverage Results" MODIFIED="1681251351848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$scratch_1.coverage" NAME="scratch_1 Coverage Results" MODIFIED="1666212891303" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$Figure_plotting_functions.coverage" NAME="Figure_plotting_functions Coverage Results" MODIFIED="1673372511009" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$generate_silva_datasets_code.coverage" NAME="generate_silva_datasets_code Coverage Results" MODIFIED="1690821212637" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$generate_silva_datasets_code.coverage" NAME="generate_silva_datasets_code Coverage Results" MODIFIED="1690835599374" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

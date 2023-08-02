@@ -85,14 +85,25 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
         [file_name for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
 
     # Prepare list to store data in:
-    seqs_to_write = [np.empty(0)] * num_of_sequences
+    seqs_to_write = [np.empty(0)] * num_of_datasets
 
     old_perc = 0
+    perc_under_seq_num = 0
+    seqs_kept = 0
     for i, seq_file in enumerate(fasta_file_names):
         # Pick five unique organisms per genus that are not the same species
         target_seqs_and_names = read_fasta_file_full_name(f'{silva_by_taxonomy_path}/{seq_file}', exclude=exclude_only,
                                                           include=include_only,
                                                           exclude_include_taxonomy_level=exclude_taxonomy_level)
+        if not target_seqs_and_names:
+            continue
+        seqs_kept += 1
+        if len(target_seqs_and_names) <= num_of_sequences:
+            # if there are only num_of_sequences or less sequences, all of the sequences will be in all datasets.
+            for row in range(len(seqs_to_write)):
+                seqs_to_write[row] = np.append(seqs_to_write[row], target_seqs_and_names)
+            perc_under_seq_num += 1
+            continue
         # Now pick num_of_sequences unique organisms per taxonomy level num_of_datasets times
         j = 0
         idx_used = []  # sequences we already used, ideally we won't reuse any of these but
@@ -136,7 +147,7 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
             sequences_taken = get_unique_members(sequences_taken.copy(), species_of_sequences_taken_set, 'Species')
 
             # Finally, find enough sequences that are not the same species to fill out our current dataset
-            num_needed = 5 - len(sequences_taken)
+            num_needed = num_of_sequences - len(sequences_taken)
             new_lines_to_take = np.random.randint(0, len(sequences_of_species_not_represented), num_needed)
             candidate_sequences = [sequences_of_species_not_represented[num] for num in new_lines_to_take]
             remaining_candidates = [sequences_of_species_not_represented[num] for num in range(len(candidate_sequences))
@@ -179,15 +190,17 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
             print(f'{new_perc}% of {len(fasta_file_names)} datasets completed...')
         old_perc = new_perc
 
-    print(f'100% of {len(fasta_file_names)} datasets completed. Now saving in {output_path[:-1]}...')
+    print(f'100% of {len(fasta_file_names)} datasets completed.\n{seqs_kept} datasets met inclusion criteria. '
+          f'{round(perc_under_seq_num/seqs_kept*100, 2)}% of kept datasets had less than the requested number of '
+          f'sequences.\nNow saving in {output_path[:-1]}...')
 
     # Add to FASTA file and save
     taxonomy_level = silva_by_taxonomy_path.split('/')[-1]
     kingdom_level = silva_by_taxonomy_path.split('/')[1].split('_')[7]
     for i, dataset in enumerate(seqs_to_write):
-        file_name = f'{output_path}{kingdom_level}_by_{taxonomy_level}_{i + 1}.fasta'
+        file_name = f'{output_path}/{kingdom_level}_by_{taxonomy_level}_{i + 1}.fasta'
         with open(file_name, 'w') as f:
             for sequence in set(dataset):
                 f.writelines([sequence.id, sequence.seq, '\n'])
 
-    print('Files saved!')
+    print('Files saved!\n')
