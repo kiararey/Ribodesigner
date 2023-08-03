@@ -228,11 +228,14 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
 
 
     # find all catalytic U sites and align sequences to reference sequences
+    print(f'Now re-indexing sequences to reference {ref_name_and_seq[0].replace("_", " ")}...')
     time1 = time.perf_counter()
     for target_seq in target_names_and_seqs:
         align_to_ref(target_seq, ref_name_and_seq)
     time2 = time.perf_counter()
-    round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding catalytic sites and indexing sequences')
+    round_convert_time(start=time1, end=time2, round_to=4,
+                       task_timed=f'finding catalytic sites and indexing sequences to reference '
+                                  f'{ref_name_and_seq[0].replace("_", " ")}')
 
     # time1 = time.perf_counter()
     # # Now, we can optimize each sequence
