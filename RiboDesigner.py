@@ -30,7 +30,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import scipy
 from numpy.random import default_rng
-import itertools
 
 with warnings.catch_warnings():
     # I know pairwise2 is being deprecated but I need to get this to work properly before attempting an update that
@@ -430,7 +429,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     # This will be a list: [igs, guide, ref_idx (0 base indexing), guide_id(igs+ref_idx)]
     igs_and_guides_designs = [(str(design[0]), design[8], design[1] - 1, str(design[0]) + str(design[1]))
                               for design in designs]
-    igs_and_guides_comp_scores = {str(design[0]) + str(design[1]): [design[6], design[8]] for design in designs}
+    igs_and_guides_initial_comp_scores = {str(design[0]) + str(design[1]): design[6] for design in designs}
 
     # Is there a U at each position for each design at each target sequence?
     designed_idxs = np.array(list({design[2] for design in igs_and_guides_designs}))  # base 0 indexing
@@ -472,6 +471,7 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
 
     # Now find how many conserved IGSes there are!
     to_optimize = {}
+    no_splices_in_background = []
     opti_seqs = []
 
     conserved_igs_true_perc_coverage = {}
@@ -516,6 +516,12 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
                                   names_and_stuff, Seq(guides_to_optimize[0]), designed_guide])
         else:
             conserved_igs_true_perc_coverage[guide_id] = 0
+            # remove designs with too many Ns
+            if designed_guide.count('N')/guide_length <= n_limit:
+                # Follow the same naming as the outputs of replace_ambiguity. Pairwise score is set at 0 based on the
+                # assumption that if there is no catalytic U there is no splicing activity
+                initial_score = igs_and_guides_initial_comp_scores[guide_id]
+                no_splices_in_background.append((designed_guide, initial_score, 0, 0, guide_id, 0))
 
     # Do an MSA
     opti_seqs.extend(optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
@@ -530,14 +536,17 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
     replace_ambiguity(in_data[0][0], in_data[0][1], in_data[0][2], in_data[0][3], in_data[0][4], in_data[0][5],
                       in_data[0][6])
 
+
     with Pool() as pool:
         less_ambiguous_designs = pool.starmap(replace_ambiguity, in_data)
 
+    less_ambiguous_designs.extend(no_splices_in_background)
     pairwise_composite_scores = {}
     background_guide_scores = {}
+    igs_and_guides_comp_scores = {}
 
     # for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in less_ambiguous_designs:
-    for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in itertools.filterfalse(lambda item: not item, less_ambiguous_designs):
+    for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in filter(None, less_ambiguous_designs):
 
         # Update our scores with the new less ambiguous designs
         igs_and_guides_comp_scores[key] = [new_seq_score * true_perc_cov, new_seq]
@@ -545,12 +554,9 @@ def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh
         background_guide_scores[key] = background_seq_score
 
     delta_composite_scores = {}
+
     for key, good_data in igs_and_guides_comp_scores.items():
-        try:
-            bad_score = pairwise_composite_scores[key]
-        except:
-            bad_score = 0
-            background_guide_scores[key] = 0
+        bad_score = pairwise_composite_scores[key]
         delta_composite_scores[key] = good_data[0] - bad_score
     round_convert_time(start=start, end=time.perf_counter(), round_to=4,
                        task_timed='scoring against background sequences')
@@ -644,8 +650,7 @@ def generate_summary_graphs(average_conserved: list, conserved_igs_true_perc_cov
 def generate_igs_vs_guide_graph(conserved_igs_true_perc_coverage: dict, names_and_guide_scores: dict,
                                 file_out: bool = False, file: str = '', title: str = 'targeted designs vs background'):
     igs_true_cov_vs_guide_comp_score_dict = {key: (int(key[5:]), conserved_igs_true_perc_coverage[key],
-                                                   names_and_guide_scores[key])
-                                             for key in conserved_igs_true_perc_coverage}
+                                                   names_and_guide_scores[key]) for key in names_and_guide_scores}
     igs_vs_guide_df = pd.DataFrame(igs_true_cov_vs_guide_comp_score_dict,
                                    index=['Index', 'IGS true percent coverage',
                                           'Guide score at U site']).T
@@ -1290,9 +1295,10 @@ def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: 
     return
 
 
-def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_target_background: bool = True,
+def replace_ambiguity(good_sequence: Seq, background_sequence: Seq = '', do_not_target_background: bool = True,
                       score_type: str = 'weighted', key: str = '', n_limit: float = 1,
                       extra_data: list = [], score_params: list = []):
+
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
                               'K': 'M', 'V': 'T', 'H': 'G', 'D': 'C', 'B': 'A', 'N': 'N'}
@@ -1337,7 +1343,7 @@ def replace_ambiguity(good_sequence: Seq, background_sequence: Seq, do_not_targe
         if new_base == 'N':
             n_number += 1
             if n_number/len(good_sequence) > n_limit:
-                return -1
+                return None
 
         new_seq += new_base
 

@@ -78,31 +78,31 @@ if __name__ == '__main__':
     # playsound('/System/Library/Sounds/Pop.aiff')
     # print(f'Test data done!\n########################################################\n')
 
-    # ########################################################
-    # # test data targeted
-    # good_targets = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
-    #                "Data files and Outputs/Ribozyme paper dataset/Original files"
-    # bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
-    # out_data_weighted = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    ########################################################
+    # test data targeted
+    good_targets = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
+                   "Data files and Outputs/Ribozyme paper dataset/Original files"
+    bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
+    out_data_weighted = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+                            background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+                            percent_of_background_seqs_used=0.75, score_type='naive', n_limit=0)
+
+    out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+                            background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+                            percent_of_background_seqs_used=0.75, score_type='weighted')
+
+    # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
     #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
     #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-    #                         percent_of_background_seqs_used=0.75, score_type='naive', n_limit=0)
-    #
-    # out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
-    #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-    #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
-    #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-    #                         percent_of_background_seqs_used=0.75, score_type='weighted')
-    #
-    # # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
-    # #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-    # #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
-    # #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-    # #                         percent_of_background_seqs_used=0.75, score_type='quantitative')
-    #
-    # playsound('/System/Library/Sounds/Pop.aiff')
-    # print(f'Test data done!\n########################################################\n')
+    #                         percent_of_background_seqs_used=0.75, score_type='quantitative')
+
+    playsound('/System/Library/Sounds/Pop.aiff')
+    print(f'Test data done!\n########################################################\n')
 
     # ########################################################
     # # Score vs. True Coverage graphs
