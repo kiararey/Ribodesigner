@@ -27,7 +27,6 @@ from itertools import repeat
 # Expanded version of SilvaSequence
 class TargetSeq:
     # Important: TargetSeq id must be formatted like a Silva sequence if we want the give_taxonomy function to work!
-
     def __init__(self, id: str = '', taxonomy: str = '', seq: Seq = ''):
         self.id = id
         self.taxonomy = taxonomy
@@ -38,7 +37,7 @@ class TargetSeq:
         return f'{self.id}({self.seq})'
 
     def __repr__(self):
-        return f'{self.id}({self.seq})'
+        return f'{self.id}, cat_sites={self.cat_sites}'
 
     def give_taxonomy(self, level: str):
         level_names = {'Domain': 0, 'Phylum': 1, 'Class': 2, 'Order': 3,
@@ -53,83 +52,57 @@ class TargetSeq:
             here_is_taxonomy = ''
         return here_is_taxonomy
 
-    # def find_cat_sites(self, igs_length: int = 5, guide_length: int = 50,
-    #                    min_length: int = 35):
-    #     """
-    #     Finds all instances of a U or T in a set of sequences and creates ribozyme designs for these sites.
-    #
-    #     :param igs_length: desired IGS sequence length.
-    #     :param guide_length: desired guide binding sequence length.
-    #     :param min_length: minimum guide sequence length from 3' end. Must be smaller than guide_length.
-    #     :return:
-    #     """
-    #     if self.cat_sites:
-    #         if len(self.cat_sites[0]) < 4:
-    #             print('TargetSeq object already has catalytic sites.')
-    #         else:
-    #             print('TargetSeq object was already aligned and has catalytic sites.')
-    #         return
-    #
-    #     #   (a.k.a. minimum guide sequence length from 3' end) ex: if you want your guide sequence to
-    #     #   bind to at least 35 nt at the 3' end of the target sequence, set min_length = 35.
-    #
-    #     # run function to find the index of all U residues of each sequence in target_seqs
-    #     # find all possible splice sites
-    #     idx = [i for i, ltr in enumerate(self.seq) if ltr == 'T']
-    #     # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
-    #     idx_new = [res for res in idx if igs_length <= res < (len(self.seq) - min_length)]
-    #
-    #     if not idx_new:
-    #         print(f'No viable catalytic sites in {self.id}')
-    #         self.cat_sites = None
-    #     else:
-    #         data = []
-    #         for i in idx_new:
-    #             # generate complementary guide sequence guide_length residues *downstream* of U site
-    #             guide = self.seq[i + 1:i + guide_length + 1].reverse_complement()
-    #             # generate complementary IGS sequence igs_length bases long *upstream* of U site
-    #             igs = self.seq[i - igs_length:i].reverse_complement()
-    #             # Store as (idx, igs, guide)
-    #             data.append((i + 1, igs, guide))  # we're adding 1 to the idx because of 0 based indexing
-    #         self.cat_sites = data
-    #
-    # def align_to_ref(self, ref_name_and_seq, igs_length: int = 5, guide_length: int = 50, min_length: int = 35):
-    #     """
-    #     :param ref_name_and_seq: TargetSequence object
-    #     :return:
-    #     """
-    #     if not self.cat_sites:
-    #         self.find_cat_sites(igs_length, guide_length, min_length)
-    #     elif len(self.cat_sites[0]) == 4:
-    #         print('TargetSeq object has already been aligned to a reference sequence.')
-    #         return
-    #
-    #     # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final
-    #     # E.coli index
-    #     aligner = PairwiseAligner(mode='global')
-    #     alignments = aligner.align(self.seq, ref_name_and_seq[1])[0]
-    #
-    #     # seq_a is the test sequence, seq_b is the reference sequence
-    #     seq_a, seq_b = alignments
-    #     # seq_a is the test sequence, seq_b is the reference sequence
-    #
-    #     # obtain index of new U
-    #     idx_seq_a = [i for i, ltr in enumerate(seq_a) if ltr == 'T']
-    #
-    #     data = []
-    #     current_spot = 0
-    #     for og_idx, igs, guide in self.cat_sites:
-    #         seq_a_idx = len(seq_a[:idx_seq_a[current_spot]].replace('-', '')) + 1
-    #         while seq_a_idx != og_idx:
-    #             current_spot += 1
-    #             seq_a_idx = len(seq_a[:idx_seq_a[current_spot]].replace('-', '')) + 1
-    #         # find what index that is based on the reference sequence
-    #         ref_string = seq_b[:idx_seq_a[current_spot]]
-    #         ref_idx = len(ref_string.replace('-', '')) + 1  # turns zero based indexing to ref_seq numbering
-    #
-    #         data.append((og_idx, ref_idx, igs, guide))
-    #
-    #     self.cat_sites = data
+
+class RibozymeDesign:
+    def __init__(self, id: str, guides_to_use: list[Seq], targets: set, guide: Seq = '', score: int = None,
+                 score_type: str = '', perc_cov: float = None, perc_on_target: float = None,
+                 true_perc_cov: float = None, composite_background_score: float = None):
+        self.id = id
+        self.ref_idx = int(id[5:])
+        self.guide = guide
+        if not guide:
+            self.guides_to_use = guides_to_use
+        else:
+            self.guides_to_use = None
+        self.targets = targets
+        self.igs = id[:5]
+        self.score = score
+        self.score_type = score_type
+        self.perc_cov = perc_cov
+        if not perc_on_target and perc_cov and true_perc_cov:
+            self.perc_on_target = true_perc_cov / perc_cov
+        else:
+            self.perc_on_target = perc_on_target
+        self.true_perc_cov = true_perc_cov
+        if score:
+            self.composite_score = true_perc_cov * score
+        else:
+            self.composite_score = None
+        if guide and score and score_type:
+            self.optimized_to_targets = True
+        else:
+            self.optimized_to_targets = False
+        # For targeted ribozyme designs only:
+        self.composite_background_score = composite_background_score
+        if self.composite_score and self.composite_background_score:
+            self.delta_vs_background = self.composite_score - composite_background_score
+        else:
+            self.delta_vs_background = None
+        self.number_of_targets = len(targets)
+        if composite_background_score:
+            self.optimized_to_background = True
+        else:
+            self.optimized_to_background = False
+
+    def __str__(self):
+        # ID: igs + ref_idx, then also display the guide sequence
+        return f'ID:{self.igs}{self.ref_idx}, Guide:{self.guide}'
+
+    def __repr__(self):
+        return f'{type(self).__name__}(IGS={self.igs}, ref_idx={self.ref_idx}, guide_sequence={self.guide}, ' \
+               f'score={self.score}, score_type={self.score_type}, optimized_to_targets={self.optimized_to_targets}, ' \
+               f'optimized_to_background={self.optimized_to_background}'
+
 
 
 def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_file: str, igs_length: int = 5,
@@ -203,7 +176,7 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
         print(f'No sequences found in {target_sequences_folder}. Please make sure your files are not empty!\n')
         return None
 
-    if not msa_fast and len(target_names_and_seqs) > 300:
+    if not msa_fast and target_names_and_seqs.size > 300:
         print(f'Consider setting msa_fast=True for large datasets over 300 sequences for faster data processing!!\n')
 
     if not ref_sequence_file:
@@ -213,39 +186,38 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     else:
         ref_name_and_seq = read_fasta(ref_sequence_file)[0]
 
-    print(f'Found {len(target_names_and_seqs)} total target sequences to analyze.')
+    print(f'Found {target_names_and_seqs.size} total target sequences to analyze.')
 
     if percent_of_target_seqs_used < 1:
-        array = np.array(target_names_and_seqs, dtype=tuple)
-        rng = default_rng(seed=seed_target)
-        target_names_and_seqs = rng.choice(array, size=round(len(target_names_and_seqs) * percent_of_target_seqs_used),
-                                           replace=False)
-        print(f'Randomly sampling {len(target_names_and_seqs)} sequences to analyze.\n')
+        target_names_and_seqs = np.random.choice(target_names_and_seqs,
+                                                 size=round(target_names_and_seqs.size * percent_of_target_seqs_used),
+                                                 replace=False)
+        print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
 
     if keep_single_targets and min_true_cov > 1 / len(target_names_and_seqs):
         # If we only want to get more than a certain percentage, override keep_single_targets
         keep_single_targets = False
 
-
-    # find all catalytic U sites and align sequences to reference sequences
-    print(f'Now re-indexing sequences to reference {ref_name_and_seq[0].replace("_", " ")}...')
     time1 = time.perf_counter()
-    for target_seq in target_names_and_seqs:
-        align_to_ref(target_seq, ref_name_and_seq)
+    fn = np.vectorize(align_to_ref, otypes=[TargetSeq],
+                      excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
+    fn(target_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length, guide_length=guide_length,
+       min_length=min_length)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4,
                        task_timed=f'finding catalytic sites and indexing sequences to reference '
                                   f'{ref_name_and_seq[0].replace("_", " ")}')
 
-    # time1 = time.perf_counter()
-    # # Now, we can optimize each sequence
-    # if optimize_seq:
-    #     to_optimize, to_keep_single_targets = prep_for_optimizing(aligned_seqs, min_true_cov=min_true_cov,
-    #                                                               accept_single_targets=keep_single_targets)
-    #
-    #     time2 = time.perf_counter()
-    #     round_convert_time(start=time1, end=time2, round_to=4, task_timed='prepping sequences for optimization')
-    #
+    time1 = time.perf_counter()
+    if optimize_seq:
+        # first, filter through possible designs and get the ones that meet our threshold
+        to_optimize = filter_igs_candidates(target_names_and_seqs, min_true_cov)
+        time2 = time.perf_counter()
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='prepping sequences for optimization')
+
+        # Now, optimize all of the possible guide sequences for each IGS:
+        time1 = time.perf_counter()
+
     #     time1 = time.perf_counter()
     #     opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
     #                                    fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast,
@@ -323,7 +295,7 @@ def back_transcribe_seq_file(seq_file: str) -> Seq:
 
 
 def read_silva_fasta(in_file: str, file_type: str = 'fasta', exclude=[], include=[],
-                     exclude_include_taxonomy_level='') -> list[TargetSeq]:
+                     exclude_include_taxonomy_level='') -> np.ndarray[TargetSeq]:
     """
     Reads in a single .fasta file or several fasta files from a directory. These files are assumed to be formatted as
     in the SILVA database as it makes finding taxonomy much easier.
@@ -343,16 +315,16 @@ def read_silva_fasta(in_file: str, file_type: str = 'fasta', exclude=[], include
         out_seqs = []
         with open(file_to_parse) as f:
             for title, seq in SimpleFastaParser(f):
-                    id = title.split(' ')[0]
-                    taxonomy = title[len(id) + 1].split(';')
-                    putative_sequence = TargetSeq(id, taxonomy, Seq(seq).upper().back_transcribe())
-                    if taxonomy_level and exclude_list or include_list:
-                        if exclude_list and putative_sequence.give_taxonomy(level=taxonomy_level) not in exclude_list:
-                            out_seqs.append(putative_sequence)
-                        elif include_list and putative_sequence.give_taxonomy(level=taxonomy_level) in include_list:
-                            out_seqs.append(putative_sequence)
-                    else:
+                id = title.split(' ')[0]
+                taxonomy = title[len(id) + 1].split(';')
+                putative_sequence = TargetSeq(id, taxonomy, Seq(seq).upper().back_transcribe())
+                if taxonomy_level and exclude_list or include_list:
+                    if exclude_list and putative_sequence.give_taxonomy(level=taxonomy_level) not in exclude_list:
                         out_seqs.append(putative_sequence)
+                    elif include_list and putative_sequence.give_taxonomy(level=taxonomy_level) in include_list:
+                        out_seqs.append(putative_sequence)
+                else:
+                    out_seqs.append(putative_sequence)
         return out_seqs
 
     if in_file[-6:] == f'.{file_type}':
@@ -363,10 +335,10 @@ def read_silva_fasta(in_file: str, file_type: str = 'fasta', exclude=[], include
         target_seqs_and_names = []
         for filename in glob.glob(os.path.join(in_file, '*.' + file_type)):
             target_seqs_and_names.extend(parse_file(filename, exclude, include, exclude_include_taxonomy_level))
-    return target_seqs_and_names
+    return np.array(target_seqs_and_names, dtype=TargetSeq)
 
 
-def read_fasta(in_file: str, file_type: str = 'fasta') -> list[TargetSeq]:
+def read_fasta(in_file: str, file_type: str = 'fasta') -> np.ndarray[TargetSeq]:
     """
     Reads in a single .fasta file or several fasta files from a directory
 
@@ -386,7 +358,7 @@ def read_fasta(in_file: str, file_type: str = 'fasta') -> list[TargetSeq]:
             with open(filename) as f:
                 for title, seq in SimpleFastaParser(f):
                     target_seqs_and_names.append((title, Seq(seq).upper().back_transcribe()))
-    return target_seqs_and_names
+    return np.array(target_seqs_and_names, dtype=TargetSeq)
 
 
 def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: str = ''):
@@ -451,7 +423,8 @@ def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length
         target_sequence.cat_sites = data
 
 
-def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int = 5, guide_length: int = 50, min_length: int = 35):
+def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int = 5, guide_length: int = 50,
+                 min_length: int = 35):
     """
     :param ref_name_and_seq: TargetSequence object
     :return:
@@ -461,7 +434,7 @@ def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int =
         if not target_sequence.cat_sites:
             return
     elif len(target_sequence.cat_sites[0]) == 4:
-        print('TargetSeq object has already been aligned to a reference sequence.')
+        print(f'TargetSeq object {target_sequence.id} has already been aligned to a reference sequence.')
         return
 
     # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final
@@ -491,3 +464,60 @@ def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int =
 
     target_sequence.cat_sites = data
     return target_sequence
+
+
+def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0) -> None:
+    """
+    returns a dictionary of possible designs that meet our needs: checks each target sequence and filters the IGSes that
+    work for the most targets. Returns a dictionary for each IGSid with the list of guides it needs to optimize, as
+    well as the true percent coverage of these and the organism number that IGS exists in (this is the index in
+    aligned_targets and we can use this later to calculate percent coverage and get taxonomy information of which
+    sequences a particular target can hit.
+    :param aligned_targets:
+    :param min_true_cov:
+    :return:
+    """
+
+    print('Finding repeat IGSes...')
+
+    # Extract all the IGS id numbers - that's the IGS sequence and the reference index number
+    all_igs_ids = [f'{item[2]}{item[1]}' for seq in aligned_targets for item in seq.cat_sites]
+    # Measure true percent coverage of these and keep IGSes that are at least the minimum true percent coverage needed
+    igs_ids_counted, igs_counts = np.unique(all_igs_ids, return_counts=True)
+
+    if [igs for igs, counts in zip(igs_ids_counted, igs_counts) if counts > aligned_targets.size]:
+        print('WARNING: Multiple IGSes per sequence at the same position detected. True percent coverage ')
+        return None
+
+    else:
+        print('Test passed.')
+
+        # this gives us a dictionary where the ID is matched to the true percent coverage
+    igs_over_min_true_cov = {igs: [[], set(), counts / aligned_targets.size] for igs, counts
+                             in zip(igs_ids_counted, igs_counts)
+                             if counts / aligned_targets.size >= min_true_cov}
+
+    # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
+    # in our initial aligned_targets array
+    igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
+                   seq.cat_sites]
+
+    # get all the guides that have good IGSes
+    for igs_id, guide, target_num in igs_subsets:
+        if igs_id in igs_over_min_true_cov:
+            # Add guide to list
+            igs_over_min_true_cov[igs_id][0].append(guide)
+            # Add organism number to set. We can calculate the percent coverage with this number later on.
+            igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].id)
+
+    print(f'{len(igs_over_min_true_cov)} repeat IGSes found.')
+    # Now make an array of all of the putative designs for later use.
+    to_optimize = np.array([RibozymeDesign(id=igs_id, guides_to_use=item[0], targets=item[1], true_perc_cov=item[2],
+                                           perc_cov=len(item[1])/ aligned_targets.size)
+                            for igs_id, item in igs_over_min_true_cov.items()])
+    return to_optimize
+
+    def optimize_designs(to_optimize: np.ndarray[RibozymeDesign], score_type: str, msa_fast: bool = True)
+
+
+

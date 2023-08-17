@@ -86,13 +86,13 @@ if __name__ == '__main__':
     bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
 
     # Test new RiboDesigner
-    out_data_weighted = ribodesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    out_data_weighted = ribodesigner(target_sequences_folder=bad_targets, barcode_seq_file=barcode_seq_file,
                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                             background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
                             fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
                             percent_of_background_seqs_used=0.75, score_type='naive', n_limit=0)
 
-    out_data_weighted = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    out_data_weighted = RiboDesigner(target_sequences_folder=bad_targets, barcode_seq_file=barcode_seq_file,
                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
                             background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
                             fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,

@@ -4,12 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Rewriting code again to remove deprecated functions and possibly add a TargetSeq class that should make later analyses easier downstream">
-      <change afterPath="$PROJECT_DIR$/ribodesigner_v2.py" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/RiboDesigner_classes.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner_classes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ribodesigner_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner_v2.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -200,6 +199,9 @@
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -241,6 +243,9 @@
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -260,6 +265,9 @@
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
       <option name="IS_MODULE_SDK" value="false" />
@@ -370,21 +378,8 @@
       <workItem from="1688512835003" duration="114000" />
       <workItem from="1688521293340" duration="594000" />
       <workItem from="1688595646118" duration="841000" />
-      <workItem from="1690820155493" duration="48818000" />
-    </task>
-    <task id="LOCAL-00020" summary="Will test first with Bacteria only">
-      <created>1661470404572</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1661470404572</updated>
-    </task>
-    <task id="LOCAL-00021" summary="Fixed a teeny mistake">
-      <created>1661791827252</created>
-      <option name="number" value="00021" />
-      <option name="presentableId" value="LOCAL-00021" />
-      <option name="project" value="LOCAL" />
-      <updated>1661791827252</updated>
+      <workItem from="1690820155493" duration="52175000" />
+      <workItem from="1692028246636" duration="21371000" />
     </task>
     <task id="LOCAL-00022" summary="Fixed a teeny mistake">
       <created>1661791924202</created>
@@ -715,7 +710,21 @@
       <option name="project" value="LOCAL" />
       <updated>1691083342780</updated>
     </task>
-    <option name="localTasksCounter" value="69" />
+    <task id="LOCAL-00069" summary="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?">
+      <created>1691097599977</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1691097599977</updated>
+    </task>
+    <task id="LOCAL-00070" summary="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?">
+      <created>1691097724591</created>
+      <option name="number" value="00070" />
+      <option name="presentableId" value="LOCAL-00070" />
+      <option name="project" value="LOCAL" />
+      <updated>1691097724592</updated>
+    </task>
+    <option name="localTasksCounter" value="71" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -745,7 +754,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Checking time spent" />
     <MESSAGE value="Returning some functions to no multiprocessing because that is faster. Next up is fixing the MSA step which takes by far the longest time." />
     <MESSAGE value="Added option of using super5 algorithm when doing the msa - very useful for many, many sequences" />
     <MESSAGE value="Small efficiency improvement in find_repeat_targets" />
@@ -770,7 +778,8 @@
     <MESSAGE value="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier." />
     <MESSAGE value="Added a feature where you can choose the percentage of ambiguity codons you are willing to accept in your final design. Currently this is only for targeted designs." />
     <MESSAGE value="Rewriting code again to remove deprecated functions and possibly add a TargetSeq class that should make later analyses easier downstream" />
-    <option name="LAST_COMMIT_MESSAGE" value="Rewriting code again to remove deprecated functions and possibly add a TargetSeq class that should make later analyses easier downstream" />
+    <MESSAGE value="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?" />
+    <option name="LAST_COMMIT_MESSAGE" value="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -826,11 +835,6 @@
           <option name="timeStamp" value="376" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/silva_sequence_functions.py</url>
-          <line>199</line>
-          <option name="timeStamp" value="387" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
           <line>304</line>
           <option name="timeStamp" value="392" />
@@ -851,14 +855,19 @@
           <option name="timeStamp" value="404" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>147</line>
-          <option name="timeStamp" value="439" />
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>489</line>
+          <option name="timeStamp" value="448" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>218</line>
+          <option name="timeStamp" value="450" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>103</line>
-          <option name="timeStamp" value="441" />
+          <line>156</line>
+          <option name="timeStamp" value="453" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -883,7 +892,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1691097428686" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1692127119684" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />

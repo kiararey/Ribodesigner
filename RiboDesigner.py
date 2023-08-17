@@ -20,7 +20,7 @@ import pandas as pd
 import numpy as np
 from collections import defaultdict
 import subprocess
-from Bio.Align import AlignInfo, MultipleSeqAlignment
+from Bio.Align import AlignInfo, MultipleSeqAlignment, PairwiseAligner
 from Bio.Align.Applications import MuscleCommandline
 from collections import Counter
 from math import exp, log
@@ -239,7 +239,7 @@ def find_cat_sites(target_names_and_seqs: list[tuple], igs_length: int = 5, guid
     # run function to find the index of all U residues of each sequence in target_seqs
     for name, sequ in target_names_and_seqs:
         # find all possible splice sites
-        idx = find(sequ, 'T')
+        idx = [i for i, ltr in enumerate(sequ) if ltr == 'T']
         # remove indexes that are < guide_length or > len(sequ) - igs_length (must have enough residues to attach to)
         idx_new = [res for res in idx if igs_length <= res < (len(sequ) - min_length)]
 
@@ -311,16 +311,13 @@ def align_to_ref_loop(name, sequ, cat_site_info, ref_name_and_seq, base_to_find)
     :param base_to_find:
     :return:
     """
-    # prepare patterns to look for to extract individual sequences from pairwise alignment
-    pattern_a = 'seqA=\'(.*?)\''
-    pattern_b = 'seqB=\'(.*?)\''
 
     # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final E.coli index
-    alignments = pairwise2.align.globalxx(sequ, ref_name_and_seq[1])
-    new_aligns = (''.join(str(alignments[0])))
+    aligner = PairwiseAligner(mode='global')
+    alignments = aligner.align(sequ, ref_name_and_seq[1])[0]
 
-    seq_a = re.search(pattern_a, new_aligns).group(1)
-    seq_b = re.search(pattern_b, new_aligns).group(1)
+    # seq_a is the test sequence, seq_b is the reference sequence
+    seq_a, seq_b = alignments
 
     # obtain index of new U
     idx_seq_a = find(seq_a, base_to_find)
