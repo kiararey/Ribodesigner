@@ -1,27 +1,23 @@
 import glob
 import os
 import random
-import warnings
+import time
+import numpy as np
+from Bio.SeqIO.FastaIO import SimpleFastaParser
+from numpy.random import default_rng
 from Bio.Seq import Seq
 import Bio.motifs
-import re
-import pandas as pd
-import numpy as np
 from collections import defaultdict
 import subprocess
 from Bio.Align import AlignInfo, MultipleSeqAlignment, PairwiseAligner
 from Bio.Align.Applications import MuscleCommandline
 from collections import Counter
+from Bio import SeqIO, AlignIO
 from math import exp, log
 from multiprocessing import Pool
-import time
 import seaborn as sns
 import matplotlib.pyplot as plt
 import scipy
-from numpy.random import default_rng
-from Bio import SeqIO, AlignIO
-from Bio.SeqIO.FastaIO import SimpleFastaParser
-from itertools import repeat
 
 
 # Expanded version of SilvaSequence
@@ -54,42 +50,64 @@ class TargetSeq:
 
 
 class RibozymeDesign:
-    def __init__(self, id: str, guides_to_use: list[Seq], targets: set, guide: Seq = '', score: int = None,
-                 score_type: str = '', perc_cov: float = None, perc_on_target: float = None,
-                 true_perc_cov: float = None, composite_background_score: float = None):
-        self.id = id
-        self.ref_idx = int(id[5:])
-        self.guide = guide
-        if not guide:
-            self.guides_to_use = guides_to_use
+    """
+    Accepted kwargs:
+    'g': list[Seq]  # guides to use to later
+    """
+    def __init__(self, id_attr: str, guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
+                 guide_attr: Seq = '', score_attr: int = None, score_type_attr: str = '', perc_cov_attr: float = None,
+                 perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
+                 background_score_attr: float = None, perc_cov_background_attr: float = None,
+                 perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None):
+        self.id = id_attr
+        self.igs = id_attr[:5]
+        self.ref_idx = int(id_attr[5:])
+        self.guide = guide_attr
+        self.guides_to_use = guides_to_use_attr
+        self.targets = targets_attr
+        self.number_of_targets = len(targets_attr)
+        self.score = score_attr
+        self.score_type = score_type_attr
+
+        # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
+        self.perc_cov = perc_cov_attr
+        self.perc_on_target = perc_on_target_attr
+        self.true_perc_cov = true_perc_cov_attr
+        self.calc_percent_coverages(perc_cov_attr=perc_cov_attr, perc_on_target_attr=perc_on_target_attr,
+                                    true_perc_cov_attr=true_perc_cov_attr)
+
+        # If we initialized using an optimized design, set these attributes now.
+        if self.score:
+            self.composite_score = self.true_perc_cov * self.score
         else:
-            self.guides_to_use = None
-        self.targets = targets
-        self.igs = id[:5]
-        self.score = score
-        self.score_type = score_type
-        self.perc_cov = perc_cov
-        if not perc_on_target and perc_cov and true_perc_cov:
-            self.perc_on_target = true_perc_cov / perc_cov
-        else:
-            self.perc_on_target = perc_on_target
-        self.true_perc_cov = true_perc_cov
-        if score:
-            self.composite_score = true_perc_cov * score
-        else:
-            self.composite_score = None
-        if guide and score and score_type:
+            self.composite_score = 0
+        if self.guide and self.score and self.score_type:
             self.optimized_to_targets = True
         else:
             self.optimized_to_targets = False
-        # For targeted ribozyme designs only:
-        self.composite_background_score = composite_background_score
-        if self.composite_score and self.composite_background_score:
-            self.delta_vs_background = self.composite_score - composite_background_score
+
+        # For initialized targeted ribozyme designs only:
+        self.background_score = background_score_attr
+        self.perc_cov_background = perc_cov_background_attr
+        self.perc_on_target_background = perc_on_target_background_attr
+        self.true_perc_cov_background = true_perc_cov_background_attr
+        self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
+                                               perc_on_target_background_attr=perc_on_target_background_attr,
+                                               true_perc_cov_background_attr=true_perc_cov_background_attr)
+
+        if self.true_perc_cov_background and background_score_attr:
+            self.composite_background_score = self.true_perc_cov_background * background_score_attr
         else:
-            self.delta_vs_background = None
-        self.number_of_targets = len(targets)
-        if composite_background_score:
+            self.composite_background_score = None
+
+        if self.composite_score and self.composite_background_score:
+            self.delta_vs_background = self.composite_score - self.composite_background_score
+        elif self.composite_score:
+            self.delta_vs_background = self.composite_score
+        else:
+            self.delta_vs_background = 0
+
+        if self.composite_background_score:
             self.optimized_to_background = True
         else:
             self.optimized_to_background = False
@@ -102,6 +120,55 @@ class RibozymeDesign:
         return f'{type(self).__name__}(IGS={self.igs}, ref_idx={self.ref_idx}, guide_sequence={self.guide}, ' \
                f'score={self.score}, score_type={self.score_type}, optimized_to_targets={self.optimized_to_targets}, ' \
                f'optimized_to_background={self.optimized_to_background}'
+
+    def calc_percent_coverages(self, perc_cov_attr: float = None, true_perc_cov_attr: float = None,
+                               perc_on_target_attr: float = None):
+        # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
+        if not perc_cov_attr and true_perc_cov_attr and perc_on_target_attr:
+            self.perc_cov = true_perc_cov_attr / perc_on_target_attr
+
+        if not perc_on_target_attr and true_perc_cov_attr and perc_cov_attr:
+            self.perc_on_target = true_perc_cov_attr / perc_cov_attr
+
+        if not true_perc_cov_attr and perc_on_target_attr and perc_cov_attr:
+            self.true_perc_cov = perc_on_target_attr * perc_cov_attr
+
+    def calc_background_percent_coverages(self, perc_cov_background_attr: float = None,
+                                          true_perc_cov_background_attr: float = None,
+                                          perc_on_target_background_attr: float = None):
+        # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
+        if not perc_cov_background_attr and true_perc_cov_background_attr and perc_on_target_background_attr:
+            self.perc_cov_background = true_perc_cov_background_attr / perc_on_target_background_attr
+
+        if not perc_on_target_background_attr and true_perc_cov_background_attr and perc_cov_background_attr:
+            self.perc_on_target_background = true_perc_cov_background_attr / perc_cov_background_attr
+
+        if not true_perc_cov_background_attr and perc_on_target_background_attr and perc_cov_background_attr:
+            self.true_perc_cov_background = perc_on_target_background_attr * perc_cov_background_attr
+
+
+    def update_after_optimizing(self, score_attr, guide_attr, score_type_attr):
+        self.score = score_attr
+        self.guide = guide_attr
+        # self.guides_to_use = None
+        self.score_type = score_type_attr
+        self.optimized_to_targets = True
+        self.composite_score = self.true_perc_cov * score_attr
+
+    def update_to_background(self, updated_guide_attr: Seq, background_score_attr: float,
+                             perc_cov_background_attr: float, perc_on_target_background_attr: float,
+                             true_perc_cov_background_attr: float):
+        self.guide = updated_guide_attr
+        self.optimized_to_background = True
+        self.background_score = background_score_attr
+        self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
+                                               perc_on_target_background_attr=perc_on_target_background_attr,
+                                               true_perc_cov_background_attr=true_perc_cov_background_attr)
+        self.composite_background_score = self.true_perc_cov_background * background_score_attr
+        self.delta_vs_background = self.composite_score - self.composite_background_score
+
+
+
 
 
 
@@ -194,56 +261,51 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                                                  replace=False)
         print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
 
-    if keep_single_targets and min_true_cov > 1 / len(target_names_and_seqs):
-        # If we only want to get more than a certain percentage, override keep_single_targets
-        keep_single_targets = False
-
     time1 = time.perf_counter()
-    fn = np.vectorize(align_to_ref, otypes=[TargetSeq],
+    print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq[0].replace("_", " ")}')
+    fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
                       excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
-    fn(target_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length, guide_length=guide_length,
-       min_length=min_length)
+    fn_align_to_ref(target_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
+                    guide_length=guide_length, min_length=min_length)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'finding catalytic sites and indexing sequences to reference '
-                                  f'{ref_name_and_seq[0].replace("_", " ")}')
+                       task_timed=f'finding catalytic sites and indexing target sequences to reference')
 
     time1 = time.perf_counter()
     if optimize_seq:
         # first, filter through possible designs and get the ones that meet our threshold
-        to_optimize = filter_igs_candidates(target_names_and_seqs, min_true_cov)
+        to_optimize = filter_igs_candidates(aligned_targets=target_names_and_seqs, min_true_cov=min_true_cov)
         time2 = time.perf_counter()
-        round_convert_time(start=time1, end=time2, round_to=4, task_timed='prepping sequences for optimization')
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
 
         # Now, optimize all of the possible guide sequences for each IGS:
+        print('Now optimizing guide sequences...')
         time1 = time.perf_counter()
+        fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
+                              excluded=['score_type', 'thresh', 'msa_fast', 'gaps_allowed'])
+        fn_msa(to_optimize, score_type=score_type, thresh=identity_thresh, msa_fast=msa_fast, gaps_allowed=gaps_allowed)
+        time2 = time.perf_counter()
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
-    #     time1 = time.perf_counter()
-    #     opti_seqs = optimize_sequences(to_optimize, identity_thresh, guide_length, ribo_seq, to_keep_single_targets,
-    #                                    fileout=fileout, file=folder_to_save, score_type=score_type, msa_fast=msa_fast,
-    #                                    gaps_allowed=gaps_allowed, min_true_cov=min_true_cov)
-    #     time2 = time.perf_counter()
-    #     round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
-    #
-    #     if targeted:
-    #         background_names_and_seqs = read_fasta(background_sequences_folder)
-    #         print(f'Found {len(background_names_and_seqs)} total background sequences to analyze.')
-    #
-    #         if percent_of_background_seqs_used < 1:
-    #             array = np.array(background_names_and_seqs, dtype=tuple)
-    #             rng = default_rng(seed=seed_background)
-    #             background_names_and_seqs = rng.choice(
-    #                 array, size=round(len(background_names_and_seqs) * percent_of_background_seqs_used), replace=False)
-    #             print(f'Randomly sampling {len(background_names_and_seqs)} background sequences to analyze.\n')
-    #         # first find the IGSes and locations of the background sequences. We do not want to hit these.
-    #         background_sequences_data = find_cat_sites(background_names_and_seqs, igs_length,
-    #                                                    guide_length, min_length)
-    #
-    #         time1 = time.perf_counter()
-    #         aligned_background_sequences = align_to_ref(background_sequences_data, ref_name_and_seq)
-    #         time2 = time.perf_counter()
-    #         round_convert_time(start=time1, end=time2, round_to=4, task_timed='indexing background sequences')
-    #
+        if targeted:
+            background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
+
+            print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
+
+            if percent_of_background_seqs_used < 1:
+                background_names_and_seqs = np.random.choice(
+                    background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
+                    replace=False)
+                print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
+
+            # first find the IGSes and locations of the background sequences. We do not want to hit these.
+            # Also align these to the reference sequence
+            fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
+                            guide_length=guide_length, min_length=min_length)
+            time2 = time.perf_counter()
+            round_convert_time(start=time1, end=time2, round_to=4,
+                               task_timed=f'finding catalytic sites and indexing background sequences to reference')
+
     #         print('Now applying designed ribozymes with background sequences and getting statistics...')
     #         average_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
     #         igs_and_guides_comp_scores = \
@@ -510,14 +572,162 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
             # Add organism number to set. We can calculate the percent coverage with this number later on.
             igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].id)
 
-    print(f'{len(igs_over_min_true_cov)} repeat IGSes found.')
+    print(f'{len(igs_over_min_true_cov)} putative designs found.')
     # Now make an array of all of the putative designs for later use.
-    to_optimize = np.array([RibozymeDesign(id=igs_id, guides_to_use=item[0], targets=item[1], true_perc_cov=item[2],
-                                           perc_cov=len(item[1])/ aligned_targets.size)
+    to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
+                                           true_perc_cov_attr=item[2], perc_cov_attr=len(item[1]) / aligned_targets.size)
                             for igs_id, item in igs_over_min_true_cov.items()])
     return to_optimize
 
-    def optimize_designs(to_optimize: np.ndarray[RibozymeDesign], score_type: str, msa_fast: bool = True)
+
+def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float = 0.7, msa_fast: bool = True,
+                     gaps_allowed: bool = True):
+    """
+    Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
+
+    """
+    # First create a dummy file with all the guides we want to optimize
+    with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
+        for line in range(to_optimize.number_of_targets):
+            f.write('>seq' + str(line) + '\n' + str(to_optimize.guides_to_use[line]) + '\n')
+
+    muscle_exe = 'muscle5'
+
+    if msa_fast:
+        subprocess.check_output([muscle_exe, '-super5', f'to_align_{to_optimize.id}.fasta', '-output',
+                                 f'aln_{to_optimize.id}.afa'], stderr=subprocess.DEVNULL)
+    else:
+        subprocess.check_output([muscle_exe, '-align', f'to_align_{to_optimize.id}.fasta', '-output',
+                                 f'aln_{to_optimize.id}.afa'], stderr=subprocess.DEVNULL)
+
+    msa = AlignIO.read(open(f'aln_{to_optimize.id}.afa'), 'fasta')
+
+    # delete files:
+    if os.path.exists(f'aln_{to_optimize.id}.afa'):
+        os.remove(f'aln_{to_optimize.id}.afa')
+    if os.path.exists(f'to_align_{to_optimize.id}.fasta'):
+        os.remove(f'to_align_{to_optimize.id}.fasta')
+
+    # Now retrieve the alignment
+    summary_align = AlignInfo.SummaryInfo(msa)
+    alignments = [record.seq for record in summary_align.alignment]
+
+    # thanks to https://github.com/mdehoon for telling me about .degenerate_consensus!!!
+    if score_type != 'quantitative':
+        if gaps_allowed:
+            opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+        else:
+            opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip(
+                '-').replace('-', 'N')
+
+        if score_type == 'naive':
+            # Naively tell me what the percent identity is: 1- ambiguity codons/ length
+            score = get_naive_score(opti_seq)
+
+        elif score_type == 'weighted':
+            score = get_weighted_score(opti_seq)
+
+        elif score_type == 'directional':
+            score = get_directional_score(opti_seq)
+
+    else:
+        if gaps_allowed:
+            left_seq = summary_align.gap_consensus(threshold=thresh, ambiguous='N')
+        else:
+            left_seq = summary_align.dumb_consensus(threshold=thresh, ambiguous='N')
+        score, opti_seq = get_quantitative_score(left_seq, alignments, count_gaps=gaps_allowed)
+
+    # Now update our initial design
+    to_optimize.update_after_optimizing(score_attr=score, guide_attr=opti_seq, score_type_attr=score_type)
 
 
+def get_naive_score(opti_seq):
+    score = 1 - str(opti_seq).count('N') / len(opti_seq)
+    return score
 
+
+def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = None, count_gaps: bool = True,
+                           penalize_trailing_gaps: bool = False):
+    """
+    :param alignments:
+    :param left_seq:
+    :param chars_to_ignore:
+    :param count_gaps:
+    :param penalize_trailing_gaps:
+    :return:
+    """
+    # a modified version of BioPython'string_to_analyze PSSM function that counts gaps by default and also gives us
+    # the quantitative score. This quantitative score is as follows:
+
+    if chars_to_ignore is None:
+        chars_to_ignore = []
+    if not isinstance(chars_to_ignore, list):
+        raise TypeError('chars_to_ignore should be a list.')
+
+    gap_char = '-'
+    if not count_gaps:
+        chars_to_ignore.append(gap_char)
+
+    sum_probabilities = 0
+    # now start looping through all of the sequences and getting info
+    seq_num = len(alignments)
+    for residue_num in range(len(left_seq)):
+        pos_prob = 0
+        for record in alignments:
+            try:
+                this_residue = record[residue_num]
+            # if we hit an index error we've run out of sequence and
+            # should not add new residues
+            except IndexError:
+                this_residue = None
+            if this_residue and this_residue not in chars_to_ignore:
+                try:
+                    # If the current residue matches the consensus residue
+                    if this_residue == left_seq[residue_num]:
+                        pos_prob += 1
+                except KeyError:
+                    raise ValueError(
+                        f'Residue %s not found {this_residue}'
+                    ) from None
+
+        sum_probabilities += pos_prob / seq_num
+
+    # Replace gaps with N since we can't order gaps when ordering oligos
+    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
+                                                                                                                  'N')
+    score = sum_probabilities / len(left_seq)
+
+    return score, opti_seq
+
+
+def get_weighted_score(opti_seq):
+    # prepare scoring matrix a(x)
+    a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
+         'H': 1/3, 'B': 1/3, 'D': 1/3, 'V': 1/3, 'N': 0, '-': 0}
+    n = len(opti_seq)
+
+    prelim_score = 0
+    for i, x in enumerate(str(opti_seq)):
+        prelim_score += a[x]
+    score = prelim_score / n
+
+    return score
+
+
+def get_directional_score(opti_seq):
+    # prepare scoring matrix a(x)
+    a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
+         'H': 1/3, 'B': 1/3, 'D': 1/3, 'V': 1/3, 'N': 0, '-': 0}
+    n = len(opti_seq)
+    # This is broken, have not fixed yet
+    # score based on extended identity and position of the bases
+    weight_sum = 0
+    weight_score_sum = 0
+
+    for i, x in enumerate(str(opti_seq)):
+        w = exp(n - i)  # Calculate weight based on proximity to IGS
+        weight_sum += w
+        weight_score_sum += w * a[x]
+        i += 1  # move downstream
+    score = weight_score_sum / weight_sum
+    return score
