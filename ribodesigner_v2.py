@@ -23,9 +23,8 @@ import scipy
 # Expanded version of SilvaSequence
 class TargetSeq:
     # Important: TargetSeq id must be formatted like a Silva sequence if we want the give_taxonomy function to work!
-    def __init__(self, id: str = '', taxonomy: str = '', seq: Seq = ''):
+    def __init__(self, id: str = '', seq: Seq = ''):
         self.id = id
-        self.taxonomy = taxonomy
         self.seq = seq
         self.cat_sites = []
 
@@ -48,13 +47,19 @@ class TargetSeq:
             here_is_taxonomy = ''
         return here_is_taxonomy
 
+    def reset_cat_sites_and_seq(self):
+        # To minimize data storage
+        self.seq = ''
+        self.cat_sites = []
+        return self
+
 
 class RibozymeDesign:
     """
     Accepted kwargs:
     'g': list[Seq]  # guides to use to later
     """
-    def __init__(self, id_attr: str, guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
+    def __init__(self, id_attr: str, guides_to_use_attr: list[Seq] = None, targets_attr: set() = None,
                  guide_attr: Seq = '', score_attr: int = None, score_type_attr: str = '', perc_cov_attr: float = None,
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
                  background_score_attr: float = None, perc_cov_background_attr: float = None,
@@ -166,11 +171,6 @@ class RibozymeDesign:
                                                true_perc_cov_background_attr=true_perc_cov_background_attr)
         self.composite_background_score = self.true_perc_cov_background * background_score_attr
         self.delta_vs_background = self.composite_score - self.composite_background_score
-
-
-
-
-
 
 def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_file: str, igs_length: int = 5,
                  guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, targeted: bool = False,
@@ -377,9 +377,8 @@ def read_silva_fasta(in_file: str, file_type: str = 'fasta', exclude=[], include
         out_seqs = []
         with open(file_to_parse) as f:
             for title, seq in SimpleFastaParser(f):
-                id = title.split(' ')[0]
-                taxonomy = title[len(id) + 1].split(';')
-                putative_sequence = TargetSeq(id, taxonomy, Seq(seq).upper().back_transcribe())
+                seq_id = title.split(' ')[0]
+                putative_sequence = TargetSeq(seq_id, Seq(seq).upper().back_transcribe())
                 if taxonomy_level and exclude_list or include_list:
                     if exclude_list and putative_sequence.give_taxonomy(level=taxonomy_level) not in exclude_list:
                         out_seqs.append(putative_sequence)
@@ -570,12 +569,13 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
             # Add guide to list
             igs_over_min_true_cov[igs_id][0].append(guide)
             # Add organism number to set. We can calculate the percent coverage with this number later on.
-            igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].id)
+            igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].reset_cat_sites_and_seq())
 
     print(f'{len(igs_over_min_true_cov)} putative designs found.')
     # Now make an array of all of the putative designs for later use.
     to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
-                                           true_perc_cov_attr=item[2], perc_cov_attr=len(item[1]) / aligned_targets.size)
+                                           true_perc_cov_attr=item[2],
+                                           perc_cov_attr=len(item[1]) / aligned_targets.size)
                             for igs_id, item in igs_over_min_true_cov.items()])
     return to_optimize
 
@@ -731,3 +731,162 @@ def get_directional_score(opti_seq):
         i += 1  # move downstream
     score = weight_score_sum / weight_sum
     return score
+
+
+def ribo_checker(designs, aligned_target_sequences, ref_seq_len, identity_thresh: float, guide_length: int,
+                 score_type: str = 'quantitative', gaps_allowed: bool = True, msa_fast: bool = False,
+                 flexible_igs: bool = False, do_not_target_background: bool = True, n_limit: int = 0):
+    """
+    Checks generated designs against a set of sequences to either find how well they align to a given dataset.
+    Will return a set of sequences that match for each design as well as a score showing how well they matched.
+    :param designs:
+    :param aligned_target_sequences:
+    :param ref_seq_len:
+    :param identity_thresh:
+    :param guide_length:
+    :param do_not_target_background: boolean set to True if you want to further optimize the designs by reducing ambiguity
+    :param score_type:
+    :param gaps_allowed:
+    :param flexible_igs:
+    :param msa_fast:
+    :param n_limit: what percentage of Ns are acceptable?
+    :return:
+    """
+    # extract all design IGSes and guides.
+    # This will be a list: [igs, guide, ref_idx (0 base indexing), guide_id(igs+ref_idx)]
+    igs_and_guides_designs = [(str(design[0]), design[8], design[1] - 1, str(design[0]) + str(design[1]))
+                              for design in designs]
+    igs_and_guides_initial_comp_scores = {str(design[0]) + str(design[1]): design[6] for design in designs}
+
+    # Is there a U at each position for each design at each target sequence?
+    designed_idxs = np.array(list({design[2] for design in igs_and_guides_designs}))  # base 0 indexing
+    uracil_sites_targets = np.zeros((len(aligned_target_sequences), ref_seq_len))
+    uracil_sites_targets[:, designed_idxs] = 1
+    for i, target_data in enumerate(aligned_target_sequences):  # base 1 indexing
+        temp_uracil_indexes = np.array([ref_idx - 1 for _, ref_idx in target_data[2][2]])  # convert to base 0 indexing
+        # everything that is a 2 is a U that appears in both the designs and the target sequence,
+        # a 1 is a U in the design
+        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2  # base 0 index
+
+    average_conserved = []
+    num_of_targets = len(aligned_target_sequences)
+    for i in designed_idxs:
+        u_values, u_counts = np.unique(uracil_sites_targets[:, i], return_counts=True)
+        try:
+            percentage_of_cat_sites_conserved = u_counts[np.where(u_values == 2)[0][0]]/num_of_targets
+        except:
+            percentage_of_cat_sites_conserved = 0
+        average_conserved.append(percentage_of_cat_sites_conserved)
+
+    # # for histogram
+    # u_values, u_counts = np.unique(uracil_sites_targets, return_counts=True)  # base 0 indexing
+    # is_u_conserved = [[False, True], u_counts[1:]]
+    # print(
+    #     f'There are {is_u_conserved[1][1]} conserved Us and {is_u_conserved[1][0]} not conserved.')
+
+    # What is the conservation of IGSes at a particular position for each design?
+    # Keep only the sites that are conserved for later.
+    igs_sites_targets = np.array(np.clip(uracil_sites_targets, 0, 1), copy=True, dtype=str)  # base 0 indexing
+    conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
+
+    for target_number, ref_idx in conserved_u_sites:  # base 0 indexing
+        # extract IGS there:
+        index_of_target_data = np.argwhere(np.array(aligned_target_sequences[target_number]
+                                                    [2][2])[:, 1] == ref_idx + 1)[0, 0]  # convert to base 1 indexing
+        igs_sites_targets[target_number, ref_idx] = str(aligned_target_sequences[target_number][2][0]
+                                                        [index_of_target_data])
+
+    # Now find how many conserved IGSes there are!
+    to_optimize = {}
+    no_splices_in_background = []
+    opti_seqs = []
+
+    conserved_igs_true_perc_coverage = {}
+
+    for igs, designed_guide, ref_idx, guide_id in igs_and_guides_designs:  # base 0 indexing
+        check = np.argwhere(igs_sites_targets == igs)
+        orgs_with_igs_on_target = check[np.argwhere(check[:, 1] == ref_idx)][:, 0, 0]
+        on_target_count = len(orgs_with_igs_on_target)
+        if on_target_count > 0:
+            true_perc_cov = on_target_count / len(aligned_target_sequences)
+            orgs_with_igs, counts = np.unique(check[:, 0], return_counts=True)
+            perc_cov = len(orgs_with_igs) / len(aligned_target_sequences)
+            perc_on_target = true_perc_cov / perc_cov
+            conserved_igs_true_perc_coverage[guide_id] = true_perc_cov
+            if not flexible_igs:
+                all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
+                                                          == ref_idx + 1)[0, 0] for target in
+                                              orgs_with_igs_on_target]  # convert to base 1 indexing
+                guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
+                                      target, index_of_target_data in
+                                      zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
+                # names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
+                #                    for target, ig_idx, occurs_in_target in
+                #                    zip(orgs_with_igs_on_target, all_indexes_of_target_data, counts)]
+            else:
+                orgs_with_u_on_target = conserved_u_sites[np.where(conserved_u_sites[:, 1] == ref_idx)][:, 0]
+                all_indexes_of_target_data = [np.argwhere(np.array(aligned_target_sequences[target][2][2])[:, 1]
+                                                          == ref_idx + 1)[0, 0] for target in
+                                              orgs_with_u_on_target]  # convert to base 1 indexing
+                guides_to_optimize = [str(aligned_target_sequences[target][2][1][index_of_target_data]) for
+                                      target, index_of_target_data in
+                                      zip(orgs_with_u_on_target, all_indexes_of_target_data)]
+                # names_and_stuff = [(aligned_target_sequences[target][0], ig_idx, occurs_in_target)
+                #                    for target, ig_idx, occurs_in_target in
+                #                    zip(orgs_with_u_on_target, all_indexes_of_target_data, counts)]
+            names_and_stuff = len(guides_to_optimize)
+            if len(guides_to_optimize) > 1:
+                to_optimize[guide_id] = [igs, ref_idx + 1, perc_cov, perc_on_target, true_perc_cov, names_and_stuff,
+                                         guides_to_optimize, designed_guide]
+            else:
+                opti_seqs.append([igs, ref_idx + 1, 1, perc_cov, perc_on_target, true_perc_cov, 1 * true_perc_cov,
+                                  names_and_stuff, Seq(guides_to_optimize[0]), designed_guide])
+        else:
+            conserved_igs_true_perc_coverage[guide_id] = 0
+            # remove designs with too many Ns
+            if designed_guide.count('N')/guide_length <= n_limit:
+                # Follow the same naming as the outputs of replace_ambiguity. Pairwise score is set at 0 based on the
+                # assumption that if there is no catalytic U there is no splicing activity
+                initial_score = igs_and_guides_initial_comp_scores[guide_id]
+                no_splices_in_background.append((designed_guide, initial_score, 0, 0, guide_id, 0))
+
+    # Do an MSA
+    opti_seqs.extend(optimize_sequences(to_optimize, identity_thresh, guide_length, '', [], gaps_allowed=gaps_allowed,
+                                        score_type=score_type, msa_fast=msa_fast, for_comparison=True))
+
+    # Now reduce ambiguity and score
+    print('\nNow scoring ribozyme designs against background sequences...')
+    start = time.perf_counter()
+    in_data = [(seqs[-1], seqs[-2], do_not_target_background, score_type, key, n_limit, seqs[5]) for key, seqs in
+               zip(to_optimize, opti_seqs)]
+
+    replace_ambiguity(in_data[0][0], in_data[0][1], in_data[0][2], in_data[0][3], in_data[0][4], in_data[0][5],
+                      in_data[0][6])
+
+
+    with Pool() as pool:
+        less_ambiguous_designs = pool.starmap(replace_ambiguity, in_data)
+
+    less_ambiguous_designs.extend(no_splices_in_background)
+    pairwise_composite_scores = {}
+    background_guide_scores = {}
+    igs_and_guides_comp_scores = {}
+
+    # for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in less_ambiguous_designs:
+    for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in filter(None, less_ambiguous_designs):
+
+        # Update our scores with the new less ambiguous designs
+        igs_and_guides_comp_scores[key] = [new_seq_score * true_perc_cov, new_seq]
+        pairwise_composite_scores[key] = pairwise_score * true_perc_cov
+        background_guide_scores[key] = background_seq_score
+
+    delta_composite_scores = {}
+
+    for key, good_data in igs_and_guides_comp_scores.items():
+        bad_score = pairwise_composite_scores[key]
+        delta_composite_scores[key] = good_data[0] - bad_score
+    round_convert_time(start=start, end=time.perf_counter(), round_to=4,
+                       task_timed='scoring against background sequences')
+
+    return average_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
+           igs_and_guides_comp_scores
