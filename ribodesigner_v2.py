@@ -95,7 +95,6 @@ class RibozymeDesign:
         # For initialized targeted ribozyme designs only:
         self.background_score = background_score_attr
         self.background_guides = background_guides_attr
-        self.pairwise_score_with_background =
         self.anti_guide = anti_guide_attr
         self.perc_cov_background = perc_cov_background_attr
         self.perc_on_target_background = perc_on_target_background_attr
@@ -169,7 +168,8 @@ class RibozymeDesign:
     def calc_background_percent_coverages(self, perc_cov_background_attr: float = None,
                                           true_perc_cov_background_attr: float = None,
                                           perc_on_target_background_attr: float = None):
-        if perc_on_target_background_attr and true_perc_cov_background_attr and perc_on_target_background_attr:
+        if perc_on_target_background_attr is not None and true_perc_cov_background_attr is not None and \
+                perc_on_target_background_attr is not None:
             self.perc_cov_background = perc_cov_background_attr
             self.true_perc_cov_background = true_perc_cov_background_attr
             self.perc_on_target_background = perc_on_target_background_attr
@@ -204,7 +204,27 @@ class RibozymeDesign:
         self.composite_background_score = self.true_perc_cov_background * background_score_attr
         self.delta_vs_background = self.composite_score - self.composite_background_score
 
-
+    def print_attributes(self):
+        if self.optimized_to_targets and self.optimized_to_background:
+            # first_row = 'IGS,Reference index,Number of species targeted,Score,% cov,% on target,true % cov,' \
+            #             'Composite score,background score,% cov background,% on target background,' \
+            #             'true % cov background,Composite score background,Delta composite score vs background,' \
+            #             'Optimized guide,Optimized guide + G + IGS\n'
+            text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.perc_cov},' \
+                   f'{self.perc_on_target},{self.true_perc_cov},{self.composite_score},{self.background_score},' \
+                   f'{self.perc_cov_background},{self.perc_on_target_background},{self.true_perc_cov_background},' \
+                   f'{self.composite_background_score},{self.delta_vs_background},{self.guide},' \
+                   f'{self.guide}G{self.igs}\n'
+        elif self.optimized_to_targets:
+            # first_row = 'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,' \
+            #             'Number of species targeted,Optimized guide,Optimized guide + G + IGS\n'
+            text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.perc_cov},' \
+                   f'{self.perc_on_target},{self.true_perc_cov},{self.composite_score},' \
+                   f'{self.guide},{self.guide}G{self.igs}\n'
+        else:
+            print('Please optimize to targets or optimize to targets then to background first.')
+            return
+        return text
 
 
 def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_file: str, igs_length: int = 5,
@@ -322,6 +342,9 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
+    if fileout:
+        write_output_file(designs=to_optimize, folder_path=folder_to_save)
+
     if targeted:
         background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
 
@@ -342,27 +365,33 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                            task_timed=f'finding catalytic sites and indexing background sequences to reference')
 
         print('Now applying designed ribozymes with background sequences and getting statistics...')
-        test = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]), identity_thresh=identity_thresh,
-                     guide_length=guide_length, score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
-                     flexible_igs=True, n_limit=n_limit)
+        opti_target_seqs = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]),
+                                             identity_thresh=identity_thresh, guide_length=guide_length,
+                                             score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
+                                             flexible_igs=True, n_limit=n_limit)
 
-    #         opti_target_seqs = compare_targeted_sequences(opti_seqs, average_conserved, conserved_igs_true_perc_coverage,
-    #                                                       background_guide_scores, delta_composite_scores,
-    #                                                       igs_and_guides_comp_scores, min_delta=min_delta,
-    #                                                       file_out=fileout, file=folder_to_save)
-    #         time2 = time.perf_counter()
-    #         round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
-    #                                                                           'sequences')
-    #
-    #         end = time.perf_counter()
-    #         round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-    #
-    #         return opti_target_seqs
-    #
+        if fileout:
+            write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
+
+        # Now make graphs
+
+        # opti_target_seqs = compare_targeted_sequences(opti_seqs, average_conserved, conserved_igs_true_perc_coverage,
+        #                                               background_guide_scores, delta_composite_scores,
+        #                                               igs_and_guides_comp_scores, min_delta=min_delta,
+        #                                               file_out=fileout, file=folder_to_save)
+        time2 = time.perf_counter()
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
+                                                                          'sequences')
+
         end = time.perf_counter()
         round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
         print('########################################################\n')
-        return opti_seqs
+        return opti_target_seqs
+
+    end = time.perf_counter()
+    round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
+    print('########################################################\n')
+    return to_optimize
 
 
 def back_transcribe_seq_file(seq_file: str) -> Seq:
@@ -603,8 +632,8 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
     return to_optimize
 
 
-def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float = 0.7, msa_fast: bool = True,
-                     gaps_allowed: bool = True, compare_to_background: bool = False):
+def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float = 0.7, guide_len: int = 50,
+                     msa_fast: bool = True, gaps_allowed: bool = True, compare_to_background: bool = False):
     """
     Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
     when compare_to_background is set to true, will do an MSA on background seqs and will update the anti-guide sequence
@@ -648,6 +677,8 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float
         else:
             opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip(
                 '-').replace('-', 'N')
+        # Make sure our sequence is our desired length
+        truncated_seq = opti_seq[-guide_len:]
 
         if score_type == 'naive':
             # Naively tell me what the percent identity is: 1- ambiguity codons/ length
@@ -659,19 +690,24 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float
         elif score_type == 'directional':
             score = get_directional_score(opti_seq)
 
+        else:
+            print('Score type not recognized. Defaulting to naive scoring')
+            score = get_naive_score(opti_seq)
+
     else:
         if gaps_allowed:
             left_seq = summary_align.gap_consensus(threshold=thresh, ambiguous='N')
         else:
             left_seq = summary_align.dumb_consensus(threshold=thresh, ambiguous='N')
         score, opti_seq = get_quantitative_score(left_seq, alignments, count_gaps=gaps_allowed)
+        truncated_seq = opti_seq[-guide_len:]
 
     # Now update our initial design
     if not compare_to_background:
-        to_optimize.update_after_optimizing(score_attr=score, guide_attr=opti_seq, score_type_attr=score_type,
+        to_optimize.update_after_optimizing(score_attr=score, guide_attr=truncated_seq, score_type_attr=score_type,
                                             reset_guides=True)
     else:
-        to_optimize.anti_guide = opti_seq
+        to_optimize.anti_guide = truncated_seq
 
 
 def get_naive_score(opti_seq):
@@ -786,20 +822,14 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     :param n_limit: what percentage of Ns are acceptable?
     :return:
     """
-    # extract all design IGSes and guides.
-    # This will be a list: [igs, guide, ref_idx (0 base indexing), guide_id(igs+ref_idx)]
-
-    # igs_and_guides_designs = [(str(design[0]), design[8], design[1] - 1, str(design[0]) + str(design[1]))
-    #                           for design in designs]
-    # igs_and_guides_initial_comp_scores = {str(design[0]) + str(design[1]): design[6] for design in designs}
 
     # Is there a U at each position for each design at each target sequence?
-    designed_idxs = np.array(list(ribodesign.ref_idx for ribodesign in designs))  # base 0 indexing
+    designed_idxs = np.array(list(ribodesign.ref_idx - 1 for ribodesign in designs))  # convert to base 0 indexing
     uracil_sites_targets = np.zeros((aligned_target_sequences.size, ref_seq_len))
     uracil_sites_targets[:, designed_idxs] = 1
 
     for i, target_sequence in enumerate(aligned_target_sequences):  # base 1 indexing
-        temp_uracil_indexes = np.array([cat_site[1] - 1 for cat_site in target_sequence.cat_sites])  # convert to base 0 indexing
+        temp_uracil_indexes = np.array([cat_site[1] - 1 for cat_site in target_sequence.cat_sites])  # convert to base 0 indexing to match array indexing locations
         # everything that is a 2 is a U that appears in both the designs and the target sequence,
         # a 1 is a U in the design
         uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2  # base 0 index
@@ -817,40 +847,43 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     # What is the conservation of IGSes at a particular position for each design?
     # Keep only the sites that are conserved for later.
     igs_sites_targets = np.array(np.clip(uracil_sites_targets, 0, 1), copy=True, dtype=str)  # base 0 indexing
+    # Keeps the indexes of where Us are conserved, so base 0 indexing
     conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
 
-    for target_number, ref_idx in conserved_u_sites:  # base 0 indexing
+    for target_number, ref_idx_loc in conserved_u_sites:  # base 0 indexing
         # extract IGS there: first, extract all the reference indexes for each catalytic site, and then find those that
         # have the same ref_idx as the conserved site. Find where they are in our array and save to our igs_sites_
         # targets array
         index_of_target_data = np.argwhere([cat_site[1] for cat_site in
-                                            aligned_target_sequences[target_number].cat_sites] == ref_idx + 1)[0, 0]  # convert to base 1 indexing
-        igs_sites_targets[target_number, ref_idx] = str(aligned_target_sequences[target_number].cat_sites[index_of_target_data])
+                                            aligned_target_sequences[target_number].cat_sites] == ref_idx_loc + 1)[0, 0]  # convert to base 1 indexing
+        igs_sites_targets[target_number, ref_idx_loc] = \
+            str(aligned_target_sequences[target_number].cat_sites[index_of_target_data][2])
 
     # Now find how many conserved IGSes there are!
     to_optimize = []
     designs_below_limit = []
     opti_seqs = []
 
-
-    for ribo_design in designs:  # base 0 indexing
-        check = np.argwhere(igs_sites_targets == ribo_design.igs)
-        orgs_with_igs_on_target = check[np.argwhere(check[:, 1] == ribo_design.ref_idx)][:, 0, 0]
-        on_target_count = len(orgs_with_igs_on_target)
+    # ref_idx is in base 1 indexing, indexes for arrays are base 0
+    for ribo_design in designs:  # base 1 indexing
+        check = np.argwhere(igs_sites_targets == ribo_design.igs)  # base 0 indexing
+        orgs_with_igs_on_target = check[np.argwhere(check[:, 1] == ribo_design.ref_idx - 1)][:, 0, 0]  # convert to base 0 indexing
+        on_target_count = orgs_with_igs_on_target.size
         if on_target_count > 0:
             true_perc_cov = on_target_count / aligned_target_sequences.size
             orgs_with_igs = np.unique(check[:, 0])
-            perc_cov = len(orgs_with_igs) / aligned_target_sequences.size
+            perc_cov = orgs_with_igs.size / aligned_target_sequences.size
             perc_on_target = true_perc_cov / perc_cov
             ribo_design.calc_background_percent_coverages(perc_cov_background_attr=perc_cov,
                                                           true_perc_cov_background_attr=true_perc_cov,
                                                           perc_on_target_background_attr=perc_on_target)
             # If the igs is not flexible, only check those that have a perfect igs upstream of the cat_site
             if not flexible_igs:
-                all_indexes_of_target_data = \
-                    [np.argwhere([cat_site[1] for cat_site
-                                  in aligned_target_sequences[target_number].cat_sites] == ref_idx + 1)[0, 0]
-                     for target_number in orgs_with_igs_on_target]  # convert to base 1 indexing
+                # comparing two base 1 indexes, no conversion needed, but this will hold base 0
+                all_indexes_of_target_data = [np.argwhere(
+                    np.array([cat_site[1] for cat_site
+                              in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
+                                              for target_number in orgs_with_igs_on_target]
 
                 guides_to_optimize = [str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
                                       target, index_of_target_data in
@@ -858,19 +891,21 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
             # Otherwise, extract all info in conserved cat_sites regardless of igs. As long at the catalytic U is on
             # target, we'll extract those data
             else:
-                orgs_with_u_on_target = conserved_u_sites[np.where(conserved_u_sites[:, 1] == ref_idx)][:, 0]
-                all_indexes_of_target_data = \
-                    [np.argwhere([cat_site[1] for cat_site
-                                  in aligned_target_sequences[target_number].cat_sites] == ref_idx + 1)[0, 0]
-                     for target_number in orgs_with_u_on_target]  # convert to base 1 indexing
+                orgs_with_u_on_target = conserved_u_sites[
+                                            np.where(conserved_u_sites[:, 1] == ribo_design.ref_idx - 1)][:, 0]  # convert to base 0
+                # comparing two base 1 indexes, no conversion needed, but this will hold base 0
+                # I'm not sure why the following line won't work if I don't convert the list in np.argwhere into an array
+                all_indexes_of_target_data = [np.argwhere(
+                    np.array([cat_site[1] for cat_site
+                              in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
+                                              for target_number in orgs_with_u_on_target]
                 guides_to_optimize = [str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
                                       target, index_of_target_data in
                                       zip(orgs_with_u_on_target, all_indexes_of_target_data)]
 
-
-
             if len(guides_to_optimize) > 1:
                 # Pass the reference to this design to further optimize to the background
+                ribo_design.background_guides = guides_to_optimize
                 to_optimize.append(ribo_design)
             else:
                 # No need to optimize to the background with a full MSA but can still remove ambiguity
@@ -886,6 +921,8 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
             # remove designs with too many Ns
             if ribo_design.guide.count('N')/guide_length <= n_limit:
                 # Follow the same naming as the outputs of replace_ambiguity.
+                ribo_design.update_to_background(background_score_attr=0, new_guide=ribo_design.guide,
+                                                 new_score=ribo_design.score, reset_guides=True)
                 designs_below_limit.append(ribo_design)
 
     # Do a MSA. Remember that we are passing the references to objects, hopefully, if I coded this correctly.
@@ -898,38 +935,19 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
 
     # Now reduce ambiguity and score
     print('\nNow scoring ribozyme designs against background sequences...')
-
     start = time.perf_counter()
 
+    # Keep in mind that this will only update designs that are above the limit of ambiguity codons N given!
     fn_ambiguity = np.vectorize(replace_ambiguity, otypes=[RibozymeDesign],
                                 excluded=['do_not_target_background', 'n_limit', 'score_params'])
     fn_ambiguity(to_reduce_ambiguity, do_not_target_background=True, n_limit=n_limit, score_params=[])
 
-    # less_ambiguous_designs.extend(no_splices_in_background)
-    # pairwise_composite_scores = {}
-    # background_guide_scores = {}
-    # igs_and_guides_comp_scores = {}
-    #
-    # # for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in less_ambiguous_designs:
-    # for new_seq, new_seq_score, background_seq_score, pairwise_score, key, true_perc_cov in filter(None, less_ambiguous_designs):
-    #
-    #     # Update our scores with the new less ambiguous designs
-    #     igs_and_guides_comp_scores[key] = [new_seq_score * true_perc_cov, new_seq]
-    #     pairwise_composite_scores[key] = pairwise_score * true_perc_cov
-    #     background_guide_scores[key] = background_seq_score
-    #
-    # delta_composite_scores = {}
-    #
-    # for key, good_data in igs_and_guides_comp_scores.items():
-    #     bad_score = pairwise_composite_scores[key]
-    #     delta_composite_scores[key] = good_data[0] - bad_score
-    # round_convert_time(start=start, end=time.perf_counter(), round_to=4,
-    #                    task_timed='scoring against background sequences')
-    #
-    # return average_conserved, conserved_igs_true_perc_coverage, delta_composite_scores, background_guide_scores, \
-    #        igs_and_guides_comp_scores
+    less_ambiguous_designs_above_limit = np.append(designs_below_limit, [design for design in to_reduce_ambiguity if design.optimized_to_background])
 
-    return
+    round_convert_time(start=start, end=time.perf_counter(), round_to=4,
+                       task_timed='scoring against background sequences')
+
+    return less_ambiguous_designs_above_limit
 
 
 def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background: bool = True,
@@ -979,7 +997,7 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background:
         if new_base == 'N':
             n_number += 1
             if n_number/len(sequence_to_fix.guide) > n_limit:
-                return None
+                return
 
         new_seq += new_base
 
@@ -1013,3 +1031,33 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background:
 
     sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=new_seq,
                                          new_score=new_seq_score, reset_guides=True)
+
+
+def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str):
+
+    if designs[0].optimized_to_targets and designs[0].optimized_to_background:
+        if os.path.exists(f'{folder_path}/Targeted designs against background above threshold.csv'):
+            os.remove(f'{folder_path}/Targeted designs against background above threshold.csv')
+        first_row = 'IGS,Reference index,Number of species targeted,Score,% cov,% on target,true % cov,' \
+                    'Composite score,background score,% cov background,% on target background,' \
+                    'true % cov background,Composite score background,Delta composite score vs background,' \
+                    'Optimized guide,Optimized guide + G + IGS\n'
+        with open(f'{folder_path}/Targeted designs against background above threshold.csv', 'w') as f:
+            f.write(first_row)
+            for ribo_design in designs:
+                f.write(ribo_design.print_attributes())
+        return
+
+    elif designs[0].optimized_to_targets:
+        if os.path.exists(f'{folder_path}/Targeted designs above threshold.csv'):
+            os.remove(f'{folder_path}/Targeted designs above threshold.csv')
+        first_row = 'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,' \
+                    'Number of species targeted,Optimized guide,Optimized guide + G + IGS\n'
+        with open(f'{folder_path}/Targeted designs above threshold.csv', 'w') as f:
+            f.write(first_row)
+            for ribo_design in designs:
+                f.write(ribo_design.print_attributes())
+        return
+    else:
+        print('Please optimize to targets or optimize to targets then to background first.')
+        return
