@@ -23,10 +23,10 @@ import scipy
 # Expanded version of SilvaSequence
 class TargetSeq:
     # Important: TargetSeq id must be formatted like a Silva sequence if we want the give_taxonomy function to work!
-    def __init__(self, id: str = '', seq: Seq = ''):
-        self.id = id
-        self.seq = seq
-        self.cat_sites = []
+    def __init__(self, id_attr: str = '', seq_attr: Seq = '', cat_sites_attr: list = []):
+        self.id = id_attr
+        self.seq = seq_attr
+        self.cat_sites = cat_sites_attr
 
     def __str__(self):
         return f'{self.id}({self.seq})'
@@ -64,10 +64,17 @@ class RibozymeDesign:
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
                  background_score_attr: float = None, perc_cov_background_attr: float = None,
                  perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
-                 background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = ''):
+                 background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
+                 background_targets_attr: set() = None, igs_attr: str = '', ref_idx_attr: int = None):
         self.id = id_attr
-        self.igs = id_attr[:5]
-        self.ref_idx = int(id_attr[5:])
+        if igs_attr:
+            self.igs = igs_attr
+        else:
+            self.igs = id_attr[:5]
+        if ref_idx_attr:
+            self.ref_idx = ref_idx_attr
+        else:
+            self.ref_idx = int(id_attr[5:])
         self.guide = guide_attr
         self.guides_to_use = guides_to_use_attr
         self.targets = targets_attr
@@ -94,8 +101,10 @@ class RibozymeDesign:
 
         # For initialized targeted ribozyme designs only:
         self.background_score = background_score_attr
+        self.background_targets = background_targets_attr
         self.background_guides = background_guides_attr
         self.anti_guide = anti_guide_attr
+        self.anti_guide_score = anti_guide_score_attr
         self.perc_cov_background = perc_cov_background_attr
         self.perc_on_target_background = perc_on_target_background_attr
         self.true_perc_cov_background = true_perc_cov_background_attr
@@ -233,15 +242,8 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                  min_true_cov: float = 0.7, identity_thresh: float = 0.7, fileout: bool = False,
                  folder_to_save: str = '', score_type: str = 'quantitative', msa_fast: bool = False,
                  keep_single_targets: bool = False, gaps_allowed: bool = True, percent_of_target_seqs_used: float = 1.0,
-                 percent_of_background_seqs_used: float = 1, seed_target: int = 1, seed_background: float = 1,
-                 n_limit: int = 0):
+                 percent_of_background_seqs_used: float = 1, n_limit: int = 0):
     """Generates ribozyme designs to target a set of sequences.
-    :param generate_summary: this will generate a summary graph of the target sequences showing the IGS true percent
-    coverage distribution vs. the guide score distribution. Keep in mind that setting this to True will SIGNIFICANTLY
-    increase computational load, because in essence the program would have to calculate guide scores for any possible
-    location regardless of min_true_cov. Only recommended for small datasets, very fast computers, or computers with a
-    lot of memory owned by people with a lot of patience.
-    :param seed: seed to use for random sampling for reproducibility
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
     sequences used without replacement
     :param percent_of_target_seqs_used: In case target data is very large we can get a random sample of the sequences used
@@ -275,8 +277,6 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     :param keep_single_targets: whether we want to get designs that only hit one target sequence. This is overriden by
     min_true_cov - i.e. if min_true_cov is higher than the equivalent of one sequence then the program will not keep
     single targets.
-    :param seed_target:
-    :param seed_background:
     :param n_limit: What percentage of Ns are acceptable in the final design? This is applied when doing targeted
     designs only for the time being.
     """
@@ -286,7 +286,6 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
     # Make the Ribozyme sequence by combining the main body and the barcode
     barcode_seq = back_transcribe_seq_file(barcode_seq_file)
     ribobody = back_transcribe_seq_file(ribobody_file)
-    ribo_seq = ribobody + barcode_seq
 
     target_names_and_seqs = read_silva_fasta(in_file=target_sequences_folder)
 
@@ -365,20 +364,15 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
                            task_timed=f'finding catalytic sites and indexing background sequences to reference')
 
         print('Now applying designed ribozymes with background sequences and getting statistics...')
-        opti_target_seqs = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]),
-                                             identity_thresh=identity_thresh, guide_length=guide_length,
-                                             score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
-                                             flexible_igs=True, n_limit=n_limit)
+        opti_target_seqs, u_data = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]),
+                                                identity_thresh=identity_thresh, guide_length=guide_length,
+                                                score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
+                                                flexible_igs=True, n_limit=n_limit)
 
         if fileout:
             write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
 
-        # Now make graphs
 
-        # opti_target_seqs = compare_targeted_sequences(opti_seqs, average_conserved, conserved_igs_true_perc_coverage,
-        #                                               background_guide_scores, delta_composite_scores,
-        #                                               igs_and_guides_comp_scores, min_delta=min_delta,
-        #                                               file_out=fileout, file=folder_to_save)
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
                                                                           'sequences')
@@ -386,7 +380,7 @@ def ribodesigner(target_sequences_folder: str, barcode_seq_file: str, ribobody_f
         end = time.perf_counter()
         round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
         print('########################################################\n')
-        return opti_target_seqs
+        return opti_target_seqs, u_data
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
@@ -430,7 +424,7 @@ def read_silva_fasta(in_file: str, file_type: str = 'fasta', exclude=[], include
         with open(file_to_parse) as f:
             for title, seq in SimpleFastaParser(f):
                 seq_id = title.split(' ')[0]
-                putative_sequence = TargetSeq(seq_id, Seq(seq).upper().back_transcribe())
+                putative_sequence = TargetSeq(id_attr=seq_id, seq_attr=Seq(seq).upper().back_transcribe())
                 if taxonomy_level and exclude_list or include_list:
                     if exclude_list and putative_sequence.give_taxonomy(level=taxonomy_level) not in exclude_list:
                         out_seqs.append(putative_sequence)
@@ -599,7 +593,8 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
     igs_ids_counted, igs_counts = np.unique(all_igs_ids, return_counts=True)
 
     if [igs for igs, counts in zip(igs_ids_counted, igs_counts) if counts > aligned_targets.size]:
-        print('WARNING: Multiple IGSes per sequence at the same position detected. True percent coverage ')
+        print('WARNING: Multiple IGSes per sequence at the same position detected. True percent coverage calculation '
+              'may need revising, or check your sequence files')
         return None
 
     else:
@@ -642,11 +637,11 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float
     # First create a dummy file with all the guides we want to optimize
     if not compare_to_background:
         with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
-            for line in range(to_optimize.number_of_targets):
+            for line in range(len(to_optimize.guides_to_use)):
                 f.write('>seq' + str(line) + '\n' + str(to_optimize.guides_to_use[line]) + '\n')
     else:
         with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
-            for line in range(to_optimize.number_of_targets):
+            for line in range(len(to_optimize.background_guides)):
                 f.write('>seq' + str(line) + '\n' + str(to_optimize.background_guides[line]) + '\n')
 
     muscle_exe = 'muscle5'
@@ -708,6 +703,7 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float
                                             reset_guides=True)
     else:
         to_optimize.anti_guide = truncated_seq
+        to_optimize.anti_guide_score = score
 
 
 def get_naive_score(opti_seq):
@@ -804,7 +800,7 @@ def get_directional_score(opti_seq):
 
 def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: np.ndarray[TargetSeq], ref_seq_len: int,
                  identity_thresh: float, guide_length: int, gaps_allowed: bool = True,
-                 msa_fast: bool = False, flexible_igs: bool = False, do_not_target_background: bool = True,
+                 msa_fast: bool = False, flexible_igs: bool = False, target_background: bool = False,
                  n_limit: int = 0, score_type: str = 'naive'):
     """
     Checks generated designs against a set of sequences to either find how well they align to a given dataset.
@@ -822,6 +818,8 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     :param n_limit: what percentage of Ns are acceptable?
     :return:
     """
+
+    # Also get background species
 
     # Is there a U at each position for each design at each target sequence?
     designed_idxs = np.array(list(ribodesign.ref_idx - 1 for ribodesign in designs))  # convert to base 0 indexing
@@ -867,6 +865,9 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     # ref_idx is in base 1 indexing, indexes for arrays are base 0
     for ribo_design in designs:  # base 1 indexing
         check = np.argwhere(igs_sites_targets == ribo_design.igs)  # base 0 indexing
+        # Fill this with empty TargetSeq objects to later make finding taxonomy more easy
+        background_names = set([TargetSeq(id_attr=back_seq.id) for back_seq in aligned_target_sequences[check[:, 0]]])
+        ribo_design.background_targets = background_names
         orgs_with_igs_on_target = check[np.argwhere(check[:, 1] == ribo_design.ref_idx - 1)][:, 0, 0]  # convert to base 0 indexing
         on_target_count = orgs_with_igs_on_target.size
         if on_target_count > 0:
@@ -927,9 +928,9 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
 
     # Do a MSA. Remember that we are passing the references to objects, hopefully, if I coded this correctly.
     fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
-                          excluded=['score_type', 'thresh', 'msa_fast', 'gaps_allowed', 'compare_to_background'])
-    fn_msa(to_optimize, score_type=score_type, thresh=identity_thresh, msa_fast=msa_fast, gaps_allowed=gaps_allowed,
-           compare_to_background=True)
+                          excluded=['score_type', 'thresh', 'msa_fast', 'guide_len', 'gaps_allowed', 'compare_to_background'])
+    fn_msa(to_optimize, score_type=score_type, thresh=identity_thresh, msa_fast=msa_fast, guide_len=guide_length,
+           gaps_allowed=gaps_allowed, compare_to_background=True)
 
     to_reduce_ambiguity = np.append(opti_seqs, to_optimize)
 
@@ -939,18 +940,22 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
 
     # Keep in mind that this will only update designs that are above the limit of ambiguity codons N given!
     fn_ambiguity = np.vectorize(replace_ambiguity, otypes=[RibozymeDesign],
-                                excluded=['do_not_target_background', 'n_limit', 'score_params'])
-    fn_ambiguity(to_reduce_ambiguity, do_not_target_background=True, n_limit=n_limit, score_params=[])
+                                excluded=['target_background', 'n_limit', 'score_params'])
+    fn_ambiguity(to_reduce_ambiguity, target_background=target_background,
+                 n_limit=n_limit, score_params=[])
 
-    less_ambiguous_designs_above_limit = np.append(designs_below_limit, [design for design in to_reduce_ambiguity if design.optimized_to_background])
+    less_ambiguous_designs_above_limit = np.append(
+        designs_below_limit, [design for design in to_reduce_ambiguity if design.optimized_to_background])
 
     round_convert_time(start=start, end=time.perf_counter(), round_to=4,
                        task_timed='scoring against background sequences')
 
-    return less_ambiguous_designs_above_limit
+    extra_data = {'Average_Us': average_conserved}
+
+    return less_ambiguous_designs_above_limit, extra_data
 
 
-def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background: bool = True,
+def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool = False,
                       n_limit: float = 1, score_params: list = []):
 
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
@@ -969,7 +974,7 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background:
 
             # Easiest case: if there is total ambiguity, just get the opposite base from the bad sequence
             if base == 'N':
-                if do_not_target_background:
+                if not target_background:
                     # Replace that base here with the antinucleotide
                     new_base = anti_iupac_nucleotides[background_base]
                 else:
@@ -979,7 +984,7 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background:
             else:
                 background_extended_bases = iupac_ambiguity_nucleotides[background_base]
                 good_extended_bases = iupac_ambiguity_nucleotides[base]
-                if do_not_target_background:
+                if not target_background:
                     for remove_this_from_set in background_extended_bases:
                         # the set that only includes the bases in the good base
                         good_extended_bases = good_extended_bases.replace(remove_this_from_set, '')
@@ -1005,32 +1010,40 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, do_not_target_background:
     pairwise_comparison_consensus = Bio.motifs.create([new_seq, sequence_to_fix.anti_guide],
                                                       alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
 
-    if sequence_to_fix.score_type == 'quantitative':
-        if score_params:
-            params = [new_seq].extend(score_params)
-            new_seq_score = map(get_quantitative_score, params)
-            pairwise_params = [pairwise_comparison_consensus].extend(score_params)
-            pairwise_score = map(get_quantitative_score, pairwise_params)
-        else:
-            print('Cannot do quantitative score without a list of alignments. Performing weighted score instead...')
-            new_seq_score = get_weighted_score(new_seq)
-            pairwise_score = get_weighted_score(pairwise_comparison_consensus)
-    elif sequence_to_fix.score_type == 'weighted':
-        new_seq_score = get_weighted_score(new_seq)
-        pairwise_score = get_weighted_score(pairwise_comparison_consensus)
-    elif sequence_to_fix.score_type == 'directional':
-        new_seq_score = get_directional_score(new_seq)
-        pairwise_score = get_directional_score(pairwise_comparison_consensus)
-    elif sequence_to_fix.score_type == 'naive':
-        new_seq_score = get_naive_score(new_seq)
-        pairwise_score = get_naive_score(pairwise_comparison_consensus)
-    else:
-        print(f'Score type {sequence_to_fix.score_type} is not supported. Please choose either weighted, quantitative, '
-              f'or directional.')
-        return -1
+    new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=pairwise_comparison_consensus,
+                                                        score_type=sequence_to_fix.score_type,
+                                                        score_params=score_params)
 
     sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=new_seq,
                                          new_score=new_seq_score, reset_guides=True)
+
+
+def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', score_params: list = []):
+    if score_type == 'quantitative':
+        if score_params:
+            a_params = [seq_a].extend(score_params)
+            seq_a_score = map(get_quantitative_score, a_params)
+            b_params = [seq_b].extend(score_params)
+            seq_b_score = map(get_quantitative_score, b_params)
+        else:
+            print('Cannot do quantitative score without a list of alignments. Performing weighted score instead...')
+            seq_a_score = get_weighted_score(seq_a)
+            seq_b_score = get_weighted_score(seq_b)
+    elif score_type == 'weighted':
+        seq_a_score = get_weighted_score(seq_a)
+        seq_b_score = get_weighted_score(seq_b)
+    elif score_type == 'directional':
+        seq_a_score = get_directional_score(seq_a)
+        seq_b_score = get_directional_score(seq_b)
+    elif score_type == 'naive':
+        seq_a_score = get_naive_score(seq_a)
+        seq_b_score = get_naive_score(seq_b)
+    else:
+        print(f'Score type {score_type} is not supported. Please choose either weighted, quantitative, '
+              f'or directional.')
+        return -1
+
+    return seq_a_score, seq_b_score
 
 
 def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str):
@@ -1049,11 +1062,11 @@ def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str):
         return
 
     elif designs[0].optimized_to_targets:
-        if os.path.exists(f'{folder_path}/Targeted designs above threshold.csv'):
-            os.remove(f'{folder_path}/Targeted designs above threshold.csv')
+        if os.path.exists(f'{folder_path}/All targeted designs.csv'):
+            os.remove(f'{folder_path}/All targeted designs.csv')
         first_row = 'IGS,Reference index,Score,% cov,% on target,True % cov,Composite score,' \
                     'Number of species targeted,Optimized guide,Optimized guide + G + IGS\n'
-        with open(f'{folder_path}/Targeted designs above threshold.csv', 'w') as f:
+        with open(f'{folder_path}/All targeted designs.csv', 'w') as f:
             f.write(first_row)
             for ribo_design in designs:
                 f.write(ribo_design.print_attributes())
@@ -1061,3 +1074,78 @@ def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str):
     else:
         print('Please optimize to targets or optimize to targets then to background first.')
         return
+
+
+def test_ribo_design(design: str, target_folder: str, ref_seq_folder: str, igs_len: int = 5, score_type: str = 'naive',
+                     thresh: float = 0.7, msa_fast: bool = False, gaps_allowed: bool = False):
+
+    # first, read in all our sequences
+    targets_to_test = read_silva_fasta(in_file=target_folder)
+    ref_name_and_seq = read_fasta(ref_seq_folder)[0]
+    igs = design[:igs_len]
+    design_guide = Seq(design[igs_len + 1:]).upper().back_transcribe()  # recall there's a G between the igs and guide
+
+    # Align the targets to test to our reference sequence
+    fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
+                                   excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
+    fn_align_to_ref(targets_to_test, ref_name_and_seq=ref_name_and_seq, igs_length=igs_len,
+                    guide_length=len(design_guide), min_length=len(design_guide))
+
+    # get all guides and the name of their targets that have the correct igs: (og_idx, ref_idx, igs, guide)
+    names = defaultdict(set)
+    guides = defaultdict(list)
+    for target in targets_to_test:
+        for putative_guide in target.cat_sites:
+            if putative_guide[2] == igs:
+                names[putative_guide[1]].add(putative_guide.id)
+                guides[putative_guide[1]].append(putative_guide[3])
+
+    # Calculate coverage for each and make a ribozyme design for each
+    locations_and_scores = np.array()
+    for (index, guide_list), target_names in zip(guides.items(), names):
+        perc_cov = len(guides) / targets_to_test.size
+        per_on_target = len(guide_list) / len(guides)
+        true_perc_cov = perc_cov * per_on_target
+        locations_and_scores.append(RibozymeDesign(id_attr=f'{igs}{index}', guide_attr=design_guide,
+                                                   targets_attr=target_names, background_targets_attr=guide_list,
+                                                   score_type_attr=score_type, perc_cov_attr=perc_cov,
+                                                   perc_on_target_attr=per_on_target, true_perc_cov_attr=true_perc_cov))
+
+    fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
+                          excluded=['score_type', 'thresh', 'msa_fast', 'guide_len', 'gaps_allowed',
+                                    'compare_to_background'])
+    fn_msa(locations_and_scores, score_type=score_type, thresh=thresh, msa_fast=msa_fast, guide_len=len(design_guide),
+           gaps_allowed=gaps_allowed, compare_to_background=True)
+
+    # Now score our design against these sequences
+    for to_score in locations_and_scores:
+        design_score, background_score = pairwise_comparison(to_score.guide, to_score.anti_guide)
+        to_score.score_attr = design_score
+        to_score.background_score_attr = background_score
+
+    return locations_and_scores
+
+
+def make_graphs(universal_designs: np.ndarray[RibozymeDesign], selective_designs: list[np.ndarray[RibozymeDesign]],
+                control_designs: np.ndarray[RibozymeDesign]):
+    # Use test_ribo_design to see how well the control_seq performs before entering it here
+
+    # Graph 1a, 1b: old plots, showing the distribution of scores for each design on background:
+    # guide scores with flexible IGS, scores with rigid IGS
+
+    # Graph 2: violin plot, showing composite score distribution in all designs of a given category
+
+    # Graph 3: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
+    # selective for all designs in different panels (same data as above but order along gene)
+
+    # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
+
+    # Using these data, pick out the best three designs in each category - best score
+
+    # Graph 5a: bar graph, y-axis is fraction of total reads, x-axis is each condition: control (original design),
+    # universal, and three selective designs one for a different order in wastewater. One design each, with the best
+    # composite score. Maybe pick the best performing one with flexible and rigid IGS
+
+    # Graph 5b: same data, but y-axis is total taxa
+
+    return

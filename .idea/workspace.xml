@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Slowly working on ribochecker function">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Finished rewriting most of the code, just need to write graph making functions!">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ribodesigner_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner_v2.py" afterDir="false" />
@@ -378,14 +378,7 @@
       <workItem from="1688521293340" duration="594000" />
       <workItem from="1688595646118" duration="841000" />
       <workItem from="1690820155493" duration="52175000" />
-      <workItem from="1692028246636" duration="59557000" />
-    </task>
-    <task id="LOCAL-00026" summary="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
-      <created>1665000492088</created>
-      <option name="number" value="00026" />
-      <option name="presentableId" value="LOCAL-00026" />
-      <option name="project" value="LOCAL" />
-      <updated>1665000492088</updated>
+      <workItem from="1692028246636" duration="75291000" />
     </task>
     <task id="LOCAL-00027" summary="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
       <created>1665000671284</created>
@@ -723,7 +716,14 @@
       <option name="project" value="LOCAL" />
       <updated>1692655845009</updated>
     </task>
-    <option name="localTasksCounter" value="75" />
+    <task id="LOCAL-00075" summary="Finished rewriting most of the code, just need to write graph making functions!">
+      <created>1692736765870</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1692736765870</updated>
+    </task>
+    <option name="localTasksCounter" value="76" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -753,7 +753,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="scrambling to make figures for lab meeting" />
     <MESSAGE value="Finalized figure making scripts" />
     <MESSAGE value="Attempting a targeted ribozyme design function. No idea if it works yet." />
     <MESSAGE value="Merging docstring edits" />
@@ -778,7 +777,8 @@
     <MESSAGE value="Working on optimization function and learning more about classes" />
     <MESSAGE value="Next up, I'll be working on the ribochecker function" />
     <MESSAGE value="Slowly working on ribochecker function" />
-    <option name="LAST_COMMIT_MESSAGE" value="Slowly working on ribochecker function" />
+    <MESSAGE value="Finished rewriting most of the code, just need to write graph making functions!" />
+    <option name="LAST_COMMIT_MESSAGE" value="Finished rewriting most of the code, just need to write graph making functions!" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -830,48 +830,23 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>340</line>
+          <line>343</line>
           <option name="timeStamp" value="376" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>307</line>
+          <line>310</line>
           <option name="timeStamp" value="392" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>560</line>
-          <option name="timeStamp" value="399" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>648</line>
-          <option name="timeStamp" value="402" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>545</line>
-          <option name="timeStamp" value="404" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>602</line>
+          <line>597</line>
           <option name="timeStamp" value="448" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>469</line>
-          <option name="timeStamp" value="471" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/RiboDesigner.py</url>
-          <line>465</line>
-          <option name="timeStamp" value="472" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>949</line>
-          <option name="timeStamp" value="502" />
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>106</line>
+          <option name="timeStamp" value="513" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -896,7 +871,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1692734360228" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1692819502710" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
