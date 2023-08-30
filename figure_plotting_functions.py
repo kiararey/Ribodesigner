@@ -17,8 +17,8 @@ pd.options.mode.chained_assignment = None
 
 def insert_into_title(title, key_word, to_insert):
     index = title.find(key_word)
-    newtitle = title[:index] + to_insert + title[index:]
-    return newtitle
+    new_title = title[:index] + to_insert + title[index:]
+    return new_title
 
 
 def fix_names(names):

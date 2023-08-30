@@ -5,7 +5,7 @@ import pandas as pd
 from RiboDesigner import RiboDesigner
 from oldribodesigner import RiboDesigner as oldRiboDesigner
 from playsound import playsound
-from ribodesigner_v2 import ribodesigner
+from ribodesigner_v2 import ribodesigner, test_ribo_design, make_graphs
 
 if __name__ == '__main__':
     # Figure 2: synthetic community data violin plots
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     # First, set up base files and parameters
     m = 5
     n = 50
-    minlen = 50
+    minlen = 35
 
     # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
     barcode_seq_file = 'Common_sequences/sfGFP_2_seq_barcode.txt'
@@ -31,6 +31,19 @@ if __name__ == '__main__':
 
     # Reference sequence - will have to be E. coli to graph the variable regions
     ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
+
+    u64 = 'CAACCCACTCCCATGGTGTGACGGGCGGTGTGTACAAGGCCCGGGAACGTgTTCAC'
+
+    # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary
+    # approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57–75 (2017).
+    s_cerevisiae_var_regs = [(69, 80), (126, 292), (478, 510), (643, 850), (1048, 1070), (1350, 1400), (1480, 1531),
+                             (1674, 1730)]
+
+    # Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
+    # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330–339 (2007).
+    e_coli_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
+                       (1243, 1294),
+                       (1435, 1465)]
 
     # ########################################################
     # # Test figure making
@@ -88,27 +101,62 @@ if __name__ == '__main__':
     big_data_background = f'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
     test_output_data = 'test_output_files/test_outputs_ribodesigner_v2'
 
-    # Test new RiboDesigner
-    out_data_naive_v2, u_data = ribodesigner(target_sequences_folder=big_data, barcode_seq_file=barcode_seq_file,
-                                     ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
-                                     targeted=True, background_sequences_folder=big_data_background, min_true_cov=0.7,
-                                     identity_thresh=0.7, fileout=True, folder_to_save=test_output_data, msa_fast=True,
-                                     ref_sequence_file=ref_path, gaps_allowed=False, percent_of_background_seqs_used=1,
-                                     score_type='naive', n_limit=0)
+    # # Test new RiboDesigner for images
+    # universal_datasets = []
+    # selective_datasets = []
+    #
+    # control_design = test_ribo_design(design=u64, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
+    #                                   score_type='weighted', thresh=0.7, msa_fast=True, gaps_allowed=False)
+    #
+    # for i in range(0, 2):
+    #     out_data_temp = ribodesigner(target_sequences_folder=big_data,
+    #                                  ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=minlen,
+    #                                  selective=False, min_true_cov=0.7, identity_thresh=0.7, msa_fast=True,
+    #                                  percent_of_background_seqs_used=1 / 3, score_type='weighted', n_limit=0,
+    #                                  percent_of_target_seqs_used=1 / 3, gaps_allowed=False)
+    #     universal_datasets.append(out_data_temp)
+    #
+    # for i in range(0, 3):
+    #     out_data_temp = ribodesigner(target_sequences_folder=big_data,
+    #                                  ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=minlen,
+    #                                  selective=True, background_sequences_folder=big_data_background, min_true_cov=0.7,
+    #                                  identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1 / 3,
+    #                                  score_type='weighted', n_limit=0, percent_of_target_seqs_used=1 / 3,
+    #                                  gaps_allowed=False)
+    #     selective_datasets.append(out_data_temp)
+    #
+    # make_graphs(control_designs=control_design, selective_designs=selective_datasets,
+    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs)
 
-    print('########################################################\n')
 
-    out_data_naive = RiboDesigner(target_sequences_folder=big_data, barcode_seq_file=barcode_seq_file,
-                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                            background_sequences_folder=big_data_background, min_true_cov=0.7, identity_thresh=0.7,
-                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=1, score_type='naive', n_limit=0)
+    # This is using the csv made with the code on top of this one
+    make_graphs(control_designs=[], selective_designs=[],
+                universal_designs=[], var_regs=e_coli_var_regs, data_file=test_output_data)
 
-    out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
-                            ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
-                            background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
-                            fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
-                            percent_of_background_seqs_used=0.75, score_type='weighted')
+
+
+
+    #
+    # out_data_naive_v2 = ribodesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    #                                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
+    #                                  selective=True, background_sequences_folder=bad_targets, min_true_cov=0.7,
+    #                                  identity_thresh=0.7, fileout=True, folder_to_save=test_output_data, msa_fast=True,
+    #                                  ref_sequence_file=ref_path, gaps_allowed=False, percent_of_background_seqs_used=1/3,
+    #                                  score_type='naive', n_limit=0, percent_of_target_seqs_used=1/3)
+    #
+    # print('########################################################\n')
+    #
+    # out_data_naive = RiboDesigner(target_sequences_folder=big_data, barcode_seq_file=barcode_seq_file,
+    #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #                         background_sequences_folder=big_data_background, min_true_cov=0.7, identity_thresh=0.7,
+    #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+    #                         percent_of_background_seqs_used=1, score_type='naive', n_limit=0)
+    #
+    # out_data_naive = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
+    #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
+    #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
+    #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
+    #                         percent_of_background_seqs_used=0.75, score_type='weighted')
 
     # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
@@ -176,7 +224,7 @@ if __name__ == '__main__':
     # m_smithii_var_regs = [(64, 74), (112, 205), (394, 433), (528, 589), (768, 799), (940, 978), (1056, 1103),
     #                       (1190, 1242), (1384, 1402)]
     # s_cerevisiae_var_regs = [(69, 80), (126, 292), (478, 510), (643, 850), (1048, 1070), (1350, 1400), (1480, 1531),
-    #                          (1674, 1730)]  # this is from 1. Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57–75 (2017).
+    #                          (1674, 1730)]  # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57–75 (2017).
     # var_regs_overrides = [m_smithii_var_regs, s_cerevisiae_var_regs, None]
     #
     # for i, name in enumerate(dataset_names):
@@ -342,6 +390,3 @@ if __name__ == '__main__':
     # Now, run these designs against all background sequences. Check how they do
 
     playsound('/System/Library/Sounds/Pop.aiff')
-
-
-    #
