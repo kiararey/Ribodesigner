@@ -1,6 +1,5 @@
 import glob
 import os
-import random
 import time
 import numpy as np
 import pandas as pd
@@ -10,17 +9,15 @@ from Bio.Seq import Seq
 import Bio.motifs
 from collections import defaultdict
 import subprocess
-from Bio.Align import AlignInfo, MultipleSeqAlignment, PairwiseAligner
-from Bio.Align.Applications import MuscleCommandline
-from collections import Counter
-from Bio import SeqIO, AlignIO
+from Bio.Align import AlignInfo, PairwiseAligner
+from Bio import AlignIO
 from math import exp, log
-from multiprocessing import Pool
 import seaborn as sns
 import matplotlib.pyplot as plt
-import scipy
-import figure_plotting_functions_v2 as fpp
+import figure_plotting_functions_v2 as fpf
 import math
+import matplotlib.patches as mpatches
+from cmcrameri import cm
 
 
 # Expanded version of SilvaSequence
@@ -449,7 +446,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
         opti_target_seqs = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]),
                                         identity_thresh=identity_thresh, guide_length=guide_length,
                                         score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
-                                        flexible_igs=True, n_limit=n_limit)
+                                        flexible_igs=True, n_limit=n_limit, target_background=not selective)
 
         if fileout:
             write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
@@ -1306,9 +1303,9 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
 
         all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy=taxonomy) for item in all_data_array],
                                                 index=index_names)
-        if os.path.exists(f'{file_loc}/test_dataset_for_graphs.csv'):
-            os.remove(f'{file_loc}/test_dataset_for_graphs.csv')
-        all_data_df.to_csv(f'{file_loc}/test_dataset_for_graphs.csv')
+        if os.path.exists(file_loc):
+            os.remove(file_loc)
+        all_data_df.to_csv(file_loc)
     else:
         all_data_df = pd.read_csv(data_file, index_col=0)
 
@@ -1318,6 +1315,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     control_designs_df = all_data_df.loc['control']
     universal_designs_df = all_data_df.loc[[name for name in labels if name[0] == 'u']]
     selective_designs_df = all_data_df.loc[[name for name in labels if name[0] == 's']]
+    background_designs_df = selective_designs_df.append(control_designs_df)
 
     # get top scores in each: 1 control, one of each group of selective and universal
     try:
@@ -1332,6 +1330,10 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
 
     top_background_scores = top_scores_selective.append(top_score_control)
 
+    # Set plot parameters
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20, 16)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+
     # The data we will need is:
     # 1a: average U conservation in background, igs conservation, delta composite score, counts === work on this later
     # 1b: guide score, igs true % coverage === work on this later
@@ -1341,73 +1343,80 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     # 4: delta score for selective designs, ref_idx === work on this later
     # 5a and 5b: orders, counts for each order
 
-    # # Use test_ribo_design to see how well the control_seq performs before entering it here
-    # design_dict = {'control': control_designs}
-    # for i, dataset in enumerate(universal_designs):
-    #     design_dict[f'universal {i}'] = dataset
-    # for i, dataset in enumerate(selective_designs):
-    #     design_dict[f'selective {i}'] = dataset
-    # panel_num = len(design_dict)
+    # Graph 1a, 1b: old plots, showing the distribution of scores for each design on background:
+    # guide scores with flexible IGS, scores with rigid IGS
+
+    # fig_1a = plt.subplots(sharex='all', layout='constrained')
+    # axes_1a = fpf.generate_axes(fig_1a, '1a', design_dict.keys())
+    # fpf.generate_summary_graphs(fig_1a, axes_1a, design_dict)
     #
-    # # Graph 1a, 1b: old plots, showing the distribution of scores for each design on background:
-    # # guide scores with flexible IGS, scores with rigid IGS
-    # graph_1a = []
-    # graph_1b = []
-    # fig_1a = plt.subplots(sharex=True, layout='constrained')
-    # axes_1a = fpp.generate_axes(fig_1a, '1a', design_dict.keys())
-    # fpp.generate_summary_graphs(fig_1a, axes_1a, design_dict)
-    #
-    # fig_1b = plt.subplots(sharex=True, layout='constrained')
-    # axes_1b = fpp.generate_axes(fig_1b, '1b', design_dict.keys())
-    # fpp.generate_igs_vs_guide_graph(fig_1b, axes_1b, design_dict)
-    #
-    #
-    # # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
-    # # selective for all designs in different panels (same data as above but order along gene)
-    # fig_2a = plt.subplots(cols, rows, sharex=True, layout='constrained')
-    # axes_2a = fpp.generate_axes(fig_2a, '2a', design_dict.keys())
-    #
-    #
-    # for i, (title, dataset) in enumerate(design_dict.items()):
-    #     fig, graph_2a_axs = fpp.generate_all_scores_vs_loc_graph(designs=dataset, var_regs=var_regs, group=title)
-    #     graph_2a_axs[i] = fig
-    #
-    #
-    # graph_2b = fpp.generate_comp_scores_vs_loc_graph(designs=design_dict, var_regs=var_regs,
-    #                                                 rows=math.ceil(panel_num / 2), cols=min(cols, 2))
-    #
-    #
-    # # Graph 3: violin plot, showing composite score distribution in all designs of a given category
-    # graph_3 = []
-    # sns.violinplot(x='Target name', y='Score', hue='on off', palette=colr, data=all_rows, split=splt,
-    #                inner=None, cut=0)
-    #
-    # # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
-    #
-    # # Using these data, pick out the best three designs in each category - best score for the universal and control,
-    # # best delta score for selective
-    # top_dict = {'control': np.sort(control_designs)[0:3]}
-    #
-    # top_control = np.sort(control_designs)[0:3]
-    # top_universal = [(np.sort(sub_array)[0:3]) for sub_array in universal_designs]
-    # top_selective = [(np.sort(sub_array)[0:3]) for sub_array in selective_designs]
-    # for i, three_universal in enumerate(top_universal):
-    #     top_dict[f'universal {i}'] = three_universal
-    # for i, three_selective in enumerate(top_selective):
-    #     top_dict[f'selective {i}'] = three_selective
-    #
-    # # Extract the taxonomy for each
-    # for key, sub_array in top_dict.items():
-    #     top_dict[key] = [(target.give_taxonomy(level=taxonomy)) for target in design.targets for design in sub_array]
+    # fig_1b = plt.subplots(sharex='all', layout='constrained')
+    # axes_1b = fpf.generate_axes(fig_1b, '1b', design_dict.keys())
+    # fpf.generate_igs_vs_guide_graph(fig_1b, axes_1b, design_dict)
+
+
+    # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
+    # selective for all designs in different panels (same data as above but order along gene)
+    for selective_dataset in [name for name in labels if name[0] == 's']:
+        fig2a, ax2a = plt.subplots(3, sharex='all')
+        fig2a.suptitle(selective_dataset)
+        fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
+        fig_2a_columns = ['u_conservation_background', 'true_%_cov_background', 'background_score']
+
+        for ax, name, col in zip(ax2a, fig_2a_titles, fig_2a_columns):
+            fpf.plot_variable_regions(ax, var_regs)
+            sns.scatterplot(x='reference_idx', y=col, data=selective_designs_df.loc[selective_dataset], ax=ax,
+                            alpha=0.7)
+            ax.set_title(name)
+        plt.tight_layout()
+        plt.show()
+
+    fig2b, ax2b = plt.subplots(len(labels), sharex='all')
+    for selective_dataset, ax in zip(labels, ax2b):
+        fpf.plot_variable_regions(ax, var_regs)
+        ax.set_title(selective_dataset)
+        try:
+            if selective_dataset[0] == 'u':
+                sns.scatterplot(x='reference_idx', y='composite_score', data=all_data_df.loc[selective_dataset], ax=ax,
+                                alpha=0.7)
+            else:
+                sns.scatterplot(x='reference_idx', y='composite_background_score',
+                                data=all_data_df.loc[selective_dataset],
+                                ax=ax, alpha=0.7)
+        except:
+            continue
+    plt.tight_layout()
+    plt.show()
+
+    # Graph 3: violin plot, showing composite score distribution in all designs of a given category
+    fig_3_data = pd.concat([universal_designs_df['composite_score'],
+                            background_designs_df['composite_background_score'].rename(
+                                {'composite_background_score': 'composite_score'})])
+
+    sns.violinplot(x=fig_3_data.index, y=fig_3_data, inner=None, cut=0)
+    plt.tight_layout()
+    plt.show()
+
+    # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
+    fig4, ax4 = plt.subplots(3, sharex='all')
+    # fpf.generate_axes(fig3, graph='4', titles=list(selective_designs_df.index))
+
+    for ax, name in zip(ax4, [name for name in labels if name[0] == 's']):
+        fpf.plot_variable_regions(ax, var_regs)
+        sns.scatterplot(x='reference_idx', y='delta_vs_background', data=selective_designs_df.loc[name], ax=ax,
+                        alpha=0.7)
+        ax.set_title(name)
+    plt.tight_layout()
+    plt.show()
 
     # Graph 5a: bar graph, y-axis is fraction of total reads, x-axis is each condition: control (original design),
     # universal, and three selective designs one for a different order in wastewater. One design each, with the best
     # composite score. Maybe pick the best performing one with flexible and rigid IGS
-    # fig_5a, axes_5a = sns.subplots(data=top_dict, layout='constrained')
 
     # Extract possible taxonomy labels
     all_targets = set()
-    universal_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in top_scores_universal['targets']]
+    universal_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in
+                         top_scores_universal['targets']]
     background_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in
                           top_background_scores['background_targets']]
 
@@ -1440,20 +1449,28 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
                 dict[name] = int(num)
             except:
                 continue
-        # new_series = pd.Series(dict, name=top_background_scores.index[i], dtype=int)
         fig_5_data.loc[top_background_scores.index[i]] = dict
+    filter_nans = fig_5_data.groupby(fig_5_data.index).sum()
 
-
-
-
-    fig, ax = plt.subplots()
-    gridspec = fig.add_gridspec(nrows=10, ncols=12)
-    axes = {}
-    axes['Percent stacked bar'] = fig.add_subplot(gridspec[0:5, 0:12])
-    axes['igs_1'] = fig.add_subplot(gridspec[5:10, 0:12])
-
-    # Graph 5b: same data, but y-axis is total taxa
-    bar1 = sns.barplot(y='targets', data=all_data_df)
+    fig5, ax5 = plt.subplots(ncols=2, nrows=1, sharey='all', layout='constrained')
+    # Figure 5a:
+    # Get 100%
+    totals = filter_nans.sum(axis=1)
+    # Calculate fractions
+    fractions = filter_nans.div(totals, axis=0)
+    fractions.plot.barh(stacked=True, ax=ax5[0], legend=0)
+    ax5[0].set_xlabel('Fraction')
+    # Figure 5b
+    filter_nans.plot.barh(stacked=True, ax=ax5[1], legend=0)
+    ax5[1].set_xlabel('Counts')
+    fig5.suptitle('Orders targeted of dataset')
+    leg_handles, leg_labels = ax5[0].get_legend_handles_labels()
+    fig5.legend(leg_handles, leg_labels, ncols=math.ceil(len(leg_labels)/14), loc='lower center', fancybox=True,
+                fontsize='x-small')
+    # show the graph
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.27)
+    plt.show()
 
     return
 

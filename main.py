@@ -104,6 +104,7 @@ if __name__ == '__main__':
     big_data_background = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
     test_output_folder = 'test_output_files/test_outputs_ribodesigner_v2'
     test_file = 'test_dataset_for_graphs.csv'
+    big_data_file_for_output = 'large_dataset.csv'
 
     # Test new RiboDesigner for images
     universal_datasets = []
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     #     selective_datasets.append(out_data_temp)
     #
     # make_graphs(control_designs=control_design, selective_designs=selective_datasets,
-    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs, file_loc=test_output_folder)
+    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs, file_loc=test_output_folder + '/' + big_data_file_for_output)
 
 
     # This is using the csv made with the code on top of this one
