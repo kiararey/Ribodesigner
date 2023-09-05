@@ -42,8 +42,7 @@ if __name__ == '__main__':
     # Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
     # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330–339 (2007).
     e_coli_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
-                       (1243, 1294),
-                       (1435, 1465)]
+                       (1243, 1294), (1435, 1465)]
 
     # ########################################################
     # # Test figure making
@@ -97,41 +96,49 @@ if __name__ == '__main__':
     good_targets = "/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/Scripts/" \
                    "Data files and Outputs/Ribozyme paper dataset/Original files"
     bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
-    big_data = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
-    big_data_background = f'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
-    test_output_data = 'test_output_files/test_outputs_ribodesigner_v2'
+    universal_data_1 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
+    universal_data_2 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_3.fasta'
+    big_data_1 = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
+    big_data_2 = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
+    big_data_3 = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
+    big_data_background = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
+    test_output_folder = 'test_output_files/test_outputs_ribodesigner_v2'
+    test_file = 'test_dataset_for_graphs.csv'
 
-    # # Test new RiboDesigner for images
-    # universal_datasets = []
-    # selective_datasets = []
-    #
+    # Test new RiboDesigner for images
+    universal_datasets = []
+    selective_datasets = []
+
     # control_design = test_ribo_design(design=u64, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
-    #                                   score_type='weighted', thresh=0.7, msa_fast=True, gaps_allowed=False)
+    #                                   score_type='weighted', thresh=0, msa_fast=True, gaps_allowed=False, file_out=True,
+    #                                   folder_to_save=test_output_folder + f'/control dataset')
     #
-    # for i in range(0, 2):
-    #     out_data_temp = ribodesigner(target_sequences_folder=big_data,
+    # for i, dataset in enumerate([universal_data_1, universal_data_2]):
+    #     out_data_temp = ribodesigner(target_sequences_folder=dataset,
     #                                  ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=minlen,
-    #                                  selective=False, min_true_cov=0.7, identity_thresh=0.7, msa_fast=True,
-    #                                  percent_of_background_seqs_used=1 / 3, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=1 / 3, gaps_allowed=False)
+    #                                  selective=False, min_true_cov=0, identity_thresh=0.7, msa_fast=True,
+    #                                  percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
+    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
+    #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
     #     universal_datasets.append(out_data_temp)
     #
-    # for i in range(0, 3):
-    #     out_data_temp = ribodesigner(target_sequences_folder=big_data,
+    # for i, dataset in enumerate([big_data_1, big_data_2, big_data_3]):
+    #     out_data_temp = ribodesigner(target_sequences_folder=dataset,
     #                                  ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=minlen,
-    #                                  selective=True, background_sequences_folder=big_data_background, min_true_cov=0.7,
-    #                                  identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1 / 3,
-    #                                  score_type='weighted', n_limit=0, percent_of_target_seqs_used=1 / 3,
-    #                                  gaps_allowed=False)
+    #                                  selective=True, background_sequences_folder=big_data_background, min_true_cov=0,
+    #                                  identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1,
+    #                                  score_type='weighted', n_limit=0, percent_of_target_seqs_used=1,
+    #                                  gaps_allowed=False, fileout=True,
+    #                                  folder_to_save=test_output_folder + f'/selective dataset {i + 1}')
     #     selective_datasets.append(out_data_temp)
     #
     # make_graphs(control_designs=control_design, selective_designs=selective_datasets,
-    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs)
+    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs, file_loc=test_output_folder)
 
 
     # This is using the csv made with the code on top of this one
     make_graphs(control_designs=[], selective_designs=[],
-                universal_designs=[], var_regs=e_coli_var_regs, data_file=test_output_data)
+                universal_designs=[], var_regs=e_coli_var_regs, data_file=test_output_folder + '/' + test_file)
 
 
 
@@ -157,7 +164,7 @@ if __name__ == '__main__':
     #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
     #                         fileout=False, msa_fast=True, ref_sequence_file=ref_path, gaps_allowed=False,
     #                         percent_of_background_seqs_used=0.75, score_type='weighted')
-
+    #
     # out_data = RiboDesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                         ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen, targeted=True,
     #                         background_sequences_folder=bad_targets, min_true_cov=0.7, identity_thresh=0.7,
@@ -301,92 +308,93 @@ if __name__ == '__main__':
     #              percent_of_target_seqs_used=.002, percent_of_background_seqs_used=.05, score_type='weighted')
     #
     # playsound('/System/Library/Sounds/Pop.aiff')
-
-    ########################################################
-    # Targeted designs by order level: run many times and simulate
-    output_path = 'SILVA_output_files_Super5/Targeted'
-    enterobacterales = f'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
-    pseudomonadales = f'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
-
-    background_seqs_no_entero = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/' \
-                                'Background_Bacteria_squished_no_entero.fasta'
-    background_seqs_no_pseudo = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/' \
-                                'Background_Bacteria_squished_no_pseudo.fasta'
-
-    # enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
-    # pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
-
-    e_datasets = np.array([file_name for file_name in os.listdir(enterobacterales) if '.fasta' in file_name])
-    p_datasets = np.array([file_name for file_name in os.listdir(pseudomonadales) if '.fasta' in file_name])
-
-    e_designs = []
-    e_by_idx = {}
-    p_designs = []
-    p_by_idx = {}
-
-    i = 1
-    for e_set, p_set in zip(e_datasets, p_datasets):
-        e_out_folder = f'{output_path}/Enterobacterales_only_squished_{i}'
-        e_file = f'{enterobacterales}/{e_set}'
-        p_out_folder = f'{output_path}/Pseudomonadales_only_squished_{i}'
-        p_file = f'{pseudomonadales}/{p_set}'
-        i += 1
-
-        e_out = RiboDesigner(target_sequences_folder=e_file, barcode_seq_file=barcode_seq_file,
-                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
-                             targeted=True, background_sequences_folder=background_seqs_no_entero, min_true_cov=0.7,
-                             identity_thresh=0.7, fileout=True, folder_to_save=e_out_folder, ref_sequence_file=ref_path,
-                             msa_fast=True, gaps_allowed=False, min_delta=0, score_type='weighted', n_limit=2.0/50)
-        e_designs.append(e_out)
-
-
-        for design in e_out:
-            # each design is saved as: 'IGS, Reference index, Score, % cov, % on target, True % cov, Composite score,
-            # Adjusted score vs. background, Number of species targeted,
-            # Optimized guide, Optimized guide + G + IGS, Full Ribozyme design, Delta composite score vs background
-            id_code = f'{design[0]}{design[1]}'
-            # Save for each design: id, Adjusted score vs. background, Delta composite score vs background, optimized guide
-            design_info = (id_code, design[7], design[8], design[10])
-
-            # Now separate by ref id
-            try:
-                to_extend = e_by_idx[design[1]]
-                e_by_idx[design[1]] = to_extend.extend(design_info)
-            except:
-                e_by_idx[design[1]] = [design_info]
-
-
-        p_out = RiboDesigner(target_sequences_folder=p_file, barcode_seq_file=barcode_seq_file,
-                             ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
-                             targeted=True, background_sequences_folder=background_seqs_no_pseudo, min_true_cov=0.7,
-                             identity_thresh=0.7, fileout=True, folder_to_save=p_out_folder, ref_sequence_file=ref_path,
-                             msa_fast=True, gaps_allowed=False, min_delta=0, score_type='weighted', n_limit=2.0/50)
-        p_designs.append(p_out)
-
-        for design in p_out:
-            # each design is saved as: 'IGS, Reference index, Score, % cov, % on target, True % cov, Composite score,
-            # Adjusted score vs. background, Number of species targeted,
-            # Optimized guide, Optimized guide + G + IGS, Full Ribozyme design, Delta composite score vs background
-            id_code = f'{design[0]}{design[1]}'
-            # Save for each design: id, Adjusted score vs. background, Delta composite score vs background, optimized guide
-            design_info = (id_code, design[7], design[8], design[10])
-
-            # Now separate by ref id
-            try:
-                to_extend = p_by_idx[design[1]]
-                p_by_idx[design[1]] = to_extend.extend(design_info)
-            except:
-                p_by_idx[design[1]] = [design_info]
-
-
-    # Then, check results: order by reference index
-
-
-    # Graph counts per index on 16s rRNA
-
-    # Pick designs that happened the most frequently. Can you make a consensus sequence? (may make this worse but idk)
-
-
-    # Now, run these designs against all background sequences. Check how they do
-
+    #
+    # ########################################################
+    # # Targeted designs by order level: run many times and simulate
+    # output_path = 'SILVA_output_files_Super5/Targeted'
+    # enterobacterales = f'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
+    # pseudomonadales = f'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
+    #
+    # background_seqs_no_entero = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/' \
+    #                             'Background_Bacteria_squished_no_entero.fasta'
+    # background_seqs_no_pseudo = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/' \
+    #                             'Background_Bacteria_squished_no_pseudo.fasta'
+    #
+    # # enterobacterales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Enterobacterales.fasta'
+    # # pseudomonadales = f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/Pseudomonadales.fasta'
+    #
+    # e_datasets = np.array([file_name for file_name in os.listdir(enterobacterales) if '.fasta' in file_name])
+    # p_datasets = np.array([file_name for file_name in os.listdir(pseudomonadales) if '.fasta' in file_name])
+    #
+    # e_designs = []
+    # e_by_idx = {}
+    # p_designs = []
+    # p_by_idx = {}
+    #
+    # i = 1
+    # for e_set, p_set in zip(e_datasets, p_datasets):
+    #     e_out_folder = f'{output_path}/Enterobacterales_only_squished_{i}'
+    #     e_file = f'{enterobacterales}/{e_set}'
+    #     p_out_folder = f'{output_path}/Pseudomonadales_only_squished_{i}'
+    #     p_file = f'{pseudomonadales}/{p_set}'
+    #     i += 1
+    #
+    #     e_out = RiboDesigner(target_sequences_folder=e_file, barcode_seq_file=barcode_seq_file,
+    #                          ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
+    #                          targeted=True, background_sequences_folder=background_seqs_no_entero, min_true_cov=0.7,
+    #                          identity_thresh=0.7, fileout=True, folder_to_save=e_out_folder, ref_sequence_file=ref_path,
+    #                          msa_fast=True, gaps_allowed=False, min_delta=0, score_type='weighted', n_limit=2.0/50,
+    #                          )
+    #     e_designs.append(e_out)
+    #
+    #
+    #     for design in e_out:
+    #         # each design is saved as: 'IGS, Reference index, Score, % cov, % on target, True % cov, Composite score,
+    #         # Adjusted score vs. background, Number of species targeted,
+    #         # Optimized guide, Optimized guide + G + IGS, Full Ribozyme design, Delta composite score vs background
+    #         id_code = f'{design[0]}{design[1]}'
+    #         # Save for each design: id, Adjusted score vs. background, Delta composite score vs background, optimized guide
+    #         design_info = (id_code, design[7], design[8], design[10])
+    #
+    #         # Now separate by ref id
+    #         try:
+    #             to_extend = e_by_idx[design[1]]
+    #             e_by_idx[design[1]] = to_extend.extend(design_info)
+    #         except:
+    #             e_by_idx[design[1]] = [design_info]
+    #
+    #
+    #     p_out = RiboDesigner(target_sequences_folder=p_file, barcode_seq_file=barcode_seq_file,
+    #                          ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
+    #                          targeted=True, background_sequences_folder=background_seqs_no_pseudo, min_true_cov=0.7,
+    #                          identity_thresh=0.7, fileout=True, folder_to_save=p_out_folder, ref_sequence_file=ref_path,
+    #                          msa_fast=True, gaps_allowed=False, min_delta=0, score_type='weighted', n_limit=2.0/50)
+    #     p_designs.append(p_out)
+    #
+    #     for design in p_out:
+    #         # each design is saved as: 'IGS, Reference index, Score, % cov, % on target, True % cov, Composite score,
+    #         # Adjusted score vs. background, Number of species targeted,
+    #         # Optimized guide, Optimized guide + G + IGS, Full Ribozyme design, Delta composite score vs background
+    #         id_code = f'{design[0]}{design[1]}'
+    #         # Save for each design: id, Adjusted score vs. background, Delta composite score vs background, optimized guide
+    #         design_info = (id_code, design[7], design[8], design[10])
+    #
+    #         # Now separate by ref id
+    #         try:
+    #             to_extend = p_by_idx[design[1]]
+    #             p_by_idx[design[1]] = to_extend.extend(design_info)
+    #         except:
+    #             p_by_idx[design[1]] = [design_info]
+    #
+    #
+    # # Then, check results: order by reference index
+    #
+    #
+    # # Graph counts per index on 16s rRNA
+    #
+    # # Pick designs that happened the most frequently. Can you make a consensus sequence? (may make this worse but idk)
+    #
+    #
+    # # Now, run these designs against all background sequences. Check how they do
+    #
     playsound('/System/Library/Sounds/Pop.aiff')

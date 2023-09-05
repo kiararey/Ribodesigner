@@ -70,8 +70,8 @@ class RibozymeDesign:
                  background_score_attr: float = None, perc_cov_background_attr: float = None,
                  perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
                  background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
-                 background_targets_attr: set() = None, igs_attr: str = '', ref_idx_attr: int = None,
-                 u_consv_background_attr: float = None):
+                 background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
+                 u_consv_background_attr: float = None, tested_design_attr: bool = False):
         self.id = id_attr
         if igs_attr:
             self.igs = igs_attr
@@ -108,10 +108,15 @@ class RibozymeDesign:
             self.optimized_to_targets = True
         else:
             self.optimized_to_targets = False
+        self.tested_design = tested_design_attr
 
         # For initialized targeted ribozyme designs only:
         self.background_score = background_score_attr
         self.background_targets = background_targets_attr
+        if background_targets_attr:
+            self.number_of_targets_background = len(background_targets_attr)
+        else:
+            self.number_of_targets_background = None
         self.background_guides = background_guides_attr
         self.u_conservation_background = u_consv_background_attr
         self.anti_guide = anti_guide_attr
@@ -142,18 +147,26 @@ class RibozymeDesign:
 
     def to_dict(self, taxonomy: str = ''):
         if taxonomy:
-            target_input = str(give_taxonomy(str(self.targets),
-                                             level=taxonomy)).replace(',', ';').replace('\'', '')
-            background_target_input = str(give_taxonomy(str(self.background_targets),
-                                                        level=taxonomy)).replace(',', ';').replace('\'', '')
+            if self.targets:
+                target_input = str(give_taxonomy(str(self.targets),
+                                                 level=taxonomy)).replace(',', ';').replace('\'', '')
+            else:
+                target_input = ''
+            if self.background_targets:
+                background_target_input = str(give_taxonomy(str(self.background_targets),
+                                                            level=taxonomy)).replace(',', ';').replace('\'', '')
+            else:
+                background_target_input = ''
         else:
             target_input = str(self.targets).replace(',', '|')
+            background_target_input = str(self.background_targets).replace(',', '|')
         return {
             'id': self.id,
             'igs': self.igs,
             'reference_idx': self.ref_idx,
             'optimized_to_targets': self.optimized_to_targets,
             'optimized_to_background': self.optimized_to_background,
+            'tested_design': self.tested_design,
             'guide': str(self.guide),
             'guides_to_use': self.guides_to_use,
             'targets': target_input,
@@ -165,6 +178,7 @@ class RibozymeDesign:
             'true_%_cov': self.true_perc_cov,
             'composite_score': self.composite_score,
             'background_targets': background_target_input,
+            'num_of_targets_background': self.number_of_targets_background,
             'background_guides': self.background_guides,
             'u_conservation_background': self.u_conservation_background,
             'anti_guide': str(self.anti_guide),
@@ -260,29 +274,47 @@ class RibozymeDesign:
         self.optimized_to_background = True
         self.background_score = background_score_attr
         self.score = new_score
+        if self.background_targets:
+            self.number_of_targets_background = len(self.background_targets)
+        elif self.background_guides:
+            self.number_of_targets_background = len(self.background_guides)
+        else:
+            self.number_of_targets_background = 0
         if reset_guides:
             self.background_guides = None
         self.guide = new_guide
         self.composite_background_score = self.true_perc_cov_background * background_score_attr
         self.delta_vs_background = self.composite_score - self.composite_background_score
 
-    def print_attributes(self):
+    def print_attributes(self, taxonomy='Order'):
         if self.optimized_to_targets and self.optimized_to_background:
-            # first_row = 'IGS,Reference index,Number of species targeted,Score,% cov,% on target,true % cov,' \
+            # first_row = 'IGS,Reference index,Number of species targeted,Score,Score type,% cov,% on target,true % cov,' \
             #             'Composite score,background score,% cov background,% on target background,' \
             #             'true % cov background,Composite score background,Delta composite score vs background,' \
             #             'Optimized guide,Optimized guide + G + IGS\n'
-            text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.perc_cov},' \
+            text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.score_type},{self.perc_cov},' \
                    f'{self.perc_on_target},{self.true_perc_cov},{self.composite_score},{self.background_score},' \
                    f'{self.perc_cov_background},{self.perc_on_target_background},{self.true_perc_cov_background},' \
                    f'{self.composite_background_score},{self.delta_vs_background},{self.guide},' \
                    f'{self.guide}G{self.igs}\n'
         elif self.optimized_to_targets:
-            # first_row = 'IGS,Reference index,Number of species targeted,Score,% cov,% on target,
+            # first_row = 'IGS,Reference index,Number of species targeted,Score,Score type,% cov,% on target,
             # True % cov,Composite score,Optimized guide,Optimized guide + G + IGS\n'
-            text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.perc_cov},' \
+            text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.score_type},{self.perc_cov},' \
                    f'{self.perc_on_target},{self.true_perc_cov},{self.composite_score},' \
                    f'{self.guide},{self.guide}G{self.igs}\n'
+        elif self.tested_design:
+            background_target_input = str(give_taxonomy(str(self.background_targets),
+                                                        level=taxonomy)).replace(',', ';').replace('\'', '')
+            # first_row = 'IGS,Reference index,Number of tested species targeted,Score type,Design score,
+            # Score on targets,% cov background,% on target background,true % cov background,Composite score background,
+            # Optimized guide,Optimized guide + G + IGS,Ideal guide,Ideal guide + G + IGS\n'
+            text = f'{self.igs},{self.ref_idx},{self.number_of_targets_background},{background_target_input},' \
+                   f'{self.score_type},{self.score},{self.background_score},{self.perc_cov_background},' \
+                   f'{self.perc_on_target_background},{self.true_perc_cov_background},' \
+                   f'{self.composite_background_score},{self.guide},{self.guide}G{self.igs},{self.anti_guide},' \
+                   f'{self.anti_guide}G{self.igs}\n'
+
         else:
             print('Please optimize to targets or optimize to targets then to background first.')
             return
@@ -377,7 +409,8 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     time1 = time.perf_counter()
 
     # first, filter through possible designs and get the ones that meet our threshold
-    to_optimize = filter_igs_candidates(aligned_targets=target_names_and_seqs, min_true_cov=min_true_cov)
+    to_optimize = filter_igs_candidates(aligned_targets=target_names_and_seqs, min_true_cov=min_true_cov,
+                                        igs_len=igs_length)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
 
@@ -622,7 +655,7 @@ def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int =
     return target_sequence
 
 
-def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0) -> None:
+def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0, igs_len: float = 5) -> None:
     """
     returns a dictionary of possible designs that meet our needs: checks each target sequence and filters the IGSes that
     work for the most targets. Returns a dictionary for each IGSid with the list of guides it needs to optimize, as
@@ -636,13 +669,27 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
     print('Finding repeat IGSes...')
 
-    # Extract all the IGS id numbers - that's the IGS sequence and the reference index number
-    all_igs_ids = [f'{item[2]}{item[1]}' for seq in aligned_targets for item in seq.cat_sites]
-    # Measure true percent coverage of these and keep IGSes that are at least the minimum true percent coverage needed
-    igs_ids_counted, igs_counts = np.unique(all_igs_ids, return_counts=True)
+    all_igs_ids = []
+    counts_of_igs = defaultdict(int)
 
-    if [igs for igs, counts in zip(igs_ids_counted, igs_counts) if counts > aligned_targets.size]:
-        print('WARNING: Multiple IGSes per sequence at the same position detected. True percent coverage calculation '
+    # Extract all the IGS id numbers - that's the IGS sequence and the reference index number
+    for seq in aligned_targets:
+        igses = set()
+        for item in seq.cat_sites:
+            all_igs_ids.append(f'{item[2]}{item[1]}')
+            igses.add(f'{item[2]}')
+
+        for igs in igses:
+            if counts_of_igs[igs]:
+                counts_of_igs[igs] += 1
+            else:
+                counts_of_igs[igs] = 1
+
+    # Measure true percent coverage of these and keep IGSes that are at least the minimum true percent coverage needed
+    igs_ids_counted, igs_ids_counts = np.unique(all_igs_ids, return_counts=True)
+
+    if [counts for key, counts in counts_of_igs.items() if counts > aligned_targets.size]:
+        print('WARNING: Multiple IGSes per sequence at the same position detected. Percent coverage calculation '
               'may need revising, or check your sequence files')
         return None
 
@@ -651,7 +698,7 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
         # this gives us a dictionary where the ID is matched to the true percent coverage
     igs_over_min_true_cov = {igs: [[], set(), counts / aligned_targets.size] for igs, counts
-                             in zip(igs_ids_counted, igs_counts)
+                             in zip(igs_ids_counted, igs_ids_counts)
                              if counts / aligned_targets.size >= min_true_cov}
 
     # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
@@ -671,7 +718,7 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
     # Now make an array of all of the putative designs for later use.
     to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
                                            true_perc_cov_attr=item[2],
-                                           perc_cov_attr=len(item[1]) / aligned_targets.size)
+                                           perc_cov_attr=counts_of_igs[igs_id[:igs_len]] / aligned_targets.size)
                             for igs_id, item in igs_over_min_true_cov.items()])
     return to_optimize
 
@@ -881,7 +928,13 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
                                         target_sequence.cat_sites])  # convert to base 0 indexing to match array indexing locations
         # everything that is a 2 is a U that appears in both the designs and the target sequence,
         # a 1 is a U in the design
-        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[i, temp_uracil_indexes] * 2  # base 0 index
+        uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[
+                                                           i, temp_uracil_indexes] * 2  # base 0 index
+        # try:
+        #     uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[
+        #                                                        i, temp_uracil_indexes] * 2  # base 0 index
+        # except:
+        #     print('uh oh')
 
     num_of_targets = aligned_target_sequences.size
     for ribodesign_num, i in enumerate(designed_idxs):
@@ -1029,10 +1082,11 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
     for i, base in enumerate(sequence_to_fix.guide):
         if base not in ['A', 'T', 'C', 'G']:
             # Get the base at that same position in the bad sequence
-            try:
-                background_base = sequence_to_fix.anti_guide[i]
-            except:
-                print('uh oh')
+            background_base = sequence_to_fix.anti_guide[i]
+            # try:
+            #     background_base = sequence_to_fix.anti_guide[i]
+            # except:
+            #     print('uh oh')
 
             # Easiest case: if there is total ambiguity, just get the opposite base from the bad sequence
             if base == 'N':
@@ -1069,11 +1123,13 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
         new_seq += new_base
 
     # Now do a pairwise sequence with the target sequence to see the delta score:
-    try:
-        pairwise_comparison_consensus = Bio.motifs.create([new_seq, sequence_to_fix.anti_guide],
-                                                          alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
-    except:
-        print('uh oh')
+    pairwise_comparison_consensus = Bio.motifs.create([new_seq, sequence_to_fix.anti_guide],
+                                                      alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
+    # try:
+    #     pairwise_comparison_consensus = Bio.motifs.create([new_seq, sequence_to_fix.anti_guide],
+    #                                                       alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
+    # except:
+    #     print('uh oh')
 
     new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=pairwise_comparison_consensus,
                                                         score_type=sequence_to_fix.score_type,
@@ -1112,11 +1168,11 @@ def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', score
     return seq_a_score, seq_b_score
 
 
-def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str):
+def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str, taxonomy='Order'):
     if designs[0].optimized_to_targets and designs[0].optimized_to_background:
         if os.path.exists(f'{folder_path}/Targeted designs against background above threshold.csv'):
             os.remove(f'{folder_path}/Targeted designs against background above threshold.csv')
-        first_row = 'IGS,Reference index,Number of species targeted,Score,% cov,% on target,true % cov,' \
+        first_row = 'IGS,Reference index,Number of species targeted,Score,Score_type,% cov,% on target,true % cov,' \
                     'Composite score,background score,% cov background,% on target background,' \
                     'true % cov background,Composite score background,Delta composite score vs background,' \
                     'Optimized guide,Optimized guide + G + IGS\n'
@@ -1129,20 +1185,32 @@ def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str):
     elif designs[0].optimized_to_targets:
         if os.path.exists(f'{folder_path}/All targeted designs.csv'):
             os.remove(f'{folder_path}/All targeted designs.csv')
-        first_row = 'IGS,Reference index,Number of species targeted,Score,% cov,% on target,True % cov,' \
+        first_row = 'IGS,Reference index,Number of species targeted,Score,Score type,% cov,% on target,True % cov,' \
                     'Composite score,Optimized guide,Optimized guide + G + IGS\n'
         with open(f'{folder_path}/All targeted designs.csv', 'w') as f:
             f.write(first_row)
             for ribo_design in designs:
                 f.write(ribo_design.print_attributes())
         return
+    elif designs[0].tested_design:
+        if os.path.exists(f'{folder_path}/Sequence tested on background.csv'):
+            os.remove(f'{folder_path}/Sequence tested on background.csv')
+        first_row = 'IGS,Reference index,Number of tested species targeted,Putative targets,Score type,Design score,' \
+                    'Score on targets,% cov background,% on target background,true % cov background,' \
+                    'Composite score background,Optimized guide,Optimized guide + G + IGS,Ideal guide,' \
+                    'Ideal guide + G + IGS\n'
+        with open(f'{folder_path}/Sequence tested on background.csv', 'w') as f:
+            f.write(first_row)
+            for ribo_design in designs:
+                f.write(ribo_design.print_attributes(taxonomy=taxonomy))
     else:
         print('Please optimize to targets or optimize to targets then to background first.')
         return
 
 
 def test_ribo_design(design: str, target_folder: str, ref_seq_folder: str, igs_len: int = 5, score_type: str = 'naive',
-                     thresh: float = 0.7, msa_fast: bool = False, gaps_allowed: bool = False):
+                     thresh: float = 0.7, msa_fast: bool = False, gaps_allowed: bool = False, file_out: bool = False,
+                     folder_to_save: str = '', taxonomy='Order'):
     print('Testing ribozyme design!')
     start = time.perf_counter()
     # first, read in all our sequences
@@ -1168,11 +1236,14 @@ def test_ribo_design(design: str, target_folder: str, ref_seq_folder: str, igs_l
     print('Finding matching IGSes and corresponding guides...')
     names = defaultdict(set)
     guides = defaultdict(list)
+    all_names = set()
     for target in targets_to_test:
         for putative_guide in target.cat_sites:
             if putative_guide[2] == igs:
                 names[putative_guide[1]].add(target.full_name)
                 guides[putative_guide[1]].append(putative_guide[3])
+                all_names.add(target.full_name)
+    num_of_seqs_with_igs = len(all_names)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4,
                        task_timed=f'matching IGSes and guides.')
@@ -1182,16 +1253,17 @@ def test_ribo_design(design: str, target_folder: str, ref_seq_folder: str, igs_l
     print('Calculating coverage for putative locations targeted by guide...')
     locations_and_scores = np.array([])
     for index, guide_list in guides.items():
-        perc_cov = len(guides) / targets_to_test.size
-        per_on_target = len(guide_list) / len(guides)
-        true_perc_cov = perc_cov * per_on_target
+        perc_cov = num_of_seqs_with_igs / targets_to_test.size
+        true_perc_cov = len(guide_list) / targets_to_test.size
+        per_on_target = perc_cov / perc_cov
         locations_and_scores = np.append(locations_and_scores,
                                          RibozymeDesign(id_attr=f'{igs}{index}', guide_attr=design_guide,
-                                                        targets_attr=names[index],
+                                                        background_targets_attr=names[index],
                                                         background_guides_attr=guide_list,
-                                                        score_type_attr=score_type, perc_cov_attr=perc_cov,
-                                                        perc_on_target_attr=per_on_target,
-                                                        true_perc_cov_attr=true_perc_cov))
+                                                        score_type_attr=score_type, perc_cov_background_attr=perc_cov,
+                                                        perc_on_target_background_attr=per_on_target,
+                                                        true_perc_cov_background_attr=true_perc_cov,
+                                                        tested_design_attr=True))
 
     fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
                           excluded=['score_type', 'thresh', 'msa_fast', 'guide_len', 'gaps_allowed',
@@ -1207,10 +1279,14 @@ def test_ribo_design(design: str, target_folder: str, ref_seq_folder: str, igs_l
         to_score.background_guides = None
         to_score.score = design_score
         to_score.background_score = background_score
+        to_score.composite_background_score = background_score * to_score.true_perc_cov_background
 
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'scoring design against background.')
+                       task_timed=f'scoring design against background')
+
+    if file_out:
+        write_output_file(designs=locations_and_scores, folder_path=folder_to_save, taxonomy=taxonomy)
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
@@ -1228,14 +1304,33 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
                       [f'universal_{i}' for i, data in enumerate(universal_designs) for _ in data] + \
                       [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data]
 
-        all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy=taxonomy) for item in all_data_array], index=index_names)
-        if os.path.exists('test_output_files/test_outputs_ribodesigner_v2/test_dataset_for_graphs.csv'):
-            os.remove('test_output_files/test_outputs_ribodesigner_v2/test_dataset_for_graphs.csv')
-        all_data_df.to_csv('test_output_files/test_outputs_ribodesigner_v2/test_dataset_for_graphs.csv')
+        all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy=taxonomy) for item in all_data_array],
+                                                index=index_names)
+        if os.path.exists(f'{file_loc}/test_dataset_for_graphs.csv'):
+            os.remove(f'{file_loc}/test_dataset_for_graphs.csv')
+        all_data_df.to_csv(f'{file_loc}/test_dataset_for_graphs.csv')
     else:
-        all_data_df = pd.read_csv(data_file)
-    print('Stop here')
+        all_data_df = pd.read_csv(data_file, index_col=0)
 
+    # Extract top scores for each category
+    labels = list(set(all_data_df.index))
+    labels.sort()
+    control_designs_df = all_data_df.loc['control']
+    universal_designs_df = all_data_df.loc[[name for name in labels if name[0] == 'u']]
+    selective_designs_df = all_data_df.loc[[name for name in labels if name[0] == 's']]
+
+    # get top scores in each: 1 control, one of each group of selective and universal
+    try:
+        top_score_control = control_designs_df.sort_values('composite_background_score', ascending=False)
+    except:
+        top_score_control = control_designs_df
+
+    top_scores_universal = universal_designs_df.sort_values('composite_score', ascending=False).groupby(
+        universal_designs_df.index).head(2)
+    top_scores_selective = selective_designs_df.sort_values('composite_background_score', ascending=False).groupby(
+        selective_designs_df.index).head(2)
+
+    top_background_scores = top_scores_selective.append(top_score_control)
 
     # The data we will need is:
     # 1a: average U conservation in background, igs conservation, delta composite score, counts === work on this later
@@ -1309,6 +1404,48 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     # universal, and three selective designs one for a different order in wastewater. One design each, with the best
     # composite score. Maybe pick the best performing one with flexible and rigid IGS
     # fig_5a, axes_5a = sns.subplots(data=top_dict, layout='constrained')
+
+    # Extract possible taxonomy labels
+    all_targets = set()
+    universal_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in top_scores_universal['targets']]
+    background_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in
+                          top_background_scores['background_targets']]
+
+    for items in (universal_targets + background_targets):
+        for item in items:
+            try:
+                name, num = item.split('; ')
+            except:
+                continue
+            all_targets.add(name)
+
+    fig_5_data = pd.DataFrame(columns=list(all_targets))
+    # universal
+    for i, design_targets in enumerate(top_scores_universal['targets']):
+        dict = {}
+        all_targets = design_targets.replace('[', '').replace(']]', '').split(']; ')
+        for item in all_targets:
+            try:
+                name, num = item.split('; ')
+                dict[name] = int(num)
+            except:
+                continue
+        fig_5_data.loc[top_scores_universal.index[i]] = dict
+    for i, design_targets in enumerate(top_background_scores['background_targets']):
+        dict = {}
+        all_targets = design_targets.replace('[', '').replace(']]', '').split(']; ')
+        for item in all_targets:
+            try:
+                name, num = item.split('; ')
+                dict[name] = int(num)
+            except:
+                continue
+        # new_series = pd.Series(dict, name=top_background_scores.index[i], dtype=int)
+        fig_5_data.loc[top_background_scores.index[i]] = dict
+
+
+
+
     fig, ax = plt.subplots()
     gridspec = fig.add_gridspec(nrows=10, ncols=12)
     axes = {}
@@ -1316,6 +1453,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     axes['igs_1'] = fig.add_subplot(gridspec[5:10, 0:12])
 
     # Graph 5b: same data, but y-axis is total taxa
+    bar1 = sns.barplot(y='targets', data=all_data_df)
 
     return
 
