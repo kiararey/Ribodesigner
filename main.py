@@ -110,31 +110,32 @@ if __name__ == '__main__':
     universal_datasets = []
     selective_datasets = []
 
-    # control_design = test_ribo_design(design=u64, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
-    #                                   score_type='weighted', thresh=0, msa_fast=True, gaps_allowed=False, file_out=True,
-    #                                   folder_to_save=test_output_folder + f'/control dataset')
-    #
-    # for i, dataset in enumerate([universal_data_1, universal_data_2]):
-    #     out_data_temp = ribodesigner(target_sequences_folder=dataset,
-    #                                  ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=minlen,
-    #                                  selective=False, min_true_cov=0, identity_thresh=0.7, msa_fast=True,
-    #                                  percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-    #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
-    #     universal_datasets.append(out_data_temp)
-    #
-    # for i, dataset in enumerate([big_data_1, big_data_2, big_data_3]):
-    #     out_data_temp = ribodesigner(target_sequences_folder=dataset,
-    #                                  ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=minlen,
-    #                                  selective=True, background_sequences_folder=big_data_background, min_true_cov=0,
-    #                                  identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1,
-    #                                  score_type='weighted', n_limit=0, percent_of_target_seqs_used=1,
-    #                                  gaps_allowed=False, fileout=True,
-    #                                  folder_to_save=test_output_folder + f'/selective dataset {i + 1}')
-    #     selective_datasets.append(out_data_temp)
-    #
-    # make_graphs(control_designs=control_design, selective_designs=selective_datasets,
-    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs, file_loc=test_output_folder + '/' + big_data_file_for_output)
+    control_design = test_ribo_design(design=u64, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
+                                      score_type='weighted', thresh=0, msa_fast=True, gaps_allowed=False, file_out=True,
+                                      folder_to_save=test_output_folder + f'/control dataset')
+
+    for i, dataset in enumerate([universal_data_1, universal_data_2]):
+        out_data_temp = ribodesigner(target_sequences_folder=dataset,
+                                     ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=n,
+                                     selective=False, background_sequences_folder=big_data_background, min_true_cov=0,
+                                     identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1,
+                                     score_type='weighted', n_limit=0, percent_of_target_seqs_used=1,
+                                     gaps_allowed=False, fileout=True,
+                                     folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
+        universal_datasets.append(out_data_temp)
+
+    for i, dataset in enumerate([big_data_1, big_data_2, big_data_3]):
+        out_data_temp = ribodesigner(target_sequences_folder=dataset,
+                                     ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=n,
+                                     selective=True, background_sequences_folder=big_data_background, min_true_cov=0,
+                                     identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1,
+                                     score_type='weighted', n_limit=0, percent_of_target_seqs_used=1,
+                                     gaps_allowed=False, fileout=True,
+                                     folder_to_save=test_output_folder + f'/selective dataset {i + 1}')
+        selective_datasets.append(out_data_temp)
+
+    make_graphs(control_designs=control_design, selective_designs=selective_datasets,
+                universal_designs=universal_datasets, var_regs=e_coli_var_regs, file_loc=test_output_folder + '/' + big_data_file_for_output)
 
 
     # This is using the csv made with the code on top of this one
@@ -143,8 +144,6 @@ if __name__ == '__main__':
 
 
 
-
-    #
     # out_data_naive_v2 = ribodesigner(target_sequences_folder=good_targets, barcode_seq_file=barcode_seq_file,
     #                                  ribobody_file=ribobody_file, igs_length=m, guide_length=n, min_length=minlen,
     #                                  selective=True, background_sequences_folder=bad_targets, min_true_cov=0.7,

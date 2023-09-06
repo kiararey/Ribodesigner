@@ -423,47 +423,42 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     if fileout:
         write_output_file(designs=to_optimize, folder_path=folder_to_save)
 
-    if selective:
-        background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
 
-        print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
+    background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
 
-        if percent_of_background_seqs_used < 1:
-            background_names_and_seqs = np.random.choice(
-                background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
-                replace=False)
-            print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
+    print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
 
-        # first find the IGSes and locations of the background sequences. We do not want to hit these.
-        # Also align these to the reference sequence
-        fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
-                        guide_length=guide_length, min_length=min_length)
-        time2 = time.perf_counter()
-        round_convert_time(start=time1, end=time2, round_to=4,
-                           task_timed=f'finding catalytic sites and indexing background sequences to reference')
+    if percent_of_background_seqs_used < 1:
+        background_names_and_seqs = np.random.choice(
+            background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
+            replace=False)
+        print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
 
-        print('Now applying designed ribozymes with background sequences and getting statistics...')
-        opti_target_seqs = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]),
-                                        identity_thresh=identity_thresh, guide_length=guide_length,
-                                        score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
-                                        flexible_igs=True, n_limit=n_limit, target_background=not selective)
+    # first find the IGSes and locations of the background sequences. We do not want to hit these.
+    # Also align these to the reference sequence
+    fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
+                    guide_length=guide_length, min_length=min_length)
+    time2 = time.perf_counter()
+    round_convert_time(start=time1, end=time2, round_to=4,
+                       task_timed=f'finding catalytic sites and indexing background sequences to reference')
 
-        if fileout:
-            write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
+    print('Now applying designed ribozymes with background sequences and getting statistics...')
+    opti_target_seqs = ribo_checker(to_optimize, background_names_and_seqs, len(ref_name_and_seq[1]),
+                                    identity_thresh=identity_thresh, guide_length=guide_length,
+                                    score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
+                                    flexible_igs=True, n_limit=n_limit, target_background=not selective)
 
-        time2 = time.perf_counter()
-        round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
-                                                                          'sequences')
+    if fileout:
+        write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
 
-        end = time.perf_counter()
-        round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-        print('########################################################\n')
-        return opti_target_seqs
+    time2 = time.perf_counter()
+    round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
+                                                                      'sequences')
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
     print('########################################################\n')
-    return to_optimize
+    return opti_target_seqs
 
 
 def back_transcribe_seq_file(seq_file: str) -> Seq:
@@ -899,12 +894,12 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     """
     Checks generated designs against a set of sequences to either find how well they align to a given dataset.
     Will return a set of sequences that match for each design as well as a score showing how well they matched.
+    :param target_background:
     :param designs:
     :param aligned_target_sequences:
     :param ref_seq_len:
     :param identity_thresh:
     :param guide_length:
-    :param do_not_target_background: boolean set to True if you want to further optimize the designs by reducing ambiguity
     :param score_type:
     :param gaps_allowed:
     :param flexible_igs:
@@ -916,8 +911,10 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     # Also get background species
 
     # Is there a U at each position for each design at each target sequence?
-    designed_idxs = np.array(list(ribodesign.ref_idx - 1 for ribodesign in designs))  # convert to base 0 indexing
-    uracil_sites_targets = np.zeros((aligned_target_sequences.size, ref_seq_len))
+    designed_idxs = np.array(list(set(ribodesign.ref_idx - 1 for ribodesign in designs)))  # convert to base 0 indexing
+    # Adding to maximum size because sometimes the alignment for the very end of a sequence does strange things
+    max_len = max(designed_idxs.max(), ref_seq_len)
+    uracil_sites_targets = np.zeros((aligned_target_sequences.size, max_len + 1))
     uracil_sites_targets[:, designed_idxs] = 1
 
     for i, target_sequence in enumerate(aligned_target_sequences):  # base 1 indexing
