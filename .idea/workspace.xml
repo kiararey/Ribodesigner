@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="fixed a bug in ribo_checker">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ribodesigner_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner_v2.py" afterDir="false" />
@@ -53,29 +53,29 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_directory_selection": "/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All",
-    "last_opened_file_path": "/Users/kiarareyes/PycharmProjects/RiboDesigner",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "run.code.analysis.last.selected.profile": "aDefault",
-    "settings.editor.selected.configurable": "advanced.settings",
-    "two.files.diff.last.used.file": "/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_directory_selection&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
+    &quot;two.files.diff.last.used.file&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py&quot;
   },
-  "keyToStringList": {
-    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
-      "Python"
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings module-name="RiboDesigner" is-module-sdk="true">
@@ -390,14 +390,8 @@
       <workItem from="1688595646118" duration="841000" />
       <workItem from="1690820155493" duration="52175000" />
       <workItem from="1692028246636" duration="139001000" />
-      <workItem from="1693844612443" duration="57129000" />
-    </task>
-    <task id="LOCAL-00033" summary="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference.">
-      <created>1673894108000</created>
-      <option name="number" value="00033" />
-      <option name="presentableId" value="LOCAL-00033" />
-      <option name="project" value="LOCAL" />
-      <updated>1673894108000</updated>
+      <workItem from="1693844612443" duration="71736000" />
+      <workItem from="1694211391046" duration="3526000" />
     </task>
     <task id="LOCAL-00034" summary="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference.">
       <created>1673895116334</created>
@@ -735,7 +729,14 @@
       <option name="project" value="LOCAL" />
       <updated>1694033114552</updated>
     </task>
-    <option name="localTasksCounter" value="82" />
+    <task id="LOCAL-00082" summary="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc">
+      <created>1694048669365</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1694048669365</updated>
+    </task>
+    <option name="localTasksCounter" value="83" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -765,7 +766,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Adding ways of quantifying U conservation and IGS conservation and guide conservation. There's a bug when I try to get the final pairwise score so I'll have to fix that, but otherwise seems to be working?" />
     <MESSAGE value="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high..." />
     <MESSAGE value="Ok added a new scoring metric that takes into account both the guide conservation in the MSA as well as the coverage of the IGS itself. I'm calling this the composite score, and it's defined as the guide score * the true percent coverage of a design." />
     <MESSAGE value="In matplotlib/ seaborn hell" />
@@ -790,7 +790,8 @@
     <MESSAGE value="Finally have data ready with pandas for matplotlib and seaborn..." />
     <MESSAGE value="Ok have some graphs, but I'll remake the main function to analyze the universal designs as well" />
     <MESSAGE value="fixed a bug in ribo_checker" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed a bug in ribo_checker" />
+    <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -852,22 +853,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1100</line>
-          <option name="timeStamp" value="575" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1143</line>
-          <option name="timeStamp" value="593" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1371</line>
+          <line>1375</line>
           <option name="timeStamp" value="615" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1497</line>
+          <line>1500</line>
           <option name="timeStamp" value="617" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
@@ -877,18 +868,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>456</line>
+          <line>455</line>
           <option name="timeStamp" value="625" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1263</line>
-          <option name="timeStamp" value="626" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1244</line>
-          <option name="timeStamp" value="627" />
+          <line>1178</line>
+          <option name="timeStamp" value="642" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -914,7 +900,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1694048340224" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1694214756488" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
