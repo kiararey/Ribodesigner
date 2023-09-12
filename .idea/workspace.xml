@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Finalized figure making scripts">
-      <change afterPath="$PROJECT_DIR$/process_metagenome_into_16s.py" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Cleaning up">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/RiboDesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/RiboDesigner.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/figure_plotting_functions.py" beforeDir="false" afterPath="$PROJECT_DIR$/figure_plotting_functions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,17 +23,24 @@
     <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="motifs_redo" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="RESET_MODE" value="SOFT" />
   </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/RiboDesigner.py" root0="FORCE_HIGHLIGHTING" />
+  <component name="GithubProjectSettings">
+    <option name="branchProtectionPatterns">
+      <list>
+        <option value="main" />
+      </list>
+    </option>
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectId" id="27tPcs0al7nYowZSPa9qHnT3XET" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
@@ -58,7 +61,8 @@
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;advanced.settings&quot;,
     &quot;two.files.diff.last.used.file&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py&quot;
   },
   &quot;keyToStringList&quot;: {
@@ -67,11 +71,19 @@
     ]
   }
 }</component>
+  <component name="PyConsoleOptionsProvider">
+    <option name="myPythonConsoleState">
+      <console-settings module-name="RiboDesigner" is-module-sdk="true">
+        <option name="myUseModuleSdk" value="true" />
+        <option name="myModuleName" value="RiboDesigner" />
+      </console-settings>
+    </option>
+  </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/Datasets_used/SILVA_squished_datasets" />
       <recent name="$PROJECT_DIR$/Datasets_used" />
-      <recent name="$PROJECT_DIR$" />
     </key>
   </component>
   <component name="RunManager" selected="Python.main">
@@ -82,9 +94,9 @@
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
-      <option name="SDK_HOME" value="$USER_HOME$/opt/miniconda3/python.app/Contents/MacOS/python" />
+      <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
-      <option name="IS_MODULE_SDK" value="false" />
+      <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
@@ -163,50 +175,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="figure_plotting_functions" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="RiboDesigner" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/figure_plotting_functions.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="true" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="generate_SILVA_datasets" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="RiboDesigner" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/generate_SILVA_datasets.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="true" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="generate_silva_datasets_code" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -245,13 +213,35 @@
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="true" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="ribodesigner_classes" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ribodesigner_classes.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
       <option name="REDIRECT_INPUT" value="false" />
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="statsondata" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="scratch (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -264,7 +254,29 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/statsondata.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="RiboDesigner" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scratch.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="true" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -277,23 +289,26 @@
       <item itemvalue="Python.main" />
       <item itemvalue="Python.RiboDesigner" />
       <item itemvalue="Python.SequencePrepper" />
-      <item itemvalue="Python.figure_plotting_functions" />
+      <item itemvalue="Python.scratch (1)" />
+      <item itemvalue="Python.ribodesigner_classes" />
+      <item itemvalue="Python.scratch" />
       <item itemvalue="Python.generate_silva_datasets_code" />
-      <item itemvalue="Python.generate_SILVA_datasets" />
-      <item itemvalue="Python.statsondata" />
       <item itemvalue="Python.RiboDesigner_paper_figures" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.scratch (1)" />
+        <item itemvalue="Python.scratch" />
+        <item itemvalue="Python.ribodesigner_classes" />
         <item itemvalue="Python.generate_silva_datasets_code" />
         <item itemvalue="Python.RiboDesigner_paper_figures" />
-        <item itemvalue="Python.statsondata" />
-        <item itemvalue="Python.generate_SILVA_datasets" />
-        <item itemvalue="Python.figure_plotting_functions" />
       </list>
     </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SvnConfiguration">
+    <configuration>$USER_HOME$/.subversion</configuration>
+  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="" />
@@ -360,265 +375,18 @@
       <workItem from="1675292234152" duration="42425000" />
       <workItem from="1676409303140" duration="14075000" />
       <workItem from="1677519528530" duration="7567000" />
-    </task>
-    <task id="LOCAL-00001" summary="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.">
-      <created>1652300361864</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1652300361864</updated>
-    </task>
-    <task id="LOCAL-00002" summary="starting to remove hardcoded paths and fixing muscle. Still have not figured out why I cannot run it yet.&#10;&#10;Also making variable names better. Slowly.">
-      <created>1652301868304</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1652301868304</updated>
-    </task>
-    <task id="LOCAL-00003" summary="Works now but make makes ugly files">
-      <created>1653495739666</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1653495739666</updated>
-    </task>
-    <task id="LOCAL-00004" summary="Works now but make makes ugly files&#10;&#10;Also removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!">
-      <created>1653512513124</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1653512513124</updated>
-    </task>
-    <task id="LOCAL-00005" summary="Removed lots of pandas and replaced with faster numpy arrays for optimize functions. This should run MUCH faster now!&#10;&#10;Still need to fix unique and narrow sequences so they work with the new code, and test the indexing, but this should be able to find common sequences in a dataset now.">
-      <created>1653590386576</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1653590386576</updated>
-    </task>
-    <task id="LOCAL-00006" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info">
-      <created>1655229211489</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1655229211489</updated>
-    </task>
-    <task id="LOCAL-00007" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info&#10;&#10;Made columns prettier">
-      <created>1655230247921</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1655230247921</updated>
-    </task>
-    <task id="LOCAL-00008" summary="Added new aligntoref outputs that show ribodesigner outputs with the extra reference info&#10;&#10;Made columns prettier and added an option on Ribodesigner to not output files">
-      <created>1655230314414</created>
-      <option name="number" value="00008" />
-      <option name="presentableId" value="LOCAL-00008" />
-      <option name="project" value="LOCAL" />
-      <updated>1655230314414</updated>
-    </task>
-    <task id="LOCAL-00009" summary="Fixed SequencePrepper.py and made a new script, PullSequences.py, that will convert some metagenomic data into a format compatible with RiboChecker">
-      <created>1656446191438</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1656446191438</updated>
-    </task>
-    <task id="LOCAL-00010" summary="Fixed SequencePrepper.py and made a new script, PullSequences.py, that will convert some metagenomic data into a format compatible with RiboChecker">
-      <created>1656448443323</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1656448443323</updated>
-    </task>
-    <task id="LOCAL-00011" summary="Added a new function, findReferenceIdx, that should allow us to align a list of sequences to a reference sequence then give us the new indexes as well as a conversion dictionary for catalytic sites (convert from original sequence index to reference sequence index numbering). &#10;&#10;Also preparing new optimization strategy without recursion: optimizeToRefSequence. If more than one IGS, pairwise align to reference and only take the closest index to the average index. Hopefully this is faster/ less computationally intensive.">
-      <created>1659398292083</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1659398292083</updated>
-    </task>
-    <task id="LOCAL-00012" summary="Making big changes to generate figure B and make the code more efficient. It ran so much faster this time around!">
-      <created>1660689107010</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1660689107010</updated>
-    </task>
-    <task id="LOCAL-00013" summary="working on optimize_sequences: need to do the following:&#10;&#10;- Determine all cases of indexing to consider&#10;- maybe even a case where we take all of the cases then use the old ribodesigner function --&gt; can do this for later versions&#10;- figure out how best to implement the mode --&gt; something something with take the closest my braIn is mush so i will think better tomorrow&#10;&#10;- then finally add scoriiiing">
-      <created>1660776508490</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1660776508491</updated>
-    </task>
-    <task id="LOCAL-00014" summary="I've added a calculation for &quot;true percent coverage&quot;, which uses the information of on-target counts to determine if the IGS is at the same location in all organisms covered. &#10;&#10;true percent coverage = percent coverage * percent on target">
-      <created>1660851062172</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1660851062172</updated>
-    </task>
-    <task id="LOCAL-00015" summary="things are coming along great! Code works great when looking for 100% true coverage and is super super fast now that we only need to analyze a subset of sequences instead of all possible permutations. Now I need to implement the scoring we need and make sure it works for other minimum true coverage thresholds&#10;&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)">
-      <created>1660862817129</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1660862817129</updated>
-    </task>
-    <task id="LOCAL-00016" summary="Hey it works!!! I had to make my own scoring function based on biopython's PSSM because it refused to work for me but the script finally works :)&#10;&#10;I will polish it and make the actual figures later!&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)">
-      <created>1660942235174</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1660942235174</updated>
-    </task>
-    <task id="LOCAL-00017" summary="Made a formal ribozymer function. Will test with SILVA database soon.">
-      <created>1661376546643</created>
-      <option name="number" value="00017" />
-      <option name="presentableId" value="LOCAL-00017" />
-      <option name="project" value="LOCAL" />
-      <updated>1661376546643</updated>
-    </task>
-    <task id="LOCAL-00018" summary="Testing with SILVA database!">
-      <created>1661460323806</created>
-      <option name="number" value="00018" />
-      <option name="presentableId" value="LOCAL-00018" />
-      <option name="project" value="LOCAL" />
-      <updated>1661460323806</updated>
-    </task>
-    <task id="LOCAL-00019" summary="Testing with SILVA database!">
-      <created>1661464294704</created>
-      <option name="number" value="00019" />
-      <option name="presentableId" value="LOCAL-00019" />
-      <option name="project" value="LOCAL" />
-      <updated>1661464294704</updated>
-    </task>
-    <task id="LOCAL-00020" summary="Will test first with Bacteria only">
-      <created>1661470404572</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1661470404572</updated>
-    </task>
-    <task id="LOCAL-00021" summary="Fixed a teeny mistake">
-      <created>1661791827252</created>
-      <option name="number" value="00021" />
-      <option name="presentableId" value="LOCAL-00021" />
-      <option name="project" value="LOCAL" />
-      <updated>1661791827252</updated>
-    </task>
-    <task id="LOCAL-00022" summary="Fixed a teeny mistake">
-      <created>1661791924202</created>
-      <option name="number" value="00022" />
-      <option name="presentableId" value="LOCAL-00022" />
-      <option name="project" value="LOCAL" />
-      <updated>1661791924202</updated>
-    </task>
-    <task id="LOCAL-00023" summary="Fixed a teeny mistake">
-      <created>1661791958347</created>
-      <option name="number" value="00023" />
-      <option name="presentableId" value="LOCAL-00023" />
-      <option name="project" value="LOCAL" />
-      <updated>1661791958347</updated>
-    </task>
-    <task id="LOCAL-00024" summary="Fixed a teeny mistake">
-      <created>1661804996558</created>
-      <option name="number" value="00024" />
-      <option name="presentableId" value="LOCAL-00024" />
-      <option name="project" value="LOCAL" />
-      <updated>1661804996558</updated>
-    </task>
-    <task id="LOCAL-00025" summary="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)">
-      <created>1661805512312</created>
-      <option name="number" value="00025" />
-      <option name="presentableId" value="LOCAL-00025" />
-      <option name="project" value="LOCAL" />
-      <updated>1661805512312</updated>
-    </task>
-    <task id="LOCAL-00026" summary="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
-      <created>1665000492088</created>
-      <option name="number" value="00026" />
-      <option name="presentableId" value="LOCAL-00026" />
-      <option name="project" value="LOCAL" />
-      <updated>1665000492088</updated>
-    </task>
-    <task id="LOCAL-00027" summary="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
-      <created>1665000671284</created>
-      <option name="number" value="00027" />
-      <option name="presentableId" value="LOCAL-00027" />
-      <option name="project" value="LOCAL" />
-      <updated>1665000671285</updated>
-    </task>
-    <task id="LOCAL-00028" summary="Condensing some statements. Also, cleaning up RiboDesigner for publishing :)">
-      <created>1665001297996</created>
-      <option name="number" value="00028" />
-      <option name="presentableId" value="LOCAL-00028" />
-      <option name="project" value="LOCAL" />
-      <updated>1665001297996</updated>
-    </task>
-    <task id="LOCAL-00029" summary="Fixed a bug that was not treating the reference file">
-      <created>1665079792758</created>
-      <option name="number" value="00029" />
-      <option name="presentableId" value="LOCAL-00029" />
-      <option name="project" value="LOCAL" />
-      <updated>1665079792758</updated>
-    </task>
-    <task id="LOCAL-00030" summary="Fixed a bug that was not treating the reference file correctly.">
-      <created>1665079809157</created>
-      <option name="number" value="00030" />
-      <option name="presentableId" value="LOCAL-00030" />
-      <option name="project" value="LOCAL" />
-      <updated>1665079809157</updated>
-    </task>
-    <task id="LOCAL-00031" summary="Fixed a bug that was not treating the reference file correctly.">
-      <created>1665080784800</created>
-      <option name="number" value="00031" />
-      <option name="presentableId" value="LOCAL-00031" />
-      <option name="project" value="LOCAL" />
-      <updated>1665080784800</updated>
-    </task>
-    <task id="LOCAL-00032" summary="Making my code better by adding f-strings. Soon will attempt to vectorize everything">
-      <created>1666981408091</created>
-      <option name="number" value="00032" />
-      <option name="presentableId" value="LOCAL-00032" />
-      <option name="project" value="LOCAL" />
-      <updated>1666981408091</updated>
-    </task>
-    <task id="LOCAL-00033" summary="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference.">
-      <created>1673894108000</created>
-      <option name="number" value="00033" />
-      <option name="presentableId" value="LOCAL-00033" />
-      <option name="project" value="LOCAL" />
-      <updated>1673894108000</updated>
-    </task>
-    <task id="LOCAL-00034" summary="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference.">
-      <created>1673895116334</created>
-      <option name="number" value="00034" />
-      <option name="presentableId" value="LOCAL-00034" />
-      <option name="project" value="LOCAL" />
-      <updated>1673895116334</updated>
-    </task>
-    <task id="LOCAL-00035" summary="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference.">
-      <created>1673897125207</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1673897125207</updated>
-    </task>
-    <task id="LOCAL-00036" summary="idk why these did not update on this branch">
-      <created>1674499532731</created>
-      <option name="number" value="00036" />
-      <option name="presentableId" value="LOCAL-00036" />
-      <option name="project" value="LOCAL" />
-      <updated>1674499532731</updated>
-    </task>
-    <task id="LOCAL-00037" summary="Added multiprocessing">
-      <created>1674529684482</created>
-      <option name="number" value="00037" />
-      <option name="presentableId" value="LOCAL-00037" />
-      <option name="project" value="LOCAL" />
-      <updated>1674529684482</updated>
+      <workItem from="1679431928013" duration="3942000" />
+      <workItem from="1679691075281" duration="22584000" />
+      <workItem from="1680555562972" duration="7144000" />
+      <workItem from="1680798553720" duration="66367000" />
+      <workItem from="1682352740136" duration="141375000" />
+      <workItem from="1688512835003" duration="114000" />
+      <workItem from="1688521293340" duration="594000" />
+      <workItem from="1688595646118" duration="841000" />
+      <workItem from="1690820155493" duration="52175000" />
+      <workItem from="1692028246636" duration="139001000" />
+      <workItem from="1693844612443" duration="71736000" />
+      <workItem from="1694211391046" duration="53312000" />
     </task>
     <task id="LOCAL-00038" summary="Added more multiprocessing.&#10;&#10;Need to break up find_repeat_targets into more manageable chunks to effectively use my cpu">
       <created>1674590368573</created>
@@ -690,7 +458,280 @@
       <option name="project" value="LOCAL" />
       <updated>1676409659019</updated>
     </task>
-    <option name="localTasksCounter" value="48" />
+    <task id="LOCAL-00048" summary="Attempting a targeted ribozyme design function. No idea if it works yet.">
+      <created>1678126043328</created>
+      <option name="number" value="00048" />
+      <option name="presentableId" value="LOCAL-00048" />
+      <option name="project" value="LOCAL" />
+      <updated>1678126043328</updated>
+    </task>
+    <task id="LOCAL-00049" summary="Merging docstring edits">
+      <created>1678127359658</created>
+      <option name="number" value="00049" />
+      <option name="presentableId" value="LOCAL-00049" />
+      <option name="project" value="LOCAL" />
+      <updated>1678127359658</updated>
+    </task>
+    <task id="LOCAL-00050" summary="About to redo the targeted ribozymes completely, saving this in case I really screw it up!">
+      <created>1681240439309</created>
+      <option name="number" value="00050" />
+      <option name="presentableId" value="LOCAL-00050" />
+      <option name="project" value="LOCAL" />
+      <updated>1681240439309</updated>
+    </task>
+    <task id="LOCAL-00051" summary="Adding ways of quantifying U conservation and IGS conservation. Will work on guide conservation tomorrow.">
+      <created>1681257584116</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1681257584116</updated>
+    </task>
+    <task id="LOCAL-00052" summary="Adding ways of quantifying U conservation and IGS conservation and guide conservation. There's a bug when I try to get the final pairwise score so I'll have to fix that, but otherwise seems to be working?">
+      <created>1681837257337</created>
+      <option name="number" value="00052" />
+      <option name="presentableId" value="LOCAL-00052" />
+      <option name="project" value="LOCAL" />
+      <updated>1681837257337</updated>
+    </task>
+    <task id="LOCAL-00053" summary="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high...">
+      <created>1681842663809</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1681842663809</updated>
+    </task>
+    <task id="LOCAL-00054" summary="Works but need to think about how to incorporate true percent coverage into the final score! Right now things that hit very little background are scoring really high...">
+      <created>1681850938109</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1681850938109</updated>
+    </task>
+    <task id="LOCAL-00055" summary="Ok added a new scoring metric that takes into account both the guide conservation in the MSA as well as the coverage of the IGS itself. I'm calling this the composite score, and it's defined as the guide score * the true percent coverage of a design.">
+      <created>1681852121462</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1681852121462</updated>
+    </task>
+    <task id="LOCAL-00056" summary="In matplotlib/ seaborn hell">
+      <created>1682029456718</created>
+      <option name="number" value="00056" />
+      <option name="presentableId" value="LOCAL-00056" />
+      <option name="project" value="LOCAL" />
+      <updated>1682029456718</updated>
+    </task>
+    <task id="LOCAL-00057" summary="In matplotlib/ seaborn hell">
+      <created>1682029935115</created>
+      <option name="number" value="00057" />
+      <option name="presentableId" value="LOCAL-00057" />
+      <option name="project" value="LOCAL" />
+      <updated>1682029935116</updated>
+    </task>
+    <task id="LOCAL-00058" summary="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively">
+      <created>1682612678179</created>
+      <option name="number" value="00058" />
+      <option name="presentableId" value="LOCAL-00058" />
+      <option name="project" value="LOCAL" />
+      <updated>1682612678180</updated>
+    </task>
+    <task id="LOCAL-00059" summary="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol">
+      <created>1682714879672</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1682714879672</updated>
+    </task>
+    <task id="LOCAL-00060" summary="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol">
+      <created>1682714988620</created>
+      <option name="number" value="00060" />
+      <option name="presentableId" value="LOCAL-00060" />
+      <option name="project" value="LOCAL" />
+      <updated>1682714988620</updated>
+    </task>
+    <task id="LOCAL-00061" summary="figured out how to use motifs to get consensus sequence! will work on an updated quantitative/ weighted scoring method next.">
+      <created>1683319885209</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1683319885209</updated>
+    </task>
+    <task id="LOCAL-00062" summary="Small edits added for efficiency">
+      <created>1685476243345</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1685476243345</updated>
+    </task>
+    <task id="LOCAL-00063" summary="Working on a function that reduces ambiguity!">
+      <created>1686683944504</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1686683944504</updated>
+    </task>
+    <task id="LOCAL-00064" summary="Actually I'm going to fix the delta scoring method. Right now I am doing a fake alignment but we need something like a pairwise alignment, or even a Shannon entropy calculation?">
+      <created>1687795727294</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1687795727294</updated>
+    </task>
+    <task id="LOCAL-00065" summary="Added a better way to get a pairwise score that does not involve making a fake msa. Also updated the output figures to show the average U conservation per design on all background sequences">
+      <created>1687806060517</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1687806060517</updated>
+    </task>
+    <task id="LOCAL-00066" summary="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier.">
+      <created>1690824031732</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1690824031732</updated>
+    </task>
+    <task id="LOCAL-00067" summary="Added a feature where you can choose the percentage of ambiguity codons you are willing to accept in your final design. Currently this is only for targeted designs.">
+      <created>1691004250085</created>
+      <option name="number" value="00067" />
+      <option name="presentableId" value="LOCAL-00067" />
+      <option name="project" value="LOCAL" />
+      <updated>1691004250085</updated>
+    </task>
+    <task id="LOCAL-00068" summary="Rewriting code again to remove deprecated functions and possibly add a TargetSeq class that should make later analyses easier downstream">
+      <created>1691083342780</created>
+      <option name="number" value="00068" />
+      <option name="presentableId" value="LOCAL-00068" />
+      <option name="project" value="LOCAL" />
+      <updated>1691083342780</updated>
+    </task>
+    <task id="LOCAL-00069" summary="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?">
+      <created>1691097599977</created>
+      <option name="number" value="00069" />
+      <option name="presentableId" value="LOCAL-00069" />
+      <option name="project" value="LOCAL" />
+      <updated>1691097599977</updated>
+    </task>
+    <task id="LOCAL-00070" summary="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?">
+      <created>1691097724591</created>
+      <option name="number" value="00070" />
+      <option name="presentableId" value="LOCAL-00070" />
+      <option name="project" value="LOCAL" />
+      <updated>1691097724592</updated>
+    </task>
+    <task id="LOCAL-00071" summary="Finished polishing RibozymeDesign class and IGS selection step. Now working on optimization function next.">
+      <created>1692289398013</created>
+      <option name="number" value="00071" />
+      <option name="presentableId" value="LOCAL-00071" />
+      <option name="project" value="LOCAL" />
+      <updated>1692289398013</updated>
+    </task>
+    <task id="LOCAL-00072" summary="Working on optimization function and learning more about classes">
+      <created>1692300890066</created>
+      <option name="number" value="00072" />
+      <option name="presentableId" value="LOCAL-00072" />
+      <option name="project" value="LOCAL" />
+      <updated>1692300890066</updated>
+    </task>
+    <task id="LOCAL-00073" summary="Next up, I'll be working on the ribochecker function">
+      <created>1692306100573</created>
+      <option name="number" value="00073" />
+      <option name="presentableId" value="LOCAL-00073" />
+      <option name="project" value="LOCAL" />
+      <updated>1692306100573</updated>
+    </task>
+    <task id="LOCAL-00074" summary="Slowly working on ribochecker function">
+      <created>1692655845009</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1692655845009</updated>
+    </task>
+    <task id="LOCAL-00075" summary="Finished rewriting most of the code, just need to write graph making functions!">
+      <created>1692736765870</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1692736765870</updated>
+    </task>
+    <task id="LOCAL-00076" summary="Making a function to test an existing design on a set of sequences. &#10;&#10;Also made the outline for a graph making function.">
+      <created>1692827183917</created>
+      <option name="number" value="00076" />
+      <option name="presentableId" value="LOCAL-00076" />
+      <option name="project" value="LOCAL" />
+      <updated>1692827183917</updated>
+    </task>
+    <task id="LOCAL-00077" summary="Making a function to test an existing design on a set of sequences. &#10;&#10;Also made the outline for a graph making function.">
+      <created>1692827655825</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1692827655825</updated>
+    </task>
+    <task id="LOCAL-00078" summary="Making graphs, struggled with pandas and ready to go into matplotlib hell again.">
+      <created>1693429262207</created>
+      <option name="number" value="00078" />
+      <option name="presentableId" value="LOCAL-00078" />
+      <option name="project" value="LOCAL" />
+      <updated>1693429262207</updated>
+    </task>
+    <task id="LOCAL-00079" summary="Finally have data ready with pandas for matplotlib and seaborn...">
+      <created>1693873348662</created>
+      <option name="number" value="00079" />
+      <option name="presentableId" value="LOCAL-00079" />
+      <option name="project" value="LOCAL" />
+      <updated>1693873348664</updated>
+    </task>
+    <task id="LOCAL-00080" summary="Ok have some graphs, but I'll remake the main function to analyze the universal designs as well">
+      <created>1693952382647</created>
+      <option name="number" value="00080" />
+      <option name="presentableId" value="LOCAL-00080" />
+      <option name="project" value="LOCAL" />
+      <updated>1693952382647</updated>
+    </task>
+    <task id="LOCAL-00081" summary="fixed a bug in ribo_checker">
+      <created>1694033114552</created>
+      <option name="number" value="00081" />
+      <option name="presentableId" value="LOCAL-00081" />
+      <option name="project" value="LOCAL" />
+      <updated>1694033114552</updated>
+    </task>
+    <task id="LOCAL-00082" summary="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc">
+      <created>1694048669365</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1694048669365</updated>
+    </task>
+    <task id="LOCAL-00083" summary="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now">
+      <created>1694215439275</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1694215439275</updated>
+    </task>
+    <task id="LOCAL-00084" summary="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!">
+      <created>1694537931471</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1694537931471</updated>
+    </task>
+    <task id="LOCAL-00085" summary="Made revised graph functions! This is a pretty stable version of RiboDesigner so I'll clean it up and merge this branch to main.">
+      <created>1694557427493</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1694557427493</updated>
+    </task>
+    <task id="LOCAL-00086" summary="Cleaning up">
+      <created>1694557754919</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1694557754919</updated>
+    </task>
+    <option name="localTasksCounter" value="87" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -707,7 +748,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="multiprocessing" />
+                        <option value="origin/targeted_designs" />
                       </list>
                     </value>
                   </entry>
@@ -720,32 +761,32 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Hey it works!!! I had to make my own scoring function based on biopython's PSSM because it refused to work for me but the script finally works :)&#10;&#10;I will polish it and make the actual figures later!&#10;to do before SILVA database check (far future):&#10;- check if pairwise alignment is adequate (check pairwise score is above a threshold)" />
-    <MESSAGE value="Made a formal ribozymer function. Will test with SILVA database soon." />
-    <MESSAGE value="Testing with SILVA database!" />
-    <MESSAGE value="Will test first with Bacteria only" />
-    <MESSAGE value="Fixed a teeny mistake" />
-    <MESSAGE value="added option in sequence prepper to avoid certain taxonomies (to test only bacteria for now)" />
-    <MESSAGE value="Optimized a few lines by condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
-    <MESSAGE value="Condensing some statements. Also, cleaning up RiboDesigner for publishing :)" />
-    <MESSAGE value="Fixed a bug that was not treating the reference file" />
-    <MESSAGE value="Fixed a bug that was not treating the reference file correctly." />
-    <MESSAGE value="Making my code better by adding f-strings. Soon will attempt to vectorize everything" />
-    <MESSAGE value="Creating SILVA database datasets" />
-    <MESSAGE value="Creating SILVA database datasets and making figure code" />
-    <MESSAGE value="Creating SILVA database datasets and making figure code. &#10;&#10;I'm also fixing up a new version of some old figure plotting functions to be compatible with this repo" />
-    <MESSAGE value="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference." />
-    <MESSAGE value="idk why these did not update on this branch" />
-    <MESSAGE value="Added multiprocessing" />
-    <MESSAGE value="Added more multiprocessing.&#10;&#10;Need to break up find_repeat_targets into more manageable chunks to effectively use my cpu" />
-    <MESSAGE value="Checking time spent" />
-    <MESSAGE value="Returning some functions to no multiprocessing because that is faster. Next up is fixing the MSA step which takes by far the longest time." />
-    <MESSAGE value="Added option of using super5 algorithm when doing the msa - very useful for many, many sequences" />
-    <MESSAGE value="Small efficiency improvement in find_repeat_targets" />
-    <MESSAGE value="Removed pandas" />
-    <MESSAGE value="scrambling to make figures for lab meeting" />
-    <MESSAGE value="Finalized figure making scripts" />
-    <option name="LAST_COMMIT_MESSAGE" value="Finalized figure making scripts" />
+    <MESSAGE value="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol" />
+    <MESSAGE value="figured out how to use motifs to get consensus sequence! will work on an updated quantitative/ weighted scoring method next." />
+    <MESSAGE value="Small edits added for efficiency" />
+    <MESSAGE value="Working on a function that reduces ambiguity!" />
+    <MESSAGE value="Actually I'm going to fix the delta scoring method. Right now I am doing a fake alignment but we need something like a pairwise alignment, or even a Shannon entropy calculation?" />
+    <MESSAGE value="Added a better way to get a pairwise score that does not involve making a fake msa. Also updated the output figures to show the average U conservation per design on all background sequences" />
+    <MESSAGE value="Generalizing the squished datasets code to be able to generate datasets that exclude certain taxonomies. Should make generating specific squished datasets much easier." />
+    <MESSAGE value="Added a feature where you can choose the percentage of ambiguity codons you are willing to accept in your final design. Currently this is only for targeted designs." />
+    <MESSAGE value="Rewriting code again to remove deprecated functions and possibly add a TargetSeq class that should make later analyses easier downstream" />
+    <MESSAGE value="Slowly making my way through new ribodesigner to get my new class in there. Seems to be significantly faster as a bonus?" />
+    <MESSAGE value="Finished polishing RibozymeDesign class and IGS selection step. Now working on optimization function next." />
+    <MESSAGE value="Working on optimization function and learning more about classes" />
+    <MESSAGE value="Next up, I'll be working on the ribochecker function" />
+    <MESSAGE value="Slowly working on ribochecker function" />
+    <MESSAGE value="Finished rewriting most of the code, just need to write graph making functions!" />
+    <MESSAGE value="Making a function to test an existing design on a set of sequences. &#10;&#10;Also made the outline for a graph making function." />
+    <MESSAGE value="Making graphs, struggled with pandas and ready to go into matplotlib hell again." />
+    <MESSAGE value="Finally have data ready with pandas for matplotlib and seaborn..." />
+    <MESSAGE value="Ok have some graphs, but I'll remake the main function to analyze the universal designs as well" />
+    <MESSAGE value="fixed a bug in ribo_checker" />
+    <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
+    <MESSAGE value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
+    <MESSAGE value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
+    <MESSAGE value="Made revised graph functions! This is a pretty stable version of RiboDesigner so I'll clean it up and merge this branch to main." />
+    <MESSAGE value="Cleaning up" />
+    <option name="LAST_COMMIT_MESSAGE" value="Cleaning up" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -766,49 +807,44 @@
           <option name="timeStamp" value="91" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/../RiboDesigner test/ribozymer.py</url>
-          <line>155</line>
-          <option name="timeStamp" value="106" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$APPLICATION_CONFIG_DIR$/scratches/scratch.py</url>
-          <line>34</line>
-          <option name="timeStamp" value="133" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$APPLICATION_CONFIG_DIR$/scratches/statsondata.py</url>
           <line>3</line>
           <option name="timeStamp" value="143" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>73</line>
-          <option name="timeStamp" value="147" />
+          <url>file://$PROJECT_DIR$/../RiboDesigner test/ribozymer.py</url>
+          <line>126</line>
+          <option name="timeStamp" value="221" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/generate_silva_datasets_code.py</url>
-          <line>154</line>
-          <option name="timeStamp" value="149" />
+          <url>file://$PROJECT_DIR$/../RiboDesigner test/ribozymer.py</url>
+          <line>251</line>
+          <option name="timeStamp" value="223" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/generate_silva_datasets_code.py</url>
-          <line>151</line>
-          <option name="timeStamp" value="150" />
+          <url>file://$PROJECT_DIR$/../RiboDesigner test/ribozymer.py</url>
+          <line>204</line>
+          <option name="timeStamp" value="224" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>43</line>
-          <option name="timeStamp" value="165" />
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>1540</line>
+          <option name="timeStamp" value="617" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>61</line>
-          <option name="timeStamp" value="170" />
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>1007</line>
+          <option name="timeStamp" value="654" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/oldribodesigner.py</url>
-          <line>248</line>
-          <option name="timeStamp" value="173" />
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>985</line>
+          <option name="timeStamp" value="687" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>776</line>
+          <option name="timeStamp" value="702" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -819,27 +855,34 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="in_data" />
+      </configuration>
+    </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboCheckerScript.coverage" NAME="RiboCheckerScript Coverage Results" MODIFIED="1656460158129" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysis.coverage" NAME="SILVAanalysis Coverage Results" MODIFIED="1660677354205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$scratch.coverage" NAME="scratch Coverage Results" MODIFIED="1665164479020" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$scratch.coverage" NAME="scratch Coverage Results" MODIFIED="1691095320521" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$statsondata.coverage" NAME="statsondata Coverage Results" MODIFIED="1670871960512" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$generate_SILVA_datasets.coverage" NAME="generate_SILVA_datasets Coverage Results" MODIFIED="1673372601578" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$findReferenceIdxScript.coverage" NAME="findReferenceIdxScript Coverage Results" MODIFIED="1660677370975" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SequencePrepper.coverage" NAME="SequencePrepper Coverage Results" MODIFIED="1661804956011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$PullSequences.coverage" NAME="PullSequences Coverage Results" MODIFIED="1656454979376" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner.coverage" NAME="RiboDesigner Coverage Results" MODIFIED="1694048101450" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.." />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1677095985704" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1694556687926" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1665072336938" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner__1_.coverage" NAME="RiboDesigner (1) Coverage Results" MODIFIED="1652129590997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
     <SUITE FILE_PATH="coverage/RiboDesigner$IGSchecker.coverage" NAME="IGSchecker Coverage Results" MODIFIED="1659372428534" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner__1_.coverage" NAME="RiboDesigner (1) Coverage Results" MODIFIED="1681251351848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$scratch_1.coverage" NAME="scratch_1 Coverage Results" MODIFIED="1666212891303" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$Figure_plotting_functions.coverage" NAME="Figure_plotting_functions Coverage Results" MODIFIED="1673372511009" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$generate_silva_datasets_code.coverage" NAME="generate_silva_datasets_code Coverage Results" MODIFIED="1675710533956" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$generate_silva_datasets_code.coverage" NAME="generate_silva_datasets_code Coverage Results" MODIFIED="1690835599374" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
