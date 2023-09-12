@@ -70,7 +70,7 @@ class RibozymeDesign:
                  perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
                  background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
                  background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
-                 u_consv_background_attr: float = None, tested_design_attr: bool = False):
+                 u_consv_background_attr: float = None, tested_design_attr: bool = False, gap_penalty: float = 10.0):
         self.id = id_attr
         if igs_attr:
             self.igs = igs_attr
@@ -747,7 +747,8 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
 
 def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float = 0.7, guide_len: int = 50,
-                     msa_fast: bool = True, gaps_allowed: bool = True, compare_to_background: bool = False):
+                     msa_fast: bool = True, gaps_allowed: bool = True, compare_to_background: bool = False,
+                     interior_gap_penalty: float = 10.0):
     """
     Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
     when compare_to_background is set to true, will do an MSA on background seqs and will update the anti-guide sequence
@@ -1001,7 +1002,7 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
         bar()
 
     print(f'Found {len(less_ambiguous_designs_above_limit)} out of '
-          f'{len(to_reduce_ambiguity) + len(designs_below_limit)} designs with <{n_limit} N content')
+          f'{len(to_reduce_ambiguity) + len(designs_below_limit)} designs with < {n_limit*100} N content')
 
     round_convert_time(start=start, end=time.perf_counter(), round_to=4,
                        task_timed='scoring against background sequences')
@@ -1406,108 +1407,94 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
         top_score_control = control_designs_df
 
     top_scores_universal = universal_designs_df.sort_values('composite_background_score', ascending=False).groupby(
-        universal_designs_df.index).head(len([name for name in labels if name[0] == 'num_universal']))
+        universal_designs_df.index).head(len([name for name in labels if name[0] == 'u'])).append(top_score_control)
     top_scores_selective = selective_designs_df.sort_values('composite_background_score', ascending=False).groupby(
-        selective_designs_df.index).head(len([name for name in labels if name[0] == 'num_selective']))
+        selective_designs_df.index).head(len([name for name in labels if name[0] == 's']))
 
-    top_background_scores = top_scores_selective.append(top_score_control)
-    top_background_scores.append(top_scores_universal)
+    top_background_scores = top_scores_universal.append(top_scores_selective)
 
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20, 16)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
 
     # Graph 1a:
-    fig1a, ax1a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='yes',
-                               sharex='yes')
+    fig1a, ax1a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
+                               sharex='all')
     fig1a.suptitle('True % coverage vs. composite score of designs on test dataset')
     for i, dataset_name in enumerate([name for name in labels if name[0] == 'u']):
         sns.scatterplot(x='composite_background_score', y='true_%_cov_background', data=all_data_df.loc[dataset_name],
-                        ax=ax1a[0][i], alpha=0.7)
-        ax1a[0][i].set_title(dataset_name)
+                        ax=ax1a[i][0], alpha=0.7)
+        ax1a[i][0].set_title(dataset_name)
     for i, dataset_name in enumerate([name for name in labels if name[0] == 's']):
         sns.scatterplot(x='composite_background_score', y='true_%_cov_background', data=all_data_df.loc[dataset_name],
-                        ax=ax1a[1][i], alpha=0.7)
-        ax1a[0][i].set_title(dataset_name)
+                        ax=ax1a[i][1], alpha=0.7)
+        ax1a[i][1].set_title(dataset_name)
     plt.tight_layout()
     plt.show()
 
     # Graph 1b:
-    fig1b, ax1b = plt.subplots(nrows=1, ncols=2, layout='constrained', sharey='yes', sharex='yes')
-
-    # Left graph: universal designs
-    slope, intercept, r, p, sterr = scipy.stats.linregress(x=universal_designs_df['true_%_cov_background'],
-                                                           y=universal_designs_df['background_score'])
-    reg_plot = sns.jointplot(x='true_%_cov_background', y='background_score', hue=universal_designs_df.index,
-                             data=universal_designs_df, kind='reg', line_kws={'color': 'plum'}, xlim=(-0.1, 1.1),
-                             ylim=(-0.1, 1.1), ax=ax1b[0][0])
-    reg_plot.ax_joint.annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction', ax=ax1b[0][0])
-
-    # Left graph: universal designs
-    slope, intercept, r, p, sterr = scipy.stats.linregress(x=selective_designs_df['true_%_cov_background'],
-                                                           y=selective_designs_df['background_score'])
-    reg_plot = sns.jointplot(x='true_%_cov_background', y='background_score', hue=selective_designs_df.index,
-                             data=selective_designs_df, kind='reg', line_kws={'color': 'plum'}, xlim=(-0.1, 1.1),
-                             ylim=(-0.1, 1.1), ax=ax1b[0][1])
-    reg_plot.ax_joint.annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction', ax=ax1b[0][1])
-    plt.tight_layout()
-    plt.show()
+    # Left graph: universal designs, right graph: selective designs
+    for dset in [universal_designs_df, selective_designs_df]:
+        slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset['true_%_cov_background'],
+                                                               y=dset['background_score'])
+        reg_plot = sns.jointplot(x='true_%_cov_background', y='background_score', hue=dset.index.name,
+                                 data=dset, xlim=(-0.1, 1.1), ylim=(-0.1, 1.1))
+        reg_plot.ax_joint.annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
+        plt.show()
 
     # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
     # selective for all designs in different panels (same data as above but order along gene)
-    for selective_dataset in [name for name in labels if name[0] == 's']:
-        fig2a, ax2a = plt.subplots(3, sharex='all')
-        fig2a.suptitle(selective_dataset)
-        fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
-        fig_2a_columns = ['u_conservation_background', 'true_%_cov_background', 'background_score']
+    fig2a, ax2a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
+                               sharex='all')
+    fig2a.suptitle('Scores along 16s rRNA sequence: universal/ selective')
+    fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
+    fig_2a_columns = ['u_conservation_background', 'true_%_cov_background', 'background_score']
+    for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
+        fpf.plot_variable_regions(ax2a[i, 0], var_regs)
+        sns.scatterplot(x='reference_idx', y=col, data=universal_designs_df, ax=ax2a[i, 0], alpha=0.7,
+                        hue=universal_designs_df.index.name)
+        ax2a[i, 0].set_title(name)
 
-        for ax, name, col in zip(ax2a, fig_2a_titles, fig_2a_columns):
-            fpf.plot_variable_regions(ax, var_regs)
-            sns.scatterplot(x='reference_idx', y=col, data=selective_designs_df.loc[selective_dataset], ax=ax,
-                            alpha=0.7)
-            ax.set_title(name)
-        plt.tight_layout()
-        plt.show()
+    for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
+        fpf.plot_variable_regions(ax2a[i, 1], var_regs)
+        sns.scatterplot(x='reference_idx', y=col, data=selective_designs_df, ax=ax2a[i, 1], alpha=0.7,
+                        hue=selective_designs_df.index.name)
+        ax2a[i, 1].set_title(name)
+    plt.tight_layout()
+    plt.show()
 
-    fig2b, ax2b = plt.subplots(len(labels), sharex='all')
-    for selective_dataset, ax in zip(labels, ax2b):
-        fpf.plot_variable_regions(ax, var_regs)
-        ax.set_title(selective_dataset)
-        try:
-            sns.scatterplot(x='reference_idx', y='composite_background_score',
-                                data=all_data_df.loc[selective_dataset],
-                                ax=ax, alpha=0.7)
-        except:
-            continue
+    fig2b, ax2b = plt.subplots(nrows=2, ncols=1, sharex='all')
+    fig2b.suptitle('Composite score along 16s sequence')
+
+    i = 0
+    for dset, name in zip([universal_designs_df, selective_designs_df], ['Universal', 'Selective']):
+        fpf.plot_variable_regions(ax2b[i], var_regs)
+        sns.scatterplot(x='reference_idx', y='composite_background_score', data=dset, ax=ax2b[i], alpha=0.7,
+                        hue=dset.index.name)
+        ax2b[i].set_title(name)
+        i += 1
     plt.tight_layout()
     plt.show()
 
     # Graph 3: violin plot, showing composite score distribution in all designs of a given category
     fig_3_data = all_data_df['composite_background_score']
-
+    plt.title('Composite score distribution by dataset')
     sns.violinplot(x=fig_3_data.index, y=fig_3_data, inner=None, cut=0)
     plt.tight_layout()
     plt.show()
 
     # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
-    fig4, ax4 = plt.subplots(2, 3, sharex='all')
-    # fpf.generate_axes(fig3, graph='4', titles=list(selective_designs_df.index))
-
-    for ax, name in zip(range(3), [name for name in labels if name[0] == 's']):
-        fpf.plot_variable_regions(ax, var_regs)
-        sns.scatterplot(x='reference_idx', y='delta_vs_background', data=selective_designs_df.loc[name], ax=ax,
-                        alpha=0.7)
-        ax.set_title(name)
+    fig4, ax4 = plt.subplots(nrows=2, ncols=1, sharex='all')
+    for i, dset in enumerate([universal_designs_df, selective_designs_df]):
+        fpf.plot_variable_regions(ax4[i], var_regs)
+        sns.scatterplot(x='reference_idx', y='delta_vs_background', data=dset, ax=ax4[i], alpha=0.7,
+                        hue=dset.index.name)
     plt.tight_layout()
     plt.show()
 
-    # Graph 5a: bar graph, y-axis is fraction of total reads, x-axis is each condition: control (original design),
-    # universal, and three selective designs one for a different order in wastewater. One design each, with the best
-    # composite score. Maybe pick the best performing one with flexible and rigid IGS
-
     # Extract possible taxonomy labels
     all_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in
-                         top_background_scores['background_targets']]
+                   top_background_scores['background_targets'] if type(targets) == str]
     all_targets_set = set()
 
     for items in all_targets:
@@ -1522,6 +1509,8 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
 
     for i, design_targets in enumerate(top_background_scores['background_targets']):
         dict = {}
+        if type(design_targets) != str:
+            continue
         all_targets = design_targets.replace('[', '').replace(']]', '').split(']; ')
         for item in all_targets:
             try:
@@ -1551,7 +1540,6 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.27)
     plt.show()
-
     return
 
 

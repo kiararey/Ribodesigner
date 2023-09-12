@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ribodesigner_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner_v2.py" afterDir="false" />
@@ -391,14 +391,7 @@
       <workItem from="1690820155493" duration="52175000" />
       <workItem from="1692028246636" duration="139001000" />
       <workItem from="1693844612443" duration="71736000" />
-      <workItem from="1694211391046" duration="39830000" />
-    </task>
-    <task id="LOCAL-00035" summary="Starting to make RiboDesigner pretty/ readable/ useable. Using doc strings to later generate a document for people to reference.">
-      <created>1673897125207</created>
-      <option name="number" value="00035" />
-      <option name="presentableId" value="LOCAL-00035" />
-      <option name="project" value="LOCAL" />
-      <updated>1673897125207</updated>
+      <workItem from="1694211391046" duration="52637000" />
     </task>
     <task id="LOCAL-00036" summary="idk why these did not update on this branch">
       <created>1674499532731</created>
@@ -736,7 +729,14 @@
       <option name="project" value="LOCAL" />
       <updated>1694215439275</updated>
     </task>
-    <option name="localTasksCounter" value="84" />
+    <task id="LOCAL-00084" summary="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!">
+      <created>1694537931471</created>
+      <option name="number" value="00084" />
+      <option name="presentableId" value="LOCAL-00084" />
+      <option name="project" value="LOCAL" />
+      <updated>1694537931471</updated>
+    </task>
+    <option name="localTasksCounter" value="85" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -766,7 +766,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Ok added a new scoring metric that takes into account both the guide conservation in the MSA as well as the coverage of the IGS itself. I'm calling this the composite score, and it's defined as the guide score * the true percent coverage of a design." />
     <MESSAGE value="In matplotlib/ seaborn hell" />
     <MESSAGE value="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively" />
     <MESSAGE value="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol" />
@@ -791,7 +790,8 @@
     <MESSAGE value="fixed a bug in ribo_checker" />
     <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
     <MESSAGE value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
-    <option name="LAST_COMMIT_MESSAGE" value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
+    <MESSAGE value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
+    <option name="LAST_COMMIT_MESSAGE" value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -853,28 +853,23 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1453</line>
-          <option name="timeStamp" value="615" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1560</line>
+          <line>1542</line>
           <option name="timeStamp" value="617" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>127</line>
-          <option name="timeStamp" value="619" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1008</line>
+          <line>1009</line>
           <option name="timeStamp" value="654" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>986</line>
+          <line>987</line>
           <option name="timeStamp" value="687" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
+          <line>778</line>
+          <option name="timeStamp" value="702" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
@@ -905,7 +900,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$alignToRef.coverage" NAME="alignToRef Coverage Results" MODIFIED="1660677276302" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1694535253221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1694556687926" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysisReferenceAligned.coverage" NAME="SILVAanalysisReferenceAligned Coverage Results" MODIFIED="1663877683796" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
