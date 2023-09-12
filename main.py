@@ -98,6 +98,7 @@ if __name__ == '__main__':
     bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
     universal_data_1 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
     universal_data_2 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_3.fasta'
+    universal_data_3 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_4.fasta'
     big_data_1 = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
     big_data_2 = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
     big_data_3 = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
@@ -111,15 +112,15 @@ if __name__ == '__main__':
     selective_datasets = []
 
     # control_design = test_ribo_design(design=u64, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
-    #                                   score_type='weighted', thresh=0, msa_fast=True, gaps_allowed=False, file_out=True,
+    #                                   score_type='weighted', thresh=0.6, msa_fast=True, gaps_allowed=False, file_out=True,
     #                                   folder_to_save=test_output_folder + f'/control dataset')
 
-    for i, dataset in enumerate([universal_data_1, universal_data_2]):
+    for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3]):
         out_data_temp = ribodesigner(target_sequences_folder=dataset,
                                      ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=n,
                                      selective=False, background_sequences_folder=big_data_background, min_true_cov=0.3,
-                                     identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=0.0001,
-                                     score_type='weighted', n_limit=0, percent_of_target_seqs_used=0.01,
+                                     identity_thresh=0.6, msa_fast=True, percent_of_background_seqs_used=1,
+                                     score_type='weighted', n_limit=0, percent_of_target_seqs_used=1,
                                      gaps_allowed=False, fileout=True,
                                      folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
         universal_datasets.append(out_data_temp)
@@ -128,7 +129,7 @@ if __name__ == '__main__':
         out_data_temp = ribodesigner(target_sequences_folder=dataset,
                                      ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=n,
                                      selective=True, background_sequences_folder=big_data_background, min_true_cov=0.3,
-                                     identity_thresh=0.7, msa_fast=True, percent_of_background_seqs_used=1,
+                                     identity_thresh=0.6, msa_fast=True, percent_of_background_seqs_used=1,
                                      score_type='weighted', n_limit=0, percent_of_target_seqs_used=1,
                                      gaps_allowed=False, fileout=True,
                                      folder_to_save=test_output_folder + f'/selective dataset {i + 1}')
