@@ -4,10 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Cleaning up">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ribodesigner_v2.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner_v2.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,9 +35,6 @@
         <option value="main" />
       </list>
     </option>
-  </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/RiboDesigner.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -391,21 +386,7 @@
       <workItem from="1690820155493" duration="52175000" />
       <workItem from="1692028246636" duration="139001000" />
       <workItem from="1693844612443" duration="71736000" />
-      <workItem from="1694211391046" duration="52637000" />
-    </task>
-    <task id="LOCAL-00036" summary="idk why these did not update on this branch">
-      <created>1674499532731</created>
-      <option name="number" value="00036" />
-      <option name="presentableId" value="LOCAL-00036" />
-      <option name="project" value="LOCAL" />
-      <updated>1674499532731</updated>
-    </task>
-    <task id="LOCAL-00037" summary="Added multiprocessing">
-      <created>1674529684482</created>
-      <option name="number" value="00037" />
-      <option name="presentableId" value="LOCAL-00037" />
-      <option name="project" value="LOCAL" />
-      <updated>1674529684482</updated>
+      <workItem from="1694211391046" duration="53312000" />
     </task>
     <task id="LOCAL-00038" summary="Added more multiprocessing.&#10;&#10;Need to break up find_repeat_targets into more manageable chunks to effectively use my cpu">
       <created>1674590368573</created>
@@ -736,7 +717,21 @@
       <option name="project" value="LOCAL" />
       <updated>1694537931471</updated>
     </task>
-    <option name="localTasksCounter" value="85" />
+    <task id="LOCAL-00085" summary="Made revised graph functions! This is a pretty stable version of RiboDesigner so I'll clean it up and merge this branch to main.">
+      <created>1694557427493</created>
+      <option name="number" value="00085" />
+      <option name="presentableId" value="LOCAL-00085" />
+      <option name="project" value="LOCAL" />
+      <updated>1694557427493</updated>
+    </task>
+    <task id="LOCAL-00086" summary="Cleaning up">
+      <created>1694557754919</created>
+      <option name="number" value="00086" />
+      <option name="presentableId" value="LOCAL-00086" />
+      <option name="project" value="LOCAL" />
+      <updated>1694557754919</updated>
+    </task>
+    <option name="localTasksCounter" value="87" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -766,8 +761,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="In matplotlib/ seaborn hell" />
-    <MESSAGE value="Preparing to fix IGS finding function slowness. Also need to implement pooling to manage memory more effectively" />
     <MESSAGE value="Removed checking for nans in prep_for_optimizing and increased performance 1000 fold lol" />
     <MESSAGE value="figured out how to use motifs to get consensus sequence! will work on an updated quantitative/ weighted scoring method next." />
     <MESSAGE value="Small edits added for efficiency" />
@@ -791,7 +784,9 @@
     <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
     <MESSAGE value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
     <MESSAGE value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
+    <MESSAGE value="Made revised graph functions! This is a pretty stable version of RiboDesigner so I'll clean it up and merge this branch to main." />
+    <MESSAGE value="Cleaning up" />
+    <option name="LAST_COMMIT_MESSAGE" value="Cleaning up" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -817,16 +812,6 @@
           <option name="timeStamp" value="143" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>58</line>
-          <option name="timeStamp" value="165" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/oldribodesigner.py</url>
-          <line>248</line>
-          <option name="timeStamp" value="173" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/../RiboDesigner test/ribozymer.py</url>
           <line>126</line>
           <option name="timeStamp" value="221" />
@@ -842,33 +827,23 @@
           <option name="timeStamp" value="224" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>400</line>
-          <option name="timeStamp" value="376" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>162</line>
-          <option name="timeStamp" value="513" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1542</line>
+          <line>1540</line>
           <option name="timeStamp" value="617" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>1009</line>
+          <line>1007</line>
           <option name="timeStamp" value="654" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>987</line>
+          <line>985</line>
           <option name="timeStamp" value="687" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner_v2.py</url>
-          <line>778</line>
+          <line>776</line>
           <option name="timeStamp" value="702" />
         </line-breakpoint>
       </breakpoints>
