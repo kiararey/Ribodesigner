@@ -19,8 +19,6 @@ from Bio.SeqIO.FastaIO import SimpleFastaParser
 from alive_progress import alive_bar
 from numpy.random import default_rng
 
-import figure_plotting_functions_v2 as fpf
-
 
 # Expanded version of SilvaSequence
 class TargetSeq:
@@ -1450,13 +1448,13 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
     fig_2a_columns = ['u_conservation_background', 'true_%_cov_background', 'background_score']
     for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
-        fpf.plot_variable_regions(ax2a[i, 0], var_regs)
+        plot_variable_regions(ax2a[i, 0], var_regs)
         sns.scatterplot(x='reference_idx', y=col, data=universal_designs_df, ax=ax2a[i, 0], alpha=0.7,
                         hue=universal_designs_df.index.name)
         ax2a[i, 0].set_title(name)
 
     for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
-        fpf.plot_variable_regions(ax2a[i, 1], var_regs)
+        plot_variable_regions(ax2a[i, 1], var_regs)
         sns.scatterplot(x='reference_idx', y=col, data=selective_designs_df, ax=ax2a[i, 1], alpha=0.7,
                         hue=selective_designs_df.index.name)
         ax2a[i, 1].set_title(name)
@@ -1468,7 +1466,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
 
     i = 0
     for dset, name in zip([universal_designs_df, selective_designs_df], ['Universal', 'Selective']):
-        fpf.plot_variable_regions(ax2b[i], var_regs)
+        plot_variable_regions(ax2b[i], var_regs)
         sns.scatterplot(x='reference_idx', y='composite_background_score', data=dset, ax=ax2b[i], alpha=0.7,
                         hue=dset.index.name)
         ax2b[i].set_title(name)
@@ -1486,7 +1484,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign], universal_designs: 
     # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
     fig4, ax4 = plt.subplots(nrows=2, ncols=1, sharex='all')
     for i, dset in enumerate([universal_designs_df, selective_designs_df]):
-        fpf.plot_variable_regions(ax4[i], var_regs)
+        plot_variable_regions(ax4[i], var_regs)
         sns.scatterplot(x='reference_idx', y='delta_vs_background', data=dset, ax=ax4[i], alpha=0.7,
                         hue=dset.index.name)
     plt.tight_layout()
@@ -1563,3 +1561,9 @@ def give_taxonomy(silva_name: str, level: str):
         return counts_and_names.tolist()
     else:
         return None
+
+
+def plot_variable_regions(ax, var_regs):
+    for V in var_regs:
+        ax.axvspan(V[0], V[1], facecolor='g', alpha=0.2)
+    return
