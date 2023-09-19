@@ -323,7 +323,8 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                  background_sequences_folder: str = '', min_delta: float = 0, min_true_cov: float = 0.7,
                  identity_thresh: float = 0.7, fileout: bool = False, folder_to_save: str = '', n_limit: float = 0.0,
                  score_type: str = 'quantitative', msa_fast: bool = False, gaps_allowed: bool = True,
-                 percent_of_target_seqs_used: float = 1.0, percent_of_background_seqs_used: float = 1):
+                 percent_of_target_seqs_used: float = 1.0, percent_of_background_seqs_used: float = 1,
+                 random_guide_sampling: bool = True, random_guide_sample_size: int = 10):
     """Generates ribozyme designs to target a set of sequences.
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
     sequences used without replacement
@@ -428,12 +429,15 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     time1 = time.perf_counter()
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         # vectorize function. For the multiprocessing module I made it return the updated RibozymeDesign
-        fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
-                              excluded=['score_type', 'thresh', 'msa_fast', 'gaps_allowed'])
 
+        fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
+                              excluded=['score_type', 'thresh', 'msa_fast', 'gaps_allowed', 'compare_to_background',
+                                        'random_sampling', 'random_sample_size'])
         # prepare data for starmap
-        in_data = [(sub_array, score_type, identity_thresh, guide_length, msa_fast, gaps_allowed) for sub_array in
-                   np.array_split(to_optimize, process_num)]
+        in_data = [(sub_array, score_type, identity_thresh, guide_length, msa_fast, gaps_allowed, False,
+                    random_guide_sampling, random_guide_sample_size)
+                   for sub_array in np.array_split(to_optimize, process_num)]
+
         # multithread
         with mp.Pool(processes=process_num) as pool:
             out_data = pool.starmap(fn_msa, in_data)
@@ -597,15 +601,14 @@ def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length
     :return:
     """
 
-    #
-    def get_data(i, target_sequence: TargetSeq):
+    def get_data(i, target_sequence_data: TargetSeq):
         # Implement like:
         # fn_get_data = np.vectorize(get_data, otypes=[int], excluded=target_sequence)
         # data = fn_get_data(idx, target_sequence=target_sequence)
         # target_sequence.cat_sites = [(i, igs, guide) for i, igs, guide in zip(data[0], data[1], data[2])]
-        guide = target_sequence.seq[i + 1:i + guide_length + 1].reverse_complement()
+        guide = target_sequence_data.seq[i + 1:i + guide_length + 1].reverse_complement()
         # generate complementary IGS sequence igs_length bases long *upstream* of U site
-        igs = target_sequence.seq[i - igs_length:i].reverse_complement()
+        igs = target_sequence_data.seq[i - igs_length:i].reverse_complement()
         # Store as (idx, igs, guide)
         return i + 1, igs, guide
 
@@ -632,7 +635,7 @@ def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length
         target_sequence.cat_sites = None
     else:
         fn_get_data = np.vectorize(get_data, otypes=[tuple], excluded=[target_sequence])
-        data = fn_get_data(idx, target_sequence=target_sequence)
+        data = fn_get_data(idx, target_sequence_data=target_sequence)
         target_sequence.cat_sites = data
     return
 
@@ -746,21 +749,26 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
 def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float = 0.7, guide_len: int = 50,
                      msa_fast: bool = True, gaps_allowed: bool = True, compare_to_background: bool = False,
-                     interior_gap_penalty: float = 10.0):
+                     random_sampling: bool = False, random_sample_size: int = 10):
     """
     Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
     when compare_to_background is set to true, will do an MSA on background seqs and will update the anti-guide sequence
 
     """
-    # First create a dummy file with all the guides we want to optimize
     if not compare_to_background:
-        with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
-            for line in range(len(to_optimize.guides_to_use)):
-                f.write('>seq' + str(line) + '\n' + str(to_optimize.guides_to_use[line]) + '\n')
+        sub_sample = to_optimize.guides_to_use
     else:
-        with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
-            for line in range(len(to_optimize.background_guides)):
-                f.write('>seq' + str(line) + '\n' + str(to_optimize.background_guides[line]) + '\n')
+        sub_sample = to_optimize.background_guides
+
+    if random_sampling and random_sample_size < len(sub_sample):
+        indices = np.random.choice(len(sub_sample), size=random_sample_size, replace=False)
+    else:
+        indices = range(len(sub_sample))
+
+    # First create a dummy file with all the guides we want to optimize
+    with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
+        for line in indices:
+            f.write('>seq' + str(line) + '\n' + str(sub_sample[line]) + '\n')
 
     muscle_exe = 'muscle5'
 

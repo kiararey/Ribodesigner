@@ -1,5 +1,5 @@
 from playsound import playsound
-from ribodesigner_v2 import ribodesigner, test_ribo_design, make_graphs
+from ribodesigner import ribodesigner, test_ribo_design, make_graphs
 
 if __name__ == '__main__':
     # Figure 2: synthetic community data violin plots
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # Reference sequence - will have to be E. coli to graph the variable regions
     ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
 
-    u64 = 'CAACCCACTCCCATGGTGTGACGGGCGGTGTGTACAAGGCCCGGGAACGTgTTCAC'
+    u1376 = 'CAACCCACTCCCATGGTGTGACGGGCGGTGTGTACAAGGCCCGGGAACGTgTTCAC'
 
     # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary
     # approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57–75 (2017).
@@ -46,9 +46,10 @@ if __name__ == '__main__':
     universal_data_1 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
     universal_data_2 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_3.fasta'
     universal_data_3 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_4.fasta'
-    big_data_1 = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
-    big_data_2 = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
-    big_data_3 = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
+    big_data_entero_only = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_1.fasta'
+    big_data_pseudo_only = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_1.fasta'
+    big_data_no_pseudo = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
+    big_data_no_entero = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
     big_data_background = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
     test_output_folder = 'test_output_files/test_outputs_ribodesigner_v2'
     test_file = 'test_dataset_for_graphs.csv'
@@ -58,27 +59,27 @@ if __name__ == '__main__':
     universal_datasets = []
     selective_datasets = []
 
-    control_design = test_ribo_design(design=u64, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
-                                      score_type='weighted', thresh=0.5, msa_fast=True, gaps_allowed=False, file_out=True,
-                                      folder_to_save=test_output_folder + f'/control dataset')
+    control_design = test_ribo_design(design=u1376, target_folder=big_data_background, ref_seq_folder=ref_path, igs_len=m,
+                                      score_type='weighted', thresh=0.5, msa_fast=True, gaps_allowed=False,
+                                      file_out=True, folder_to_save=test_output_folder + f'/control dataset')
 
     for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3]):
-        out_data_temp = ribodesigner(target_sequences_folder=dataset,
-                                     ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=n,
-                                     selective=False, background_sequences_folder=big_data_background, min_true_cov=0.3,
-                                     identity_thresh=0.5, msa_fast=True, percent_of_background_seqs_used=1,
-                                     score_type='weighted', n_limit=0.1, percent_of_target_seqs_used=1,
-                                     gaps_allowed=False, fileout=True,
+        out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
+                                     guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
+                                     background_sequences_folder=big_data_background, identity_thresh=0.5,
+                                     msa_fast=True, percent_of_background_seqs_used=0.0001, score_type='weighted', n_limit=0,
+                                     percent_of_target_seqs_used=0.0001, gaps_allowed=False, fileout=True,
+                                     random_guide_sampling=True, random_guide_sample_size=10,
                                      folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
         universal_datasets.append(out_data_temp)
 
-    for i, dataset in enumerate([big_data_1, big_data_2, big_data_3]):
-        out_data_temp = ribodesigner(target_sequences_folder=dataset,
-                                     ref_sequence_file=ref_path, igs_length=m, guide_length=n, min_length=n,
-                                     selective=True, background_sequences_folder=big_data_background, min_true_cov=0.3,
-                                     identity_thresh=0.5, msa_fast=True, percent_of_background_seqs_used=1,
-                                     score_type='weighted', n_limit=0.1, percent_of_target_seqs_used=1,
-                                     gaps_allowed=False, fileout=True,
+    for i, datasets in enumerate([(big_data_entero_only, big_data_no_entero), (big_data_pseudo_only, big_data_no_pseudo), big_data_3]):
+        out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
+                                     guide_length=n, min_length=n, selective=True, min_true_cov=0.3,
+                                     background_sequences_folder=datasets[1], identity_thresh=0.5,
+                                     msa_fast=True, percent_of_background_seqs_used=0.0001, score_type='weighted', n_limit=0,
+                                     percent_of_target_seqs_used=0.0001, gaps_allowed=False, fileout=True,
+                                     random_guide_sampling=True, random_guide_sample_size=10,
                                      folder_to_save=test_output_folder + f'/selective dataset {i + 1}')
         selective_datasets.append(out_data_temp)
 
@@ -86,9 +87,13 @@ if __name__ == '__main__':
                 universal_designs=universal_datasets, var_regs=e_coli_var_regs, file_loc=test_output_folder + '/' + big_data_file_for_output)
 
 
+    # # This is using the csv made with the code on top of this one
+    # make_graphs(control_designs=[], selective_designs=[],
+    #             universal_designs=[], var_regs=e_coli_var_regs, data_file=test_output_folder + '/' + test_file)
+
     # This is using the csv made with the code on top of this one
     make_graphs(control_designs=[], selective_designs=[],
-                universal_designs=[], var_regs=e_coli_var_regs, data_file=test_output_folder + '/' + test_file)
+                universal_designs=[], var_regs=e_coli_var_regs, data_file=test_output_folder + '/' + big_data_file_for_output)
 
     playsound('/System/Library/Sounds/Pop.aiff')
     print(f'Test data done!\n########################################################\n')
