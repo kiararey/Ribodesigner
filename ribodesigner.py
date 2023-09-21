@@ -324,7 +324,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                  identity_thresh: float = 0.7, fileout: bool = False, folder_to_save: str = '', n_limit: float = 0.0,
                  score_type: str = 'quantitative', msa_fast: bool = False, gaps_allowed: bool = True,
                  percent_of_target_seqs_used: float = 1.0, percent_of_background_seqs_used: float = 1,
-                 random_guide_sampling: bool = True, random_guide_sample_size: int = 10):
+                 random_guide_sample_size: int = 10):
     """Generates ribozyme designs to target a set of sequences.
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
     sequences used without replacement
@@ -426,16 +426,20 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
     # Now, optimize all of the possible guide sequences for each IGS:
     print('Now optimizing guide sequences...')
+    # # Test optimizing guide sequences
+    # optimize_designs(to_optimize[0], score_type=score_type, thresh=identity_thresh, msa_fast=msa_fast,
+    #                  gaps_allowed=gaps_allowed, compare_to_background=False,
+    #                  random_sample_size=random_guide_sample_size, random_sample=True)
     time1 = time.perf_counter()
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         # vectorize function. For the multiprocessing module I made it return the updated RibozymeDesign
 
         fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
                               excluded=['score_type', 'thresh', 'msa_fast', 'gaps_allowed', 'compare_to_background',
-                                        'random_sampling', 'random_sample_size'])
+                                        'random_sample_size', 'random_sample'])
         # prepare data for starmap
         in_data = [(sub_array, score_type, identity_thresh, guide_length, msa_fast, gaps_allowed, False,
-                    random_guide_sampling, random_guide_sample_size)
+                    random_guide_sample_size, True)
                    for sub_array in np.array_split(to_optimize, process_num)]
 
         # multithread
@@ -749,88 +753,82 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
 def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float = 0.7, guide_len: int = 50,
                      msa_fast: bool = True, gaps_allowed: bool = True, compare_to_background: bool = False,
-                     random_sampling: bool = False, random_sample_size: int = 10):
+                     random_sample_size: int = 10, random_sample: bool = False):
     """
     Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
     when compare_to_background is set to true, will do an MSA on background seqs and will update the anti-guide sequence
 
     """
     if not compare_to_background:
+        random_indices = np.random.permutation(np.arange(len(to_optimize.guides_to_use)))
         sub_sample = to_optimize.guides_to_use
     else:
+        random_indices = np.random.permutation(np.arange(len(to_optimize.background_guides)))
         sub_sample = to_optimize.background_guides
 
-    if random_sampling and random_sample_size < len(sub_sample):
-        indices = np.random.choice(len(sub_sample), size=random_sample_size, replace=False)
-    else:
-        indices = range(len(sub_sample))
+    if random_sample and random_sample_size < len(sub_sample):
+        # Extract guide batches: technically it won't split into all even chunk sizes, but it will split arrays into
+        # len(sub_sample) % sample_size arrays of sample_size + 1 size, then the rest will be split into arrays of
+        # the expected size
+        batch_indices = np.array_split(random_indices, len(sub_sample)/random_sample_size)
+        batches = np.array([(sub_sample[index] for index in indices) for indices in batch_indices])
 
-    # First create a dummy file with all the guides we want to optimize
-    with open(f'to_align_{to_optimize.id}.fasta', 'w') as f:
-        for line in indices:
-            f.write('>seq' + str(line) + '\n' + str(sub_sample[line]) + '\n')
+        # Prepare to run msa
+        names = np.array([f'{to_optimize.id}_{i}' for i in range(len(batches))])
+        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[np.ndarray, str], excluded=['muscle_exe_name', 'msa_fast',
+                                                                                         'score_type', 'guide_len'])
+        # Should return an array of tuples - (truncated_seq, score)
+        seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast, score_type=score_type,
+                                    guide_len=guide_len)
 
-    muscle_exe = 'muscle5'
-
-    if msa_fast:
-        subprocess.check_output([muscle_exe, '-super5', f'to_align_{to_optimize.id}.fasta', '-output',
-                                 f'aln_{to_optimize.id}.afa'], stderr=subprocess.DEVNULL)
-    else:
-        subprocess.check_output([muscle_exe, '-align', f'to_align_{to_optimize.id}.fasta', '-output',
-                                 f'aln_{to_optimize.id}.afa'], stderr=subprocess.DEVNULL)
-
-    msa = AlignIO.read(open(f'aln_{to_optimize.id}.afa'), 'fasta')
-
-    # delete files:
-    if os.path.exists(f'aln_{to_optimize.id}.afa'):
-        os.remove(f'aln_{to_optimize.id}.afa')
-    if os.path.exists(f'to_align_{to_optimize.id}.fasta'):
-        os.remove(f'to_align_{to_optimize.id}.fasta')
-
-    # Now retrieve the alignment
-    summary_align = AlignInfo.SummaryInfo(msa)
-    alignments = [record.seq for record in summary_align.alignment]
-
-    # thanks to https://github.com/mdehoon for telling me about .degenerate_consensus!!!
-    if score_type != 'quantitative':
-        if gaps_allowed:
-            opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
-        else:
-            opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip(
-                '-').replace('-', 'N')
-        # Make sure our sequence is our desired length
-        truncated_seq = opti_seq[-guide_len:]
-
-        if score_type == 'naive':
-            # Naively tell me what the percent identity is: 1- ambiguity codons/ length
-            score = get_naive_score(truncated_seq)
-
-        elif score_type == 'weighted':
-            score = get_weighted_score(truncated_seq)
-
-        elif score_type == 'directional':
-            score = get_directional_score(truncated_seq)
-
-        else:
-            print('Score type not recognized. Defaulting to naive scoring')
-            score = get_naive_score(truncated_seq)
+        # Pick the sequence with the best score: this will be our guide sequence to optimize
+        index = np.argmax(seqs_and_scores[1])
+        best_guide, best_score = (seqs_and_scores[0][index], float(seqs_and_scores[1][index]))
 
     else:
-        if gaps_allowed:
-            left_seq = summary_align.gap_consensus(threshold=thresh, ambiguous='N')[-guide_len:]
+        batches = np.array((guide for guide in sub_sample))
+        best_guide, best_score = muscle_msa_routine(sequences_to_align=sub_sample, name_of_file=to_optimize.id,
+                                             muscle_exe_name='muscle5', msa_fast=msa_fast, score_type=score_type,
+                                             guide_len=guide_len)
+        if not compare_to_background:
+            to_optimize.update_after_optimizing(score_attr=best_score, guide_attr=best_guide, score_type_attr=score_type,
+                                                reset_guides=True)
         else:
-            left_seq = summary_align.dumb_consensus(threshold=thresh, ambiguous='N')[-guide_len:]
-        score, opti_seq = get_quantitative_score(left_seq, alignments, count_gaps=gaps_allowed)
-        truncated_seq = opti_seq[-guide_len:]
+            to_optimize.anti_guide = best_guide[-len(to_optimize.guide):]
+            to_optimize.anti_guide_score = best_score
+        return to_optimize
 
     # Now update our initial design
     if not compare_to_background:
-        to_optimize.update_after_optimizing(score_attr=score, guide_attr=truncated_seq, score_type_attr=score_type,
-                                            reset_guides=True)
+        # Set initial guide
+        to_optimize.guide = best_guide
+        to_optimize.score = best_score
+        to_optimize.score_type = score_type
+
+        # Prepare the rest of the consensus sequences to do a refinement step!
+        seqs_for_refine_step = np.delete(seqs_and_scores[0], index)
+
+        # Do a pairwise analysis: keep decreasing the ambiguity of our sequence
+        for other_guide in seqs_for_refine_step:
+            if best_score == 1:
+                break
+
+            to_optimize.anti_guide = other_guide
+            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=to_optimize, target_background=True, n_limit=1,
+                                                       update_score=False)
+
+            if new_seq_score > best_score:
+                best_guide = new_seq
+                best_score = new_seq_score
+                to_optimize.guide = best_guide
+                to_optimize.score = best_score
+
+        to_optimize.update_after_optimizing(score_attr=best_score, guide_attr=best_guide,
+                                            score_type_attr=score_type, reset_guides=True)
     else:
         # In case the sequence is using min_len that is different than the guide length
-        to_optimize.anti_guide = opti_seq[-len(to_optimize.guide):]
-        to_optimize.anti_guide_score = score
+        to_optimize.anti_guide = best_guide[-len(to_optimize.guide):]
+        to_optimize.anti_guide_score = best_score
 
     return to_optimize
 
@@ -1241,7 +1239,8 @@ def check_guide_stats(ribo_design, igs_sites_targets, aligned_target_sequences, 
 
 
 def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool = False,
-                      n_limit: float = 1, score_params: list = []):
+                      n_limit: float = 1, score_params: list = [], update_score: bool = True):
+
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
                               'K': 'M', 'V': 'T', 'H': 'G', 'D': 'C', 'B': 'A', 'N': 'N', '-': 'N'}
@@ -1305,9 +1304,12 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
     new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=pairwise_comparison_consensus,
                                                         score_type=sequence_to_fix.score_type,
                                                         score_params=score_params)
-
-    sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=new_seq,
-                                         new_score=new_seq_score, reset_guides=True)
+    if update_score:
+        sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=new_seq,
+                                             new_score=new_seq_score, reset_guides=True)
+        return
+    else:
+        return new_seq_score, new_seq
 
 
 def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', score_params: list = []):
@@ -1575,3 +1577,54 @@ def plot_variable_regions(ax, var_regs):
     for V in var_regs:
         ax.axvspan(V[0], V[1], facecolor='g', alpha=0.2)
     return
+
+
+def muscle_msa_routine(sequences_to_align: np.ndarray[Seq], name_of_file: str, muscle_exe_name: str, msa_fast: bool,
+                       score_type: str, guide_len: int):
+    # First create a dummy file with all the guides we want to optimize
+    with open(f'to_align_{name_of_file}.fasta', 'w') as f:
+        for i, line in enumerate(sequences_to_align):
+            f.write('>seq' + str(i) + '\n' + str(line) + '\n')
+    if msa_fast:
+        subprocess.check_output([muscle_exe_name, '-super5', f'to_align_{name_of_file}.fasta', '-output',
+                                 f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
+    else:
+        subprocess.check_output([muscle_exe_name, '-align', f'to_align_{name_of_file}.fasta', '-output',
+                                 f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
+
+    msa = AlignIO.read(open(f'aln_{name_of_file}.afa'), 'fasta')
+
+    # delete files:
+    if os.path.exists(f'aln_{name_of_file}.afa'):
+        os.remove(f'aln_{name_of_file}.afa')
+    if os.path.exists(f'to_align_{name_of_file}.fasta'):
+        os.remove(f'to_align_{name_of_file}.fasta')
+
+    # Now retrieve the alignment
+    summary_align = AlignInfo.SummaryInfo(msa)
+    alignments = [record.seq for record in summary_align.alignment]
+
+    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+    # Make sure our sequence is our desired length
+    truncated_seq = opti_seq[-guide_len:]
+
+    score = return_score_from_type(sequence_to_test=truncated_seq, score_type=score_type)
+
+    return truncated_seq, score
+
+
+def return_score_from_type(sequence_to_test: Seq, score_type: str):
+    if score_type == 'naive':
+        # Naively tell me what the percent identity is: 1- ambiguity codons/ length
+        score = get_naive_score(sequence_to_test)
+
+    elif score_type == 'weighted':
+        score = get_weighted_score(sequence_to_test)
+
+    elif score_type == 'directional':
+        score = get_directional_score(sequence_to_test)
+
+    else:
+        print('Score type not recognized. Defaulting to naive scoring')
+        score = get_naive_score(sequence_to_test)
+    return score
