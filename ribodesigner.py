@@ -453,38 +453,41 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
     if fileout:
         write_output_file(designs=optimized_seqs, folder_path=folder_to_save)
-    background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
 
-    print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
+    if selective:
+        background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
 
-    if percent_of_background_seqs_used < 1:
-        background_names_and_seqs = np.random.choice(
-            background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
-            replace=False)
-        print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
+        print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
 
-    # first find the IGSes and locations of the background sequences. We do not want to hit these.
-    # Also align these to the reference sequence
-    with alive_bar(unknown='fish', spinner='fishes') as bar:
-        fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
-                        guide_length=guide_length, min_length=min_length)
+        if percent_of_background_seqs_used < 1:
+            background_names_and_seqs = np.random.choice(
+                background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
+                replace=False)
+            print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
+
+        # first find the IGSes and locations of the background sequences. We do not want to hit these.
+        # Also align these to the reference sequence
+        with alive_bar(unknown='fish', spinner='fishes') as bar:
+            fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
+                            guide_length=guide_length, min_length=min_length)
+            time2 = time.perf_counter()
+            bar()
+        round_convert_time(start=time1, end=time2, round_to=4,
+                           task_timed=f'finding catalytic sites and indexing background sequences to reference')
+
+        print('Now applying designed ribozymes with background sequences and getting statistics...')
+        opti_target_seqs = ribo_checker(optimized_seqs, background_names_and_seqs, len(ref_name_and_seq[1]),
+                                        identity_thresh=identity_thresh, guide_length=guide_length,
+                                        score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
+                                        flexible_igs=True, n_limit=n_limit, target_background=not selective)
+
+        if fileout:
+            write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
+
         time2 = time.perf_counter()
-        bar()
-    round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'finding catalytic sites and indexing background sequences to reference')
-
-    print('Now applying designed ribozymes with background sequences and getting statistics...')
-    opti_target_seqs = ribo_checker(optimized_seqs, background_names_and_seqs, len(ref_name_and_seq[1]),
-                                    identity_thresh=identity_thresh, guide_length=guide_length,
-                                    score_type=score_type, gaps_allowed=gaps_allowed, msa_fast=msa_fast,
-                                    flexible_igs=True, n_limit=n_limit, target_background=not selective)
-
-    if fileout:
-        write_output_file(designs=opti_target_seqs, folder_path=folder_to_save)
-
-    time2 = time.perf_counter()
-    round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
-                                                                      'sequences')
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
+                                                                          'sequences')
+    # Finally, test sequences against a test dataset
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
@@ -1090,9 +1093,7 @@ def test_ribo_design(design: str, target_folder: str, ref_seq_folder: str, igs_l
     # Now score our design against these sequences
     with alive_bar(len(locations_and_scores), spinner='fishes') as bar:
         for to_score in locations_and_scores:
-            pairwise_comparison_consensus = Bio.motifs.create([to_score.guide, to_score.anti_guide],
-                                                              alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
-            design_score, background_score = pairwise_comparison(to_score.guide, pairwise_comparison_consensus)
+            design_score, background_score = pairwise_comparison(to_score.guide, to_score.anti_guide)
             to_score.background_guides = None
             to_score.score = design_score
             to_score.background_score = background_score
@@ -1298,10 +1299,7 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
         new_seq += new_base
 
     # Now do a pairwise sequence with the target sequence to see the delta score:
-    pairwise_comparison_consensus = Bio.motifs.create([new_seq, sequence_to_fix.anti_guide],
-                                                      alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
-
-    new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=pairwise_comparison_consensus,
+    new_seq_score, pairwise_score = pairwise_comparison(seq_a=Seq(new_seq), seq_b=sequence_to_fix.anti_guide,
                                                         score_type=sequence_to_fix.score_type,
                                                         score_params=score_params)
     if update_score:
@@ -1313,32 +1311,32 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
 
 
 def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', score_params: list = []):
-    # seq_b is pairwise
+    pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b], alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
     if score_type == 'quantitative':
         if score_params:
             a_params = [seq_a].extend(score_params)
             seq_a_score = map(get_quantitative_score, a_params)
-            b_params = [seq_b].extend(score_params)
-            seq_b_score = map(get_quantitative_score, b_params)
+            pairwise_params = [pairwise_comparison_consensus].extend(score_params)
+            pairwise_score = map(get_quantitative_score, pairwise_params)
         else:
             print('Cannot do quantitative score without a list of alignments. Performing weighted score instead...')
             seq_a_score = get_weighted_score(seq_a)
-            seq_b_score = get_weighted_score(seq_b)
+            pairwise_score = get_weighted_score(pairwise_comparison_consensus)
     elif score_type == 'weighted':
         seq_a_score = get_weighted_score(seq_a)
-        seq_b_score = get_weighted_score(seq_b)
+        pairwise_score = get_weighted_score(pairwise_comparison_consensus)
     elif score_type == 'directional':
         seq_a_score = get_directional_score(seq_a)
-        seq_b_score = get_directional_score(seq_b)
+        pairwise_score = get_directional_score(pairwise_comparison_consensus)
     elif score_type == 'naive':
         seq_a_score = get_naive_score(seq_a)
-        seq_b_score = get_naive_score(seq_b)
+        pairwise_score = get_naive_score(pairwise_comparison_consensus)
     else:
         print(f'Score type {score_type} is not supported. Please choose either weighted, quantitative, '
               f'or directional.')
         return -1
 
-    return seq_a_score, seq_b_score
+    return seq_a_score, pairwise_score
 
 
 def write_output_file(designs: np.ndarray[RibozymeDesign], folder_path: str, taxonomy='Order'):

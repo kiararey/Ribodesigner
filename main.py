@@ -67,7 +67,7 @@ if __name__ == '__main__':
         out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
                                      guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
                                      background_sequences_folder=big_data_background, identity_thresh=0.5,
-                                     msa_fast=True, percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
+                                     msa_fast=True, percent_of_background_seqs_used=0.01, score_type='weighted', n_limit=0,
                                      percent_of_target_seqs_used=0.01, gaps_allowed=False, fileout=True,
                                      random_guide_sample_size=3,
                                      folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
