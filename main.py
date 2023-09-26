@@ -46,11 +46,13 @@ if __name__ == '__main__':
     universal_data_1 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
     universal_data_2 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_3.fasta'
     universal_data_3 = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_4.fasta'
-    big_data_entero_only = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_1.fasta'
-    big_data_pseudo_only = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_1.fasta'
+    big_data_entero_only = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_only_1.fasta'
+    big_data_pseudo_only = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_only_1.fasta'
+    big_data_no_entero_or_pseudo = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo_or_entero.fasta'
     big_data_no_pseudo = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
     big_data_no_entero = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
-    big_data_background = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
+    big_data_only_entero_and_pseudo = 'Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished/Pseudo_and_entero_only_1.fasta'
+    background_data = 'Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
     test_output_folder = 'test_output_files/test_outputs_ribodesigner_v2'
     test_file = 'test_dataset_for_graphs.csv'
     big_data_file_for_output = 'large_dataset.csv'
@@ -63,22 +65,24 @@ if __name__ == '__main__':
     #                                   score_type='weighted', thresh=0.5, msa_fast=True, gaps_allowed=False,
     #                                   file_out=True, folder_to_save=test_output_folder + f'/control dataset')
 
-    for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3]):
-        out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
-                                     guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
-                                     background_sequences_folder=big_data_background, identity_thresh=0.5,
-                                     msa_fast=True, percent_of_background_seqs_used=0.01, score_type='weighted', n_limit=0,
-                                     percent_of_target_seqs_used=0.01, gaps_allowed=False, fileout=True,
-                                     random_guide_sample_size=3,
-                                     folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
-        universal_datasets.append(out_data_temp)
+    # for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3]):
+    #     out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
+    #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
+    #                                  background_sequences_folder=big_data_background, identity_thresh=0.5,
+    #                                  msa_fast=True, percent_of_background_seqs_used=0.01, score_type='weighted', n_limit=0,
+    #                                  percent_of_target_seqs_used=0.01, gaps_allowed=False, fileout=True,
+    #                                  random_guide_sample_size=3,
+    #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
+    #     universal_datasets.append(out_data_temp)
 
-    for i, datasets in enumerate([(big_data_entero_only, big_data_no_entero), (big_data_pseudo_only, big_data_no_pseudo), big_data_3]):
+    for i, datasets in enumerate([(big_data_entero_only, big_data_no_entero),
+                                  (big_data_pseudo_only, big_data_no_pseudo),
+                                  (big_data_no_entero_or_pseudo, big_data_only_entero_and_pseudo)]):
         out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
                                      guide_length=n, min_length=n, selective=True, min_true_cov=0.3,
                                      background_sequences_folder=datasets[1], identity_thresh=0.5,
-                                     msa_fast=True, percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
-                                     percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
+                                     msa_fast=True, percent_of_background_seqs_used=0.001, score_type='weighted', n_limit=0,
+                                     percent_of_target_seqs_used=0.001, gaps_allowed=False, fileout=True,
                                      random_guide_sample_size=10,
                                      folder_to_save=test_output_folder + f'/selective dataset {i + 1}')
         selective_datasets.append(out_data_temp)

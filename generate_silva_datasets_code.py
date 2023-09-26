@@ -38,8 +38,10 @@ silva_by_taxonomy_path = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bact
 # Here is the file where we want to save the dataset
 output_path_entero = 'Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished'
 output_path_pseudo = 'Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished'
+output_path_both = 'Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished'
 output_path_background_no_e = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished_no_entero'
 output_path_background_no_p = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished_no_pseudo'
+output_path_background_no_p_or_e = 'Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished'
 
 # There are only Bacteria in this dataset, so will only do that:
 fasta_file_names = np.array([file_name for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
@@ -50,24 +52,33 @@ num_of_sequences_per_genus = 5
 
 include_only_entero = ['Enterobacterales']
 include_only_pseudo = ['Pseudomonadales']
+include_only_both = ['Pseudomonadales', 'Enterobacterales']
 taxonomy_level_of_inclusion = 'Order'
 
 # Generate the squished datasets
-generate_silva_datasets(silva_by_taxonomy_path, output_path_entero, num_of_datasets=num_of_datasets,
-                        num_of_sequences=num_of_sequences_per_genus, include_only=include_only_entero,
+# generate_silva_datasets(silva_by_taxonomy_path, output_path_entero, num_of_datasets=num_of_datasets,
+#                         num_of_sequences=num_of_sequences_per_genus, include_only=include_only_entero,
+#                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
+#
+# generate_silva_datasets(silva_by_taxonomy_path, output_path_pseudo, num_of_datasets=num_of_datasets,
+#                         num_of_sequences=num_of_sequences_per_genus, include_only=include_only_pseudo,
+#                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
+
+generate_silva_datasets(silva_by_taxonomy_path, output_path_both, num_of_datasets=num_of_datasets,
+                        num_of_sequences=num_of_sequences_per_genus, include_only=include_only_both,
                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
 
-generate_silva_datasets(silva_by_taxonomy_path, output_path_pseudo, num_of_datasets=num_of_datasets,
-                        num_of_sequences=num_of_sequences_per_genus, include_only=include_only_pseudo,
-                        exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
+# Generate background datasets (exclude one or the other or both)
+# generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_e, num_of_datasets=1,
+#                         num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_entero,
+#                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
+#
+# generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_p, num_of_datasets=1,
+#                         num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_pseudo,
+#                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
 
-# Generate background datasets (exclude one or the other)
-generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_e, num_of_datasets=1,
-                        num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_entero,
-                        exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
-
-generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_p, num_of_datasets=1,
-                        num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_pseudo,
+generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_p_or_e, num_of_datasets=1,
+                        num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_both,
                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
 
 
