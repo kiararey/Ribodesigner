@@ -1381,22 +1381,25 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     # Extract top scores for each category - this way it will count for us!
     all_data_df.index.name = 'Index'
     labels = list(set(all_data_df.index))
+    universal_labels = [name for name in labels if name[0] == 'u']
+    selective_labels = [name for name in labels if name[0] == 's']
     labels.sort()
     control_designs_df = all_data_df.loc['control']
-    universal_designs_df = all_data_df.loc[[name for name in labels if name[0] == 'u']]
-    num_universal = len([name for name in labels if name[0] == 'u'])
-    selective_designs_df = all_data_df.loc[[name for name in labels if name[0] == 's']]
-    num_selective = len([name for name in labels if name[0] == 's'])
+    universal_designs_df = all_data_df.loc[universal_labels]
+    num_universal = len(universal_labels)
+    selective_designs_df = all_data_df.loc[selective_labels]
+    num_selective = len(selective_labels)
 
     # get top scores in each: 1 control, one of each group of selective and universal
     top_score_control = control_designs_df.nlargest(1, 'composite_background_score')
-    top_scores_universal = universal_designs_df.nlargest(3, 'composite_score')
-    top_scores_selective = selective_designs_df.nlargest(3, 'composite_background_score')
-
-    # top_scores_universal = universal_designs_df.sort_values('composite_background_score', ascending=False).groupby(
-    #     universal_designs_df.index).head(10)
-    # top_scores_selective = selective_designs_df.sort_values('composite_background_score', ascending=False).groupby(
-    #     selective_designs_df.index).head(10)
+    top_scores_universal = universal_designs_df.loc[universal_labels[0]].nlargest(1, 'composite_score')
+    for label in universal_labels[1:]:
+        score_temp = universal_designs_df.loc[label].nlargest(1, 'composite_score')
+        top_scores_universal = pd.concat([top_scores_universal, score_temp])
+    top_scores_selective = selective_designs_df.loc[selective_labels[0]].nlargest(1, 'composite_score')
+    for label in selective_labels[1:]:
+        score_temp = selective_designs_df.loc[label].nlargest(1, 'composite_background_score')
+        top_scores_selective = pd.concat([top_scores_selective, score_temp])
 
     top_background_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
 
@@ -1479,9 +1482,18 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     plt.show()
 
     # Graph 3: violin plot, showing composite score distribution in all designs of a given category
-    fig_3_data = all_data_df['composite_background_score']
-    plt.title('Composite score distribution by dataset')
-    sns.violinplot(x=fig_3_data.index, y=fig_3_data, inner=None, cut=0)
+    back_score_data = all_data_df.loc[:, ['id', 'background_score']]
+    back_score_data['score_type'] = 'Guide score'
+    back_score_data.rename(columns={'background_score': 'score'}, inplace=True)
+    back_true_cov_data = all_data_df.loc[:, ['id', 'true_%_cov_background']]
+    back_true_cov_data['score_type'] = 'True % coverage'
+    back_true_cov_data.rename(columns={'true_%_cov_background': 'score'}, inplace=True)
+    fig_3_data = pd.concat([back_score_data, back_true_cov_data])
+    # fig_3_data = all_data_df['background_score']
+    plt.title('Guide and IGS scores distribution on test dataset')
+    # sns.violinplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, inner='point', cut=0, split=True)
+    sns.boxplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, notch=True, boxprops={'alpha': 0.7})
+    sns.stripplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, dodge=True)
     plt.tight_layout()
     plt.show()
 
