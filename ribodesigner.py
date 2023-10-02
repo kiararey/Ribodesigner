@@ -18,8 +18,8 @@ from Bio.Align import AlignInfo, PairwiseAligner
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from alive_progress import alive_bar
-from numpy.random import default_rng
-
+from icecream import ic
+ic.configureOutput(prefix='debug | --> ')
 
 # Expanded version of SilvaSequence
 # noinspection DuplicatedCode
@@ -64,7 +64,6 @@ class RibozymeDesign:
     Accepted kwargs:
     'g': list[Seq]  # guides to use to later
     """
-
     def __init__(self, id_attr: str, guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: int = None, score_type_attr: str = '', perc_cov_attr: float = None,
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
@@ -135,10 +134,16 @@ class RibozymeDesign:
             self.composite_background_score = None
 
         if self.composite_score and self.composite_background_score:
+            self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
+            self.delta_guide_vs_background = self.score - self.background_score
             self.delta_vs_background = self.composite_score - self.composite_background_score
         elif self.composite_score:
+            self.delta_igs_vs_background = self.true_perc_cov
+            self.delta_guide_vs_background = self.score
             self.delta_vs_background = self.composite_score
         else:
+            self.delta_igs_vs_background = 0
+            self.delta_guide_vs_background = 0
             self.delta_vs_background = 0
 
         if self.composite_background_score:
@@ -146,22 +151,36 @@ class RibozymeDesign:
         else:
             self.optimized_to_background = False
 
-    def to_dict(self, taxonomy: str = ''):
-        if taxonomy:
+    def to_dict(self, taxonomy: str | list = '', all_data: bool = False):
+        inputs = {}
+        if not taxonomy:
+            taxonomy = ['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Taxon']
+        if type(taxonomy) == list:
+            for target in taxonomy:
+                target_input = (str(give_taxonomy(str(self.targets), level=target))
+                                .replace('[[', '{').replace('\']]', '}')
+                                .replace(', \'', ':').replace('\'], [', ';'))
+                inputs[f'target_{target}'] = target_input
+                back_target_input = (str(give_taxonomy(str(self.targets), level=target))
+                                     .replace('[[', '{').replace('\']]', '}')
+                                     .replace(', \'', ':').replace('\'], [', ';'))
+                inputs[f'target_{target}_background'] = back_target_input
+        else:
             if self.targets:
-                target_input = str(give_taxonomy(str(self.targets),
-                                                 level=taxonomy)).replace(',', ';').replace('\'', '')
+                target_input = (str(give_taxonomy(str(self.targets), level=taxonomy))
+                                .replace('[[', '{').replace('\']]', '}')
+                                .replace(', \'', ':').replace('\'], [', ';'))
             else:
                 target_input = ''
             if self.background_targets:
-                background_target_input = str(give_taxonomy(str(self.background_targets),
-                                                            level=taxonomy)).replace(',', ';').replace('\'', '')
+                background_target_input = (str(give_taxonomy(str(self.background_targets), level=taxonomy))
+                                           .replace('[[', '{').replace('\']]', '}')
+                                           .replace(', \'', ':').replace('\'], [', ';'))
             else:
                 background_target_input = ''
-        else:
-            target_input = str(self.targets).replace(',', '|')
-            background_target_input = str(self.background_targets).replace(',', '|')
-        return {
+            inputs[taxonomy] = target_input
+            inputs[f'{taxonomy}_background'] = background_target_input
+        return_dict = {
             'id': self.id,
             'igs': self.igs,
             'reference_idx': self.ref_idx,
@@ -169,8 +188,6 @@ class RibozymeDesign:
             'optimized_to_background': self.optimized_to_background,
             'tested_design': self.tested_design,
             'guide': str(self.guide),
-            'guides_to_use': self.guides_to_use,
-            'targets': target_input,
             'num_of_targets': self.number_of_targets,
             'score_type': self.score_type,
             'score': self.score,
@@ -178,19 +195,26 @@ class RibozymeDesign:
             '%_on target': self.perc_on_target,
             'true_%_cov': self.true_perc_cov,
             'composite_score': self.composite_score,
-            'background_targets': background_target_input,
             'num_of_targets_background': self.number_of_targets_background,
-            'background_guides': self.background_guides,
             'u_conservation_background': self.u_conservation_background,
-            'anti_guide': str(self.anti_guide),
-            'anti_guide_score': self.anti_guide_score,
             'background_score': self.background_score,
             '%_coverage_background': self.perc_cov_background,
             '%_on target_background': self.perc_on_target_background,
             'true_%_cov_background': self.true_perc_cov_background,
             'composite_background_score': self.composite_background_score,
+            'delta_igs_vs_background': self.delta_igs_vs_background,
+            'delta_guide_vs_background': self.delta_guide_vs_background,
             'delta_vs_background': self.delta_vs_background
         }
+        if all_data:
+            more_data = {
+                'guides_to_use': self.guides_to_use,
+                'background_guides': self.background_guides,
+                'anti_guide': str(self.anti_guide),
+                'anti_guide_score': self.anti_guide_score}
+            return_dict.update(more_data)
+        return_dict.update(inputs)
+        return return_dict
 
     def __lt__(self, other):
         if self.optimized_to_background:
@@ -266,6 +290,7 @@ class RibozymeDesign:
         self.guide = guide_attr
         if reset_guides:
             self.guides_to_use = None
+            self.anti_guide = None
         self.score_type = score_type_attr
         self.optimized_to_targets = True
         self.composite_score = self.true_perc_cov * score_attr
@@ -285,6 +310,8 @@ class RibozymeDesign:
             self.background_guides = None
         self.guide = new_guide
         self.composite_background_score = self.true_perc_cov_background * background_score_attr
+        self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
+        self.delta_guide_vs_background = self.score - self.background_score
         self.delta_vs_background = self.composite_score - self.composite_background_score
 
     def print_attributes(self, taxonomy='Order'):
@@ -417,10 +444,12 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     # Now, optimize all of the possible guide sequences for each IGS:
     print('Now optimizing guide sequences...')
     # # Test optimizing guide sequences
-    # optimize_designs(to_optimize[0], score_type=score_type, thresh=identity_thresh, msa_fast=msa_fast,
-    #                  gaps_allowed=gaps_allowed, compare_to_background=False,
-    #                  random_sample_size=random_guide_sample_size, random_sample=True)
-    time1 = time.perf_counter()
+    # for i in range(0, 10):
+    #     optimize_designs(to_optimize[i], score_type=score_type, thresh=identity_thresh, msa_fast=msa_fast,
+    #                      gaps_allowed=gaps_allowed, compare_to_background=False,
+    #                      random_sample_size=random_guide_sample_size, random_sample=True)
+    #     ic()
+    # time1 = time.perf_counter()
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         # vectorize function. For the multiprocessing module I made it return the updated RibozymeDesign
 
@@ -487,8 +516,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
     print('Now applying designed ribozymes with background sequences and getting statistics...')
     optimized_seqs = ribo_checker(optimized_seqs, test_names_and_seqs, len(ref_name_and_seq[1]),
-                                  guide_length=guide_length, flexible_igs=True, n_limit=n_limit,
-                                  target_background=not selective, refine_selective=False)
+                                  guide_length=guide_length, flexible_igs=True, n_limit=1, refine_selective=False)
 
     if fileout:
         write_output_file(designs=optimized_seqs, folder_path=folder_to_save)
@@ -787,15 +815,14 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float
         fn_muscle = np.vectorize(muscle_msa_routine, otypes=[np.ndarray, str], excluded=['muscle_exe_name', 'msa_fast',
                                                                                          'score_type', 'guide_len'])
         # Should return an array of tuples - (truncated_seq, score)
-        seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast, score_type=score_type,
-                                    guide_len=guide_len)
+        seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast,
+                                    score_type=score_type, guide_len=guide_len)
 
         # Pick the sequence with the best score: this will be our guide sequence to optimize
         index = np.argmax(seqs_and_scores[1])
         best_guide, best_score = (seqs_and_scores[0][index], float(seqs_and_scores[1][index]))
 
     else:
-        batches = np.array((guide for guide in sub_sample))
         best_guide, best_score = muscle_msa_routine(sequences_to_align=sub_sample, name_of_file=to_optimize.id,
                                                     muscle_exe_name='muscle5', msa_fast=msa_fast, score_type=score_type,
                                                     guide_len=guide_len)
@@ -839,7 +866,6 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, thresh: float
         # In case the sequence is using min_len that is different than the guide length
         to_optimize.anti_guide = best_guide[-len(to_optimize.guide):]
         to_optimize.anti_guide_score = best_score
-
     return to_optimize
 
 
@@ -981,12 +1007,14 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
             f'Out of {len(designs)} designs, {len(designs_below_n_limit)} '
             f'have scores with < {n_limit * 100}% N content.')
 
-    return designs_below_n_limit
+    filered_designs = list(filter(lambda item: item is not None, designs_below_n_limit))
+
+    return filered_designs
 
 
 def test_ribo_design(design: str, test_folder: str, ref_seq_folder: str, igs_len: int = 5, score_type: str = 'naive',
                      thresh: float = 0.7, msa_fast: bool = False, gaps_allowed: bool = False, file_out: bool = False,
-                     folder_to_save: str = '', taxonomy='Order'):
+                     folder_to_save: str = '', taxonomy=''):
     print('Testing ribozyme design!')
     start = time.perf_counter()
     # first, read in all our sequences
@@ -1182,7 +1210,6 @@ def check_guide_stats(ribo_design: RibozymeDesign, igs_sites_targets: np.ndarray
             guides_to_optimize = np.array([str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
                                            target, index_of_target_data in
                                            zip(orgs_with_u_on_target, all_indexes_of_target_data)])
-
         # If necessary, optimize further:
         if ribo_design.score < 1 and refine_selective:
             best_score = ribo_design.score
@@ -1201,7 +1228,6 @@ def check_guide_stats(ribo_design: RibozymeDesign, igs_sites_targets: np.ndarray
                     best_score = new_seq_score
                     ribo_design.guide = best_guide
                     ribo_design.score = best_score
-
         # Find average guide score
         fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
                                    excluded=['seq_b', 'score_type', 'only_consensus'])
@@ -1290,18 +1316,19 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
 
         new_seq += new_base
 
-    # Now do a pairwise sequence with the target sequence to see the delta score:
-    new_seq_score, pairwise_score = pairwise_comparison(seq_a=Seq(new_seq), seq_b=sequence_to_fix.anti_guide,
-                                                        score_type=sequence_to_fix.score_type)
     if update_score:
-        sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=new_seq,
+        # Now do a pairwise sequence with the target sequence to see the delta score:
+        new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
+                                                            score_type=sequence_to_fix.score_type)
+        sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
                                              new_score=new_seq_score, reset_guides=True)
         return
     else:
+        new_seq_score = return_score_from_type(sequence_to_test=new_seq, score_type=sequence_to_fix.score_type)
         return new_seq_score, new_seq
 
 
-def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', only_consensus: bool = False):
+def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False):
     if len(seq_a) != len(seq_b):
         pad = '-' * abs(len(seq_a) - len(seq_b))
         if len(seq_a) > len(seq_b):
@@ -1309,7 +1336,8 @@ def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', only_
         else:
             seq_a += pad
 
-    pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b], alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
+    pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b],
+                                                      alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
     pairwise_score = return_score_from_type(sequence_to_test=pairwise_comparison_consensus, score_type=score_type)
 
     if only_consensus:
@@ -1319,49 +1347,17 @@ def pairwise_comparison(seq_a: Seq, seq_b: Seq, score_type: str = 'naive', only_
         return seq_a_score, pairwise_score
 
 
-def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign], folder_path: str, taxonomy='Order'):
-    if designs[0].optimized_to_targets and designs[0].optimized_to_background:
-        if os.path.exists(f'{folder_path}/Targeted designs against background above threshold.csv'):
-            os.remove(f'{folder_path}/Targeted designs against background above threshold.csv')
-        first_row = 'IGS,Reference index,Number of species targeted,Score,Score_type,% cov,% on target,true % cov,' \
-                    'Composite score,background score,% cov background,% on target background,' \
-                    'true % cov background,Composite score background,Delta composite score vs background,' \
-                    'Optimized guide,Optimized guide + G + IGS\n'
-        with open(f'{folder_path}/Targeted designs against background above threshold.csv', 'w') as f:
-            f.write(first_row)
-            for ribo_design in designs:
-                f.write(ribo_design.print_attributes())
-        return
-
-    elif designs[0].optimized_to_targets:
-        if os.path.exists(f'{folder_path}/All targeted designs.csv'):
-            os.remove(f'{folder_path}/All targeted designs.csv')
-        first_row = 'IGS,Reference index,Number of species targeted,Score,Score type,% cov,% on target,True % cov,' \
-                    'Composite score,Optimized guide,Optimized guide + G + IGS\n'
-        with open(f'{folder_path}/All targeted designs.csv', 'w') as f:
-            f.write(first_row)
-            for ribo_design in designs:
-                f.write(ribo_design.print_attributes())
-        return
-    elif designs[0].tested_design:
-        if os.path.exists(f'{folder_path}/Sequence tested on background.csv'):
-            os.remove(f'{folder_path}/Sequence tested on background.csv')
-        first_row = 'IGS,Reference index,Number of tested species targeted,Putative targets,Score type,Design score,' \
-                    'Score on targets,% cov background,% on target background,true % cov background,' \
-                    'Composite score background,Optimized guide,Optimized guide + G + IGS,Ideal guide,' \
-                    'Ideal guide + G + IGS\n'
-        with open(f'{folder_path}/Sequence tested on background.csv', 'w') as f:
-            f.write(first_row)
-            for ribo_design in designs:
-                f.write(ribo_design.print_attributes(taxonomy=taxonomy))
-    else:
-        print('Please optimize to targets or optimize to targets then to background first.')
-        return
+def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign], folder_path: str, taxonomy=''):
+    designs_df = pd.DataFrame.from_records([item.to_dict(taxonomy=taxonomy) for item in designs])
+    if os.path.exists(f'{folder_path}/Targeted designs against background above threshold.csv'):
+        os.remove(f'{folder_path}/Targeted designs against background above threshold.csv')
+    designs_df.to_csv(f'{folder_path}/Targeted designs against background above threshold.csv', index=False)
+    return
 
 
 def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_designs: list[np.ndarray[RibozymeDesign]],
                 selective_designs: list[np.ndarray[RibozymeDesign]], var_regs: list[tuple[int, int]],
-                save_fig: bool = False, file_loc: str = None, file_type: str = 'png', taxonomy: str = 'Order',
+                save_fig: bool = False, file_loc: str = None, file_type: str = 'png', taxonomy: str = '',
                 data_file: str = ''):
     # Make data into a pandas dataframe
     if not data_file:
@@ -1392,13 +1388,13 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
 
     # get top scores in each: 1 control, one of each group of selective and universal
     top_score_control = control_designs_df.nlargest(1, 'composite_background_score')
-    top_scores_universal = universal_designs_df.loc[universal_labels[0]].nlargest(1, 'composite_score')
+    top_scores_universal = universal_designs_df.loc[universal_labels[0]].nlargest(1, 'composite_background_score')
     for label in universal_labels[1:]:
-        score_temp = universal_designs_df.loc[label].nlargest(1, 'composite_score')
+        score_temp = universal_designs_df.loc[label].nlargest(1, 'composite_background_score')
         top_scores_universal = pd.concat([top_scores_universal, score_temp])
-    top_scores_selective = selective_designs_df.loc[selective_labels[0]].nlargest(1, 'composite_score')
+    top_scores_selective = selective_designs_df.loc[selective_labels[0]].nlargest(1, 'delta_vs_background')
     for label in selective_labels[1:]:
-        score_temp = selective_designs_df.loc[label].nlargest(1, 'composite_background_score')
+        score_temp = selective_designs_df.loc[label].nlargest(1, 'delta_vs_background')
         top_scores_selective = pd.concat([top_scores_selective, score_temp])
 
     top_background_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
@@ -1574,10 +1570,14 @@ def give_taxonomy(silva_name: str, level: str):
     for name in putative_names:
         all_levels = name.split(';')
         try:
-            here_is_taxonomy = all_levels[level_names[level]]
+            if level == 'Domain':
+                here_is_taxonomy = all_levels[0].split(' ')[-1]
+            else:
+                here_is_taxonomy = all_levels[level_names[level]]
+            out_names.append(here_is_taxonomy)
         except IndexError:
-            here_is_taxonomy = ''
-        out_names.append(here_is_taxonomy)
+            out_names.append('unknown')
+            continue
     if out_names:
         counts_and_names = np.asarray(np.unique(out_names, return_counts=True)).T
         return counts_and_names.tolist()
@@ -1591,7 +1591,7 @@ def plot_variable_regions(ax, var_regs):
     return
 
 
-def muscle_msa_routine(sequences_to_align: np.ndarray[Seq], name_of_file: str, muscle_exe_name: str, msa_fast: bool,
+def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: str, msa_fast: bool,
                        score_type: str, guide_len: int):
     # First create a dummy file with all the guides we want to optimize
     with open(f'to_align_{name_of_file}.fasta', 'w') as f:
@@ -1625,7 +1625,7 @@ def muscle_msa_routine(sequences_to_align: np.ndarray[Seq], name_of_file: str, m
     return truncated_seq, score
 
 
-def return_score_from_type(sequence_to_test: Seq, score_type: str):
+def return_score_from_type(sequence_to_test: Seq | str, score_type: str):
     if score_type == 'naive':
         # Naively tell me what the percent identity is: 1- ambiguity codons/ length
         score = get_naive_score(sequence_to_test)

@@ -72,8 +72,8 @@ if __name__ == '__main__':
         out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
                                      guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
                                      identity_thresh=0.5, msa_fast=True, score_type='weighted', n_limit=0,
-                                     percent_of_target_seqs_used=0.001, gaps_allowed=False, fileout=True,
-                                     random_guide_sample_size=3, test_folder=background_data,
+                                     percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
+                                     random_guide_sample_size=10, test_folder=background_data,
                                      folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
         universal_datasets.append(out_data_temp)
 
@@ -83,8 +83,8 @@ if __name__ == '__main__':
         out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
                                      guide_length=n, min_length=n, selective=True, min_true_cov=0.3,
                                      background_sequences_folder=datasets[1], identity_thresh=0.5, msa_fast=True,
-                                     percent_of_background_seqs_used=0.001, score_type='weighted', n_limit=0,
-                                     percent_of_target_seqs_used=0.001, gaps_allowed=False, fileout=True,
+                                     percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
+                                     percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
                                      random_guide_sample_size=10,
                                      folder_to_save=test_output_folder + f'/selective dataset {i + 1}',
                                      test_folder=background_data)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     make_graphs(control_designs=control_design, selective_designs=selective_datasets,
                 universal_designs=universal_datasets, var_regs=e_coli_var_regs,
-                file_loc=test_output_folder + '/' + big_data_file_for_output, taxonomy='Class')
+                file_loc=test_output_folder + '/' + big_data_file_for_output, taxonomy='')
 
     # # This is using the csv made with the code on top of this one
     # make_graphs(control_designs=[], selective_designs=[],
