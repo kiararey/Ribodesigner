@@ -1402,38 +1402,115 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20, 16)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
 
     # Graph 1a:
-    fig1a, ax1a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
+    fig1a, ax1a = plt.subplots(nrows=1, ncols=2, layout='constrained', sharey='all',
                                sharex='all')
     fig1a.suptitle('True % coverage vs. composite score of designs on test dataset')
-    for i, dataset_name in enumerate([name for name in labels if name[0] == 'u']):
-        sns.scatterplot(x='composite_background_score', y='true_%_cov_background', data=all_data_df.loc[dataset_name],
-                        ax=ax1a[i][0], alpha=0.7)
-        ax1a[i][0].set_title(dataset_name)
-    for i, dataset_name in enumerate([name for name in labels if name[0] == 's']):
-        sns.scatterplot(x='composite_background_score', y='true_%_cov_background', data=all_data_df.loc[dataset_name],
-                        ax=ax1a[i][1], alpha=0.7)
-        ax1a[i][1].set_title(dataset_name)
+    sns.scatterplot(x='delta_vs_background', y='num_of_targets_background', data=universal_designs_df,
+                    ax=ax1a[0], alpha=0.7, hue=universal_designs_df.index.name)
+    ax1a[0].set_title('Universal')
+    sns.scatterplot(x='delta_vs_background', y='num_of_targets_background', data=selective_designs_df,
+                    ax=ax1a[1], alpha=0.7, hue=selective_designs_df.index.name)
+    ax1a[1].set_title('Selective')
     plt.tight_layout()
     plt.show()
 
+    def make_jointplot(x_var, y_var):
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=4, ncols=9)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[1:4, 0:3]),
+            1: jointplot_fig.add_subplot(gridspec[0:1, 0:3]),
+            2: jointplot_fig.add_subplot(gridspec[1:4, 3:4]),
+            3: jointplot_fig.add_subplot(gridspec[1:4, 5:8]),
+            4: jointplot_fig.add_subplot(gridspec[0:1, 5:8]),
+            5: jointplot_fig.add_subplot(gridspec[1:4, 8:9])
+        }
+        for i, dset, labels in zip([0, 3], [universal_designs_df, selective_designs_df],
+                                   [universal_labels, selective_labels]):
+            slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset[x_var],
+                                                                   y=dset[y_var])
+            sns.scatterplot(x=x_var, y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i],
+                            alpha=0.7)
+            sns.kdeplot(x=x_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 1],
+                        fill=True, common_norm=True, alpha=.3, legend=False)
+            sns.kdeplot(y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 2],
+                        fill=True, common_norm=True, alpha=.3, legend=False)
+
+            joint_ax[i].annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
+
+        jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
+        jointplot_fig.axes[3].sharex(jointplot_fig.axes[0])
+        jointplot_fig.axes[3].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[1].set(xlabel=None)
+        jointplot_fig.axes[2].set(ylabel=None)
+        jointplot_fig.axes[4].set(xlabel=None)
+        jointplot_fig.axes[5].set(ylabel=None)
+        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+        jointplot_fig.axes[1].tick_params(labelbottom=False)
+        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[2].tick_params(labelleft=False)
+        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
+        jointplot_fig.axes[4].tick_params(labelbottom=False)
+        jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
+        jointplot_fig.axes[5].tick_params(labelleft=False)
+
+        plt.show()
+        return
+
+    make_jointplot('true_%_cov_background', 'background_score')
+    make_jointplot('delta_igs_vs_background', 'delta_guide_vs_background')
+
     # Graph 1b:
     # Left graph: universal designs, right graph: selective designs
-    for dset in [universal_designs_df, selective_designs_df]:
-        slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset['true_%_cov_background'],
-                                                               y=dset['background_score'])
-        reg_plot = sns.jointplot(x='true_%_cov_background', y='background_score', hue=dset.index.name,
-                                 data=dset, xlim=(-0.1, 1.1), ylim=(-0.1, 1.1))
-        reg_plot.ax_joint.annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
-        plt.show()
+    # fig1b = plt.figure()
+    # gridspec = fig1b.add_gridspec(nrows=4, ncols=9)
+    # ax1b = {
+    #     0: fig1b.add_subplot(gridspec[1:4, 0:3]),
+    #     1: fig1b.add_subplot(gridspec[0:1, 0:3]),
+    #     2: fig1b.add_subplot(gridspec[1:4, 3:4]),
+    #     3: fig1b.add_subplot(gridspec[1:4, 5:8]),
+    #     4: fig1b.add_subplot(gridspec[0:1, 5:8]),
+    #     5: fig1b.add_subplot(gridspec[1:4, 8:9])
+    # }
+    # for i, dset, labels in zip([0, 3], [universal_designs_df, selective_designs_df],
+    #                            [universal_labels, selective_labels]):
+    #     slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset['true_%_cov_background'],
+    #                                                            y=dset['background_score'])
+    #     sns.scatterplot(x='true_%_cov_background', y='background_score', hue=dset.index.name, data=dset, ax=ax1b[i],
+    #                     alpha=0.7)
+    #     sns.kdeplot(x='true_%_cov_background', hue=dset.index.name, data=dset, ax=ax1b[i + 1],
+    #                 fill=True, common_norm=True, alpha=.3, legend=False)
+    #     sns.kdeplot(y='background_score', hue=dset.index.name, data=dset, ax=ax1b[i + 2],
+    #                 fill=True, common_norm=True, alpha=.3, legend=False)
+    #
+    #     ax1b[i].annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
+    #
+    # fig1b.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
+    # fig1b.axes[3].sharex(fig1b.axes[0])
+    # fig1b.axes[3].sharey(fig1b.axes[0])
+    # fig1b.axes[1].set(xlabel=None)
+    # fig1b.axes[2].set(ylabel=None)
+    # fig1b.axes[4].set(xlabel=None)
+    # fig1b.axes[5].set(ylabel=None)
+    # fig1b.axes[1].sharex(fig1b.axes[0])
+    # fig1b.axes[1].tick_params(labelbottom=False)
+    # fig1b.axes[2].sharey(fig1b.axes[0])
+    # fig1b.axes[2].tick_params(labelleft=False)
+    # fig1b.axes[4].sharex(fig1b.axes[3])
+    # fig1b.axes[4].tick_params(labelbottom=False)
+    # fig1b.axes[5].sharey(fig1b.axes[3])
+    # fig1b.axes[5].tick_params(labelleft=False)
+    #
+    # plt.show()
 
     # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
     # selective for all designs in different panels (same data as above but order along gene)
     fig2a, ax2a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
                                sharex='all')
     fig2a.suptitle('Scores along 16s rRNA sequence: universal/ selective')
-    colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
     fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
     fig_2a_columns = ['u_conservation_background', 'true_%_cov_background', 'background_score']
     ax2a[0, 0].set_title('Universal designs')
@@ -1441,7 +1518,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         plot_variable_regions(ax2a[i, 0], var_regs)
         ax2a[i, 0].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
                            label='control')
-        for j, dataset in enumerate([name for name in labels if name[0] == 'u']):
+        for j, dataset in enumerate(universal_labels):
             ax2a[i, 0].scatter(x=universal_designs_df.loc[dataset, 'reference_idx'],
                                y=universal_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
         ax2a[i, 0].set_ylabel(name)
@@ -1453,7 +1530,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         plot_variable_regions(ax2a[i, 1], var_regs)
         ax2a[i, 1].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
                            label='control')
-        for j, dataset in enumerate([name for name in labels if name[0] == 's']):
+        for j, dataset in enumerate(selective_labels):
             ax2a[i, 1].scatter(x=selective_designs_df.loc[dataset, 'reference_idx'],
                                y=selective_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
         ax2a[i, 1].legend()
@@ -1479,17 +1556,17 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
 
     # Graph 3: violin plot, showing composite score distribution in all designs of a given category
     back_score_data = all_data_df.loc[:, ['id', 'background_score']]
-    back_score_data['score_type'] = 'Guide score'
-    back_score_data.rename(columns={'background_score': 'score'}, inplace=True)
+    back_score_data['score_type'] = 'Guide score on test data'
+    back_score_data.rename(columns={'background_score': 'Score'}, inplace=True)
     back_true_cov_data = all_data_df.loc[:, ['id', 'true_%_cov_background']]
-    back_true_cov_data['score_type'] = 'True % coverage'
-    back_true_cov_data.rename(columns={'true_%_cov_background': 'score'}, inplace=True)
+    back_true_cov_data['score_type'] = 'True % coverage on test data'
+    back_true_cov_data.rename(columns={'true_%_cov_background': 'Score'}, inplace=True)
     fig_3_data = pd.concat([back_score_data, back_true_cov_data])
     # fig_3_data = all_data_df['background_score']
     plt.title('Guide and IGS scores distribution on test dataset')
     # sns.violinplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, inner='point', cut=0, split=True)
-    sns.boxplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, notch=True, boxprops={'alpha': 0.7})
-    sns.stripplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, dodge=True)
+    sns.boxplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, notch=True, boxprops={'alpha': 0.7})
+    sns.stripplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, dodge=True)
     plt.tight_layout()
     plt.show()
 
@@ -1509,32 +1586,18 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     plt.show()
 
     # Extract possible taxonomy labels
-    all_targets = [targets.replace('[', '').replace(']]', '').split(']; ') for targets in
-                   top_background_scores['background_targets'] if type(targets) == str]
+    background_target_col_name = f'target_{taxonomy}_background'
     all_targets_set = set()
+    all_targets_raw = dict(top_background_scores[background_target_col_name])
 
-    for items in all_targets:
-        for item in items:
-            try:
-                name, num = item.split('; ')
-            except ValueError:
-                continue
-            all_targets_set.add(name)
+    all_targets_dict = {}
+    for key, val in all_targets_raw.items():
+        val = val.replace(';', ',')
+        all_targets_dict[key] = eval(val)
+        all_targets_set.update(set(all_targets_dict[key].keys()))
 
-    fig_5_data = pd.DataFrame(columns=list(all_targets_set))
+    fig_5_data = pd.DataFrame(all_targets_dict).T
 
-    for i, design_targets in enumerate(top_background_scores['background_targets']):
-        design_dict = {}
-        if type(design_targets) != str:
-            continue
-        all_targets = design_targets.replace('[', '').replace(']]', '').split(']; ')
-        for item in all_targets:
-            try:
-                name, num = item.split('; ')
-                design_dict[name] = int(num)
-            except ValueError:
-                continue
-        fig_5_data.loc[top_background_scores.index[i]] = design_dict
     filter_nans = fig_5_data.groupby(fig_5_data.index).sum()
 
     fig5, ax5 = plt.subplots(ncols=2, nrows=1, sharey='all', layout='constrained')
@@ -1548,7 +1611,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     # Figure 5b
     filter_nans.plot.barh(stacked=True, ax=ax5[1], legend=0)
     ax5[1].set_xlabel('Counts')
-    fig5.suptitle('Orders targeted of dataset')
+    fig5.suptitle(f'{taxonomy} targeted of dataset')
     leg_handles, leg_labels = ax5[0].get_legend_handles_labels()
     fig5.legend(leg_handles, leg_labels, ncols=math.ceil(len(leg_labels) / 14), loc='lower center', fancybox=True,
                 fontsize='x-small')
