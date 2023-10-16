@@ -47,8 +47,9 @@ if __name__ == '__main__':
                    "Data files and Outputs/Ribozyme paper dataset/Original files"
     bad_targets = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Species/Bacillus_halotolerans.fasta'
     universal_data_1 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
-    universal_data_2 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_3.fasta'
-    universal_data_3 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_4.fasta'
+    universal_data_2 = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_2.fasta'
+    universal_data_3 = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_2.fasta'
+    universal_data_4 = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_2.fasta'
     big_data_entero_only = path + 'Enterobacterales_only_squished/Enterobacterales_only_by_Genus_1.fasta'
     big_data_pseudo_only = path + 'Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_1.fasta'
     big_data_no_entero_or_pseudo = path + 'Background_Bacteria_squished/' \
@@ -56,51 +57,56 @@ if __name__ == '__main__':
     big_data_no_pseudo = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
     big_data_no_entero = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
     big_data_only_entero_and_pseudo = path + 'Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta'
-    background_data = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
+    background_data_bac = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
+    background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
+    background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
+    background_data_all = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta'
     test_output_folder = 'test_output_files/test_outputs_ribodesigner_v2'
     test_file = 'test_dataset_for_graphs.csv'
     big_data_file_for_output = 'large_dataset.csv'
 
+    test_data_folders = [background_data_bac, background_data_arc, background_data_euk, background_data_all]
+    test_data_folders_test = [big_data_entero_only, bad_targets]
     # Test new RiboDesigner for images
     universal_datasets = []
     selective_datasets = []
 
-    control_design = test_ribo_design(design=u1376, test_folder=bad_targets, ref_seq_folder=ref_path, igs_len=m,
-                                      score_type='weighted', thresh=0.5, msa_fast=True, gaps_allowed=False,
-                                      file_out=True, folder_to_save=test_output_folder + f'/control dataset')
+    # control_design = test_ribo_design(design=u1376, test_folders=test_data_folders_test, ref_seq_folder=ref_path, igs_len=m,
+    #                                   score_type='weighted', file_out=True,
+    #                                   folder_to_save=test_output_folder + f'/control dataset')
+    #
+    # for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3, universal_data_4]):
+    #     out_data_temp = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path, igs_length=m,
+    #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
+    #                                  msa_fast=True, score_type='weighted', n_limit=0,
+    #                                  percent_of_target_seqs_used=0.0001, gaps_allowed=False, fileout=True,
+    #                                  random_guide_sample_size=10, test_folders=test_data_folders_test,
+    #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
+    #     universal_datasets.append(out_data_temp)
+    #
+    # for i, datasets in enumerate([(big_data_entero_only, big_data_no_entero),
+    #                               (big_data_pseudo_only, big_data_no_pseudo),
+    #                               (big_data_no_entero_or_pseudo, big_data_only_entero_and_pseudo)]):
+    #     out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
+    #                                  guide_length=n, min_length=n, selective=True, min_true_cov=0.3,
+    #                                  background_sequences_folder=datasets[1], msa_fast=True,
+    #                                  percent_of_background_seqs_used=0.0001, score_type='weighted', n_limit=0,
+    #                                  percent_of_target_seqs_used=0.001, gaps_allowed=False, fileout=True,
+    #                                  random_guide_sample_size=10,
+    #                                  folder_to_save=test_output_folder + f'/selective dataset {i + 1}',
+    #                                  test_folders=test_data_folders_test)
+    #     selective_datasets.append(out_data_temp)
 
-    for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3]):
-        out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
-                                     guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
-                                     identity_thresh=0.5, msa_fast=True, score_type='weighted', n_limit=0,
-                                     percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-                                     random_guide_sample_size=10, test_folder=background_data,
-                                     folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
-        universal_datasets.append(out_data_temp)
-
-    for i, datasets in enumerate([(big_data_entero_only, big_data_no_entero),
-                                  (big_data_pseudo_only, big_data_no_pseudo),
-                                  (big_data_no_entero_or_pseudo, big_data_only_entero_and_pseudo)]):
-        out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
-                                     guide_length=n, min_length=n, selective=True, min_true_cov=0.3,
-                                     background_sequences_folder=datasets[1], identity_thresh=0.5, msa_fast=True,
-                                     percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
-                                     percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-                                     random_guide_sample_size=10,
-                                     folder_to_save=test_output_folder + f'/selective dataset {i + 1}',
-                                     test_folder=background_data)
-        selective_datasets.append(out_data_temp)
-
-    make_graphs(control_designs=control_design, selective_designs=selective_datasets,
-                universal_designs=universal_datasets, var_regs=e_coli_var_regs,
-                file_loc=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
-                test_folder=background_data, save_fig=True, save_file_loc=test_output_folder + '/' + 'Figure outputs')
+    # make_graphs(control_designs=control_design, selective_designs=selective_datasets,
+    #             universal_designs=universal_datasets, var_regs=e_coli_var_regs,
+    #             file_loc=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
+    #             test_folders=test_data_folders_test, save_fig=True, save_file_loc=test_output_folder + '/' + 'Figure outputs')
 
     # This is using the csv made with the code on top of this one
     make_graphs(control_designs=[], selective_designs=[],
                 universal_designs=[], var_regs=e_coli_var_regs,
                 data_file=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
-                test_folder=background_data, save_file_loc=test_output_folder + '/' + 'Figure outputs',
+                test_folder=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
                 save_fig=True)
 
     playsound('/System/Library/Sounds/Pop.aiff')
