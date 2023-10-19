@@ -1517,212 +1517,289 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
 
     # Set plot parameters
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20, 16)}
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30, 16)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
+    # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
+    colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
 
-    # Graph 1a:
-    # Find max y label:
-    y_max = all_data_df.max(numeric_only=True)
-    fig1a, ax1a = plt.subplots(nrows=1, ncols=2, layout='constrained',
-                               sharex='all')
-    fig1a.suptitle('Number of targets vs. delta composite scores')
-    sns.scatterplot(x='delta_vs_test', y='num_of_targets_test', data=universal_designs_df,
-                    ax=ax1a[0], alpha=0.7, hue=universal_designs_df.index.name)
-    ax1a[0].set_title('Universal vs. Test Dataset')
-    ax1a[0].set_ylim(bottom=0, top=max(y_max['num_of_targets_test'], y_max['num_of_targets_background']))
-    ax1a[0].set_xlabel('Delta composite score vs. test dataset')
-    ax1a[0].set_ylabel('Number of targets in test dataset')
-    sns.scatterplot(x='delta_vs_background', y='num_of_targets_background', data=selective_designs_df,
-                    ax=ax1a[1], alpha=0.7, hue=selective_designs_df.index.name)
-    ax1a[1].set_title('Selective vs. Background Dataset')
-    ax1a[1].set_ylim(bottom=0, top=max(y_max['num_of_targets_test'], y_max['num_of_targets_background']))
-    ax1a[1].set_xlabel('Delta composite score vs. backpround dataset')
-    ax1a[1].set_ylabel('Number of targets in backpround dataset')
+    # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
+    # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
+    # E. coli MG1655 16s rRNA sequence.
+    target_names = ['bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
 
-    plt.tight_layout()
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/fig1a.{file_type}', format=file_type)
-    plt.show()
+    for i, target_name in enumerate(target_names):
+        universal_subset = all_data_df.loc[f'universal_{i}']
 
-    def make_jointplot(x_var, y_var, name):
+        # Prepare axes
         jointplot_fig = plt.figure()
-        gridspec = jointplot_fig.add_gridspec(nrows=4, ncols=9)
+        gridspec = jointplot_fig.add_gridspec(nrows=4, ncols=11)
         joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[1:4, 0:3]),
-            1: jointplot_fig.add_subplot(gridspec[0:1, 0:3]),
-            2: jointplot_fig.add_subplot(gridspec[1:4, 3:4]),
-            3: jointplot_fig.add_subplot(gridspec[1:4, 5:8]),
-            4: jointplot_fig.add_subplot(gridspec[0:1, 5:8]),
-            5: jointplot_fig.add_subplot(gridspec[1:4, 8:9])
+            0: jointplot_fig.add_subplot(gridspec[1:4, 6:10]),
+            1: jointplot_fig.add_subplot(gridspec[0:1, 6:10]),
+            2: jointplot_fig.add_subplot(gridspec[1:4, 10:11]),
+            3: jointplot_fig.add_subplot(gridspec[0:2, 0:5]),
+            4: jointplot_fig.add_subplot(gridspec[2:4, 0:5]),
         }
-        for i, dset, labels in zip([0, 3], [universal_designs_df, selective_designs_df],
-                                   [universal_labels, selective_labels]):
-            slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset[x_var],
-                                                                   y=dset[y_var])
-            sns.scatterplot(x=x_var, y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i],
-                            alpha=0.7)
-            sns.kdeplot(x=x_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 1],
-                        fill=True, common_norm=True, alpha=.3, legend=False)
-            sns.kdeplot(y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 2],
-                        fill=True, common_norm=True, alpha=.3, legend=False)
-
-            joint_ax[i].annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
-
+        xvar = 'true_%_cov_test'
+        yvar = 'test_score'
+        legend_names = ['Bacteria only', 'Archaea only', 'Eukaryota only', 'All kingdoms', 'Control']
+        # Plot scatter and kde plots
+        sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[0], alpha=0.5,
+                        legend=False)
+        jointplot_fig.axes[0].scatter(x=top_score_control[xvar], y=top_score_control[yvar],
+                                      alpha=1, c='#fde725', label='Control')
+        sns.kdeplot(x=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[1], fill=True,
+                    common_norm=True, alpha=.3, legend=False)
+        sns.kdeplot(y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[2], fill=True,
+                    common_norm=True, alpha=.3, legend=False)
+        jointplot_fig.axes[0].set_xlabel('IGS true percent coverage')
+        jointplot_fig.axes[0].set_ylabel('Guide score')
+        # Set variable regions for location plots
+        plot_variable_regions(joint_ax[3], var_regs)
+        plot_variable_regions(joint_ax[4], var_regs)
+        # Plot test data for each testing condition
+        sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[3],
+                        alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[4],
+                        alpha=0.5)
+        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
+        # Plot control data
+        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'], y=top_score_control[xvar], alpha=1,
+                                      c='#fde725', label='control')
+        jointplot_fig.axes[3].set_ylabel('IGS true percent coverage')
+        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'], y=top_score_control[yvar], alpha=1,
+                                      c='#fde725', label='control')
+        jointplot_fig.axes[4].set_ylabel('Guide score')
+        # Set graph settings for pretti graphing
         jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[3].sharex(jointplot_fig.axes[0])
-        jointplot_fig.axes[3].sharey(jointplot_fig.axes[0])
-        jointplot_fig.axes[1].set(xlabel=None)
-        jointplot_fig.axes[2].set(ylabel=None)
-        jointplot_fig.axes[4].set(xlabel=None)
-        jointplot_fig.axes[5].set(ylabel=None)
-        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
-        jointplot_fig.axes[1].tick_params(labelbottom=False)
-        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
-        jointplot_fig.axes[2].tick_params(labelleft=False)
+        jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
         jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].tick_params(labelbottom=False)
-        jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
-        jointplot_fig.axes[5].tick_params(labelleft=False)
+        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
+        jointplot_fig.axes[1].set(xlabel=None)
+        jointplot_fig.axes[1].set_title('C', loc='left', fontsize=30)
+        jointplot_fig.axes[2].set(ylabel=None)
+        jointplot_fig.axes[3].set(xlabel=None)
+        jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
+        jointplot_fig.axes[4].set(xlabel=None)
+        jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
+        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
+        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
+        jointplot_fig.axes[3].tick_params(labelbottom=False)
+        legend = plt.legend(bbox_to_anchor=(1.6, -0.15), ncols=5, title='Test dataset')
+        for label in legend.get_texts():
+            txt = label.get_text().split('/')[-1][0:3]
+            new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
+            label.set_text(new_label[0])
+        jointplot_fig.suptitle(f'Designs from {target_name} target sequences against test datasets')
 
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/{name}.{file_type}', format=file_type)
+            plt.savefig(fname=f'{save_file_loc}/figure_2_{target_name}.{file_type}', format=file_type)
         plt.show()
-        return
 
-    make_jointplot('true_%_cov_test', 'test_score', name='/fig1b')
-    make_jointplot('delta_igs_vs_test', 'delta_guide_vs_test', name='/fig1c')
-
-    # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
-    # selective for all designs in different panels (same data as above but order along gene)
-    fig2a, ax2a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
-                               sharex='all')
-    fig2a.suptitle('Scores along 16s rRNA sequences in test datasets: universal/ selective')
-    fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
-    fig_2a_columns = ['u_conservation_test', 'true_%_cov_test', 'test_score']
-    ax2a[0, 0].set_title('Universal designs')
-    for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
-        plot_variable_regions(ax2a[i, 0], var_regs)
-        ax2a[i, 0].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
-                           label='control')
-        for j, dataset in enumerate(universal_labels):
-            ax2a[i, 0].scatter(x=universal_designs_df.loc[dataset, 'reference_idx'],
-                               y=universal_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
-        ax2a[i, 0].set_ylabel(name)
-        ax2a[i, 0].legend()
-        ax2a[i, 0].set_xlabel('Position in reference sequence')
-    ax2a[0, 1].set_title('Selective designs')
-    for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
-        plot_variable_regions(ax2a[i, 1], var_regs)
-        ax2a[i, 1].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
-                           label='control')
-        for j, dataset in enumerate(selective_labels):
-            ax2a[i, 1].scatter(x=selective_designs_df.loc[dataset, 'reference_idx'],
-                               y=selective_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
-        ax2a[i, 1].legend()
-    ax2a[i, 0].set_xlabel('Position in reference sequence')
-    plt.tight_layout()
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/fig2a.{file_type}', format=file_type)
-    plt.show()
-
-    fig2b, ax2b = plt.subplots(nrows=2, ncols=1, sharex='all')
-    fig2b.suptitle('Composite score along test 16s sequences')
-
-    for i, (dset, name) in enumerate(zip([universal_designs_df, selective_designs_df], ['Universal', 'Selective'])):
-        plot_variable_regions(ax2b[i], var_regs)
-        ax2b[i].scatter(x=top_score_control['reference_idx'], y=top_score_control['composite_test_score'],
-                        alpha=0.7, c='#fde725', label='control')
-        for j, dataset in enumerate(list(set(dset.index))):
-            ax2b[i].scatter(x=dset.loc[dataset, 'reference_idx'],
-                            y=dset.loc[dataset, 'composite_test_score'], alpha=0.5, c=colors[j], label=dataset)
-        ax2b[i].set_title(name)
-        ax2b[i].set_ylabel('Composite test score')
-    ax2b[1].set_xlabel('16s rRNA sequence position on reference sequence')
-    plt.tight_layout()
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/fig2b.{file_type}', format=file_type)
-    plt.show()
-
-    # Graph 3: violin plot, showing composite score distribution in all designs of a given category
-    back_score_data = all_data_df.loc[:, ['id', 'test_score']]
-    back_score_data['score_type'] = 'Guide score on test data'
-    back_score_data.rename(columns={'test_score': 'Score'}, inplace=True)
-    back_true_cov_data = all_data_df.loc[:, ['id', 'true_%_cov_test']]
-    back_true_cov_data['score_type'] = 'True % coverage on test data'
-    back_true_cov_data.rename(columns={'true_%_cov_test': 'Score'}, inplace=True)
-    fig_3_data = pd.concat([back_score_data, back_true_cov_data])
-    plt.title('Guide and IGS scores distribution on test dataset')
-    # sns.violinplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, inner='point', cut=0, split=True)
-    sns.boxplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, notch=True, boxprops={'alpha': 0.7})
-    sns.stripplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, dodge=True)
-
-    plt.tight_layout()
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/fig3.{file_type}', format=file_type)
-    plt.show()
-
-    # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
-    fig4, ax4 = plt.subplots(nrows=2, ncols=1, sharex='all')
-    for i, dset in enumerate([universal_designs_df, selective_designs_df]):
-        plot_variable_regions(ax4[i], var_regs)
-        ax4[i].scatter(x=top_score_control['reference_idx'], y=top_score_control['delta_vs_test'],
-                       alpha=0.7, c='#fde725', label='control')
-        for j, dataset in enumerate(list(set(dset.index))):
-            ax4[i].scatter(x=dset.loc[dataset, 'reference_idx'], y=dset.loc[dataset, 'delta_vs_test'],
-                           alpha=0.5, c=colors[j], label=dataset)
-        ax4[i].set_ylabel('Delta composite score vs. test dataset')
-    ax4[0].set_title('Universal')
-    ax4[1].set_title('Selective')
-    ax4[1].set_xlabel('16s rRNA sequence position on reference sequence')
-
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/fig4.{file_type}', format=file_type)
-    plt.show()
-
-    # Extract taxonomy levels from test dataset too
-    for i, test_folder in enumerate(test_folders):
-        test_names_and_seqs = read_silva_fasta(in_file=test_folder)
-        fn_align_to_ref = np.vectorize(give_taxonomy, otypes=[TargetSeq], excluded=['level'])
-        test_dataset_taxonomies = fn_align_to_ref(test_names_and_seqs, level=taxonomy)
-
-        test_counts_and_names = dict(np.asarray(np.unique(test_dataset_taxonomies, return_counts=True)).T)
-        # Extract possible taxonomy labels
-        test_target_col_name = f'target_{taxonomy}_test'
-        all_targets_set = set()
-        all_targets_raw = dict(top_test_scores[test_target_col_name])
-
-        all_targets_dict = {f'Test data {i}': test_counts_and_names}
-        for key, val in all_targets_raw.items():
-            val = val.replace(';', ',')
-            all_targets_dict[key] = eval(val)
-            all_targets_set.update(set(all_targets_dict[key].keys()))
-
-    fig_5_data = pd.DataFrame(all_targets_dict).T
-
-    filter_nans = fig_5_data.groupby(fig_5_data.index).sum()
-
-    fig5, ax5 = plt.subplots(ncols=2, nrows=1, sharey='all', layout='constrained')
-    # Figure 5a:
-    # Get 100%
-    totals = filter_nans.sum(axis=1)
-    # Calculate fractions
-    fractions = filter_nans.div(totals, axis=0)
-    fractions.plot.barh(stacked=True, ax=ax5[0], legend=0)
-    ax5[0].set_xlabel('Fraction')
-    # Figure 5b
-    filter_nans.plot.barh(stacked=True, ax=ax5[1], legend=0)
-    ax5[1].set_xlabel('Counts')
-    fig5.suptitle(f'{taxonomy} targeted of dataset')
-    leg_handles, leg_labels = ax5[0].get_legend_handles_labels()
-    fig5.legend(leg_handles, leg_labels, ncols=math.ceil(len(leg_labels) / 14), loc='lower center', fancybox=True,
-                fontsize='x-small')
-    # show the graph
-    plt.tight_layout()
-    plt.subplots_adjust(bottom=0.27)
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/fig5.{file_type}', format=file_type)
-    plt.show()
+    # # Graph 1a:
+    # # Find max y label:
+    # y_max = all_data_df.max(numeric_only=True)
+    # fig1a, ax1a = plt.subplots(nrows=1, ncols=2, layout='constrained',
+    #                            sharex='all')
+    # fig1a.suptitle('Number of targets vs. delta composite scores')
+    # sns.scatterplot(x='delta_vs_test', y='num_of_targets_test', data=universal_designs_df,
+    #                 ax=ax1a[0], alpha=0.7, hue=universal_designs_df.index.name)
+    # ax1a[0].set_title('Universal vs. Test Dataset')
+    # ax1a[0].set_ylim(bottom=0, top=max(y_max['num_of_targets_test'], y_max['num_of_targets_background']))
+    # ax1a[0].set_xlabel('Delta composite score vs. test dataset')
+    # ax1a[0].set_ylabel('Number of targets in test dataset')
+    # sns.scatterplot(x='delta_vs_background', y='num_of_targets_background', data=selective_designs_df,
+    #                 ax=ax1a[1], alpha=0.7, hue=selective_designs_df.index.name)
+    # ax1a[1].set_title('Selective vs. Background Dataset')
+    # ax1a[1].set_ylim(bottom=0, top=max(y_max['num_of_targets_test'], y_max['num_of_targets_background']))
+    # ax1a[1].set_xlabel('Delta composite score vs. backpround dataset')
+    # ax1a[1].set_ylabel('Number of targets in backpround dataset')
+    #
+    # plt.tight_layout()
+    # if save_fig:
+    #     plt.savefig(fname=f'{save_file_loc}/fig1a.{file_type}', format=file_type)
+    # plt.show()
+    #
+    # def make_jointplot(x_var, y_var, name):
+    #     jointplot_fig = plt.figure()
+    #     gridspec = jointplot_fig.add_gridspec(nrows=4, ncols=9)
+    #     joint_ax = {
+    #         0: jointplot_fig.add_subplot(gridspec[1:4, 0:3]),
+    #         1: jointplot_fig.add_subplot(gridspec[0:1, 0:3]),
+    #         2: jointplot_fig.add_subplot(gridspec[1:4, 3:4]),
+    #         3: jointplot_fig.add_subplot(gridspec[1:4, 5:8]),
+    #         4: jointplot_fig.add_subplot(gridspec[0:1, 5:8]),
+    #         5: jointplot_fig.add_subplot(gridspec[1:4, 8:9])
+    #     }
+    #     for i, dset, labels in zip([0, 3], [universal_designs_df, selective_designs_df],
+    #                                [universal_labels, selective_labels]):
+    #         slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset[x_var],
+    #                                                                y=dset[y_var])
+    #         sns.scatterplot(x=x_var, y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i],
+    #                         alpha=0.7)
+    #         sns.kdeplot(x=x_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 1],
+    #                     fill=True, common_norm=True, alpha=.3, legend=False)
+    #         sns.kdeplot(y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 2],
+    #                     fill=True, common_norm=True, alpha=.3, legend=False)
+    #
+    #         joint_ax[i].annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
+    #
+    #     jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
+    #     jointplot_fig.axes[3].sharex(jointplot_fig.axes[0])
+    #     jointplot_fig.axes[3].sharey(jointplot_fig.axes[0])
+    #     jointplot_fig.axes[1].set(xlabel=None)
+    #     jointplot_fig.axes[2].set(ylabel=None)
+    #     jointplot_fig.axes[4].set(xlabel=None)
+    #     jointplot_fig.axes[5].set(ylabel=None)
+    #     jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+    #     jointplot_fig.axes[1].tick_params(labelbottom=False)
+    #     jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+    #     jointplot_fig.axes[2].tick_params(labelleft=False)
+    #     jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
+    #     jointplot_fig.axes[4].tick_params(labelbottom=False)
+    #     jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
+    #     jointplot_fig.axes[5].tick_params(labelleft=False)
+    #
+    #     if save_fig:
+    #         plt.savefig(fname=f'{save_file_loc}/{name}.{file_type}', format=file_type)
+    #     plt.show()
+    #     return
+    #
+    # make_jointplot('true_%_cov_test', 'test_score', name='/fig1b')
+    # make_jointplot('delta_igs_vs_test', 'delta_guide_vs_test', name='/fig1c')
+    #
+    # # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
+    # # selective for all designs in different panels (same data as above but order along gene)
+    # fig2a, ax2a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
+    #                            sharex='all')
+    # fig2a.suptitle('Scores along 16s rRNA sequences in test datasets: universal/ selective')
+    # fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
+    # fig_2a_columns = ['u_conservation_test', 'true_%_cov_test', 'test_score']
+    # ax2a[0, 0].set_title('Universal designs')
+    # for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
+    #     plot_variable_regions(ax2a[i, 0], var_regs)
+    #     ax2a[i, 0].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
+    #                        label='control')
+    #     for j, dataset in enumerate(universal_labels):
+    #         ax2a[i, 0].scatter(x=universal_designs_df.loc[dataset, 'reference_idx'],
+    #                            y=universal_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
+    #     ax2a[i, 0].set_ylabel(name)
+    #     ax2a[i, 0].legend()
+    #     ax2a[i, 0].set_xlabel('Position in reference sequence')
+    # ax2a[0, 1].set_title('Selective designs')
+    # for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
+    #     plot_variable_regions(ax2a[i, 1], var_regs)
+    #     ax2a[i, 1].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
+    #                        label='control')
+    #     for j, dataset in enumerate(selective_labels):
+    #         ax2a[i, 1].scatter(x=selective_designs_df.loc[dataset, 'reference_idx'],
+    #                            y=selective_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
+    #     ax2a[i, 1].legend()
+    # ax2a[i, 0].set_xlabel('Position in reference sequence')
+    # plt.tight_layout()
+    # if save_fig:
+    #     plt.savefig(fname=f'{save_file_loc}/fig2a.{file_type}', format=file_type)
+    # plt.show()
+    #
+    # fig2b, ax2b = plt.subplots(nrows=2, ncols=1, sharex='all')
+    # fig2b.suptitle('Composite score along test 16s sequences')
+    #
+    # for i, (dset, name) in enumerate(zip([universal_designs_df, selective_designs_df], ['Universal', 'Selective'])):
+    #     plot_variable_regions(ax2b[i], var_regs)
+    #     ax2b[i].scatter(x=top_score_control['reference_idx'], y=top_score_control['composite_test_score'],
+    #                     alpha=0.7, c='#fde725', label='control')
+    #     for j, dataset in enumerate(list(set(dset.index))):
+    #         ax2b[i].scatter(x=dset.loc[dataset, 'reference_idx'],
+    #                         y=dset.loc[dataset, 'composite_test_score'], alpha=0.5, c=colors[j], label=dataset)
+    #     ax2b[i].set_title(name)
+    #     ax2b[i].set_ylabel('Composite test score')
+    # ax2b[1].set_xlabel('16s rRNA sequence position on reference sequence')
+    # plt.tight_layout()
+    # if save_fig:
+    #     plt.savefig(fname=f'{save_file_loc}/fig2b.{file_type}', format=file_type)
+    # plt.show()
+    #
+    # # Graph 3: violin plot, showing composite score distribution in all designs of a given category
+    # back_score_data = all_data_df.loc[:, ['id', 'test_score']]
+    # back_score_data['score_type'] = 'Guide score on test data'
+    # back_score_data.rename(columns={'test_score': 'Score'}, inplace=True)
+    # back_true_cov_data = all_data_df.loc[:, ['id', 'true_%_cov_test']]
+    # back_true_cov_data['score_type'] = 'True % coverage on test data'
+    # back_true_cov_data.rename(columns={'true_%_cov_test': 'Score'}, inplace=True)
+    # fig_3_data = pd.concat([back_score_data, back_true_cov_data])
+    # plt.title('Guide and IGS scores distribution on test dataset')
+    # # sns.violinplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, inner='point', cut=0, split=True)
+    # sns.boxplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, notch=True, boxprops={'alpha': 0.7})
+    # sns.stripplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, dodge=True)
+    #
+    # plt.tight_layout()
+    # if save_fig:
+    #     plt.savefig(fname=f'{save_file_loc}/fig3.{file_type}', format=file_type)
+    # plt.show()
+    #
+    # # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
+    # fig4, ax4 = plt.subplots(nrows=2, ncols=1, sharex='all')
+    # for i, dset in enumerate([universal_designs_df, selective_designs_df]):
+    #     plot_variable_regions(ax4[i], var_regs)
+    #     ax4[i].scatter(x=top_score_control['reference_idx'], y=top_score_control['delta_vs_test'],
+    #                    alpha=0.7, c='#fde725', label='control')
+    #     for j, dataset in enumerate(list(set(dset.index))):
+    #         ax4[i].scatter(x=dset.loc[dataset, 'reference_idx'], y=dset.loc[dataset, 'delta_vs_test'],
+    #                        alpha=0.5, c=colors[j], label=dataset)
+    #     ax4[i].set_ylabel('Delta composite score vs. test dataset')
+    # ax4[0].set_title('Universal')
+    # ax4[1].set_title('Selective')
+    # ax4[1].set_xlabel('16s rRNA sequence position on reference sequence')
+    #
+    # if save_fig:
+    #     plt.savefig(fname=f'{save_file_loc}/fig4.{file_type}', format=file_type)
+    # plt.show()
+    #
+    # # Extract taxonomy levels from test dataset too
+    # for i, test_folder in enumerate(test_folders):
+    #     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
+    #     fn_align_to_ref = np.vectorize(give_taxonomy, otypes=[TargetSeq], excluded=['level'])
+    #     test_dataset_taxonomies = fn_align_to_ref(test_names_and_seqs, level=taxonomy)
+    #
+    #     test_counts_and_names = dict(np.asarray(np.unique(test_dataset_taxonomies, return_counts=True)).T)
+    #     # Extract possible taxonomy labels
+    #     test_target_col_name = f'target_{taxonomy}_test'
+    #     all_targets_set = set()
+    #     all_targets_raw = dict(top_test_scores[test_target_col_name])
+    #
+    #     all_targets_dict = {f'Test data {i}': test_counts_and_names}
+    #     for key, val in all_targets_raw.items():
+    #         val = val.replace(';', ',')
+    #         all_targets_dict[key] = eval(val)
+    #         all_targets_set.update(set(all_targets_dict[key].keys()))
+    #
+    # fig_5_data = pd.DataFrame(all_targets_dict).T
+    #
+    # filter_nans = fig_5_data.groupby(fig_5_data.index).sum()
+    #
+    # fig5, ax5 = plt.subplots(ncols=2, nrows=1, sharey='all', layout='constrained')
+    # # Figure 5a:
+    # # Get 100%
+    # totals = filter_nans.sum(axis=1)
+    # # Calculate fractions
+    # fractions = filter_nans.div(totals, axis=0)
+    # fractions.plot.barh(stacked=True, ax=ax5[0], legend=0)
+    # ax5[0].set_xlabel('Fraction')
+    # # Figure 5b
+    # filter_nans.plot.barh(stacked=True, ax=ax5[1], legend=0)
+    # ax5[1].set_xlabel('Counts')
+    # fig5.suptitle(f'{taxonomy} targeted of dataset')
+    # leg_handles, leg_labels = ax5[0].get_legend_handles_labels()
+    # fig5.legend(leg_handles, leg_labels, ncols=math.ceil(len(leg_labels) / 14), loc='lower center', fancybox=True,
+    #             fontsize='x-small')
+    # # show the graph
+    # plt.tight_layout()
+    # plt.subplots_adjust(bottom=0.27)
+    # if save_fig:
+    #     plt.savefig(fname=f'{save_file_loc}/fig5.{file_type}', format=file_type)
+    # plt.show()
     return
 
 

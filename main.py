@@ -71,7 +71,7 @@ if __name__ == '__main__':
     universal_datasets = []
     selective_datasets = []
 
-    # control_design = test_ribo_design(design=u1376, test_folders=test_data_folders_test, ref_seq_folder=ref_path, igs_len=m,
+    # control_design = test_ribo_design(design=u1376, test_folders=test_data_folders, ref_seq_folder=ref_path, igs_len=m,
     #                                   score_type='weighted', file_out=True,
     #                                   folder_to_save=test_output_folder + f'/control dataset')
     #
@@ -79,8 +79,8 @@ if __name__ == '__main__':
     #     out_data_temp = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path, igs_length=m,
     #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0.3,
     #                                  msa_fast=True, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=0.0001, gaps_allowed=False, fileout=True,
-    #                                  random_guide_sample_size=10, test_folders=test_data_folders_test,
+    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
+    #                                  random_guide_sample_size=10, test_folders=test_data_folders,
     #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
     #     universal_datasets.append(out_data_temp)
     #
@@ -90,13 +90,13 @@ if __name__ == '__main__':
     #     out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
     #                                  guide_length=n, min_length=n, selective=True, min_true_cov=0.3,
     #                                  background_sequences_folder=datasets[1], msa_fast=True,
-    #                                  percent_of_background_seqs_used=0.0001, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=0.001, gaps_allowed=False, fileout=True,
+    #                                  percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
+    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
     #                                  random_guide_sample_size=10,
     #                                  folder_to_save=test_output_folder + f'/selective dataset {i + 1}',
-    #                                  test_folders=test_data_folders_test)
+    #                                  test_folders=test_data_folders)
     #     selective_datasets.append(out_data_temp)
-
+    #
     # make_graphs(control_designs=control_design, selective_designs=selective_datasets,
     #             universal_designs=universal_datasets, var_regs=e_coli_var_regs,
     #             file_loc=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     make_graphs(control_designs=[], selective_designs=[],
                 universal_designs=[], var_regs=e_coli_var_regs,
                 data_file=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
-                test_folder=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
+                test_folders=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
                 save_fig=True)
 
     playsound('/System/Library/Sounds/Pop.aiff')
