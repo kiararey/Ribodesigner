@@ -181,21 +181,24 @@ class RibozymeDesign:
                 if self.targets:
                     target_input = (str(give_taxonomy(str(self.targets), level=target))
                                     .replace('[[', '{').replace('\']]', '}')
-                                    .replace(', \'', ':').replace('\'], [', ';'))
+                                    .replace(', \'', ':').replace('\'], [', ';')
+                                    .replace('\n', ''))
                     inputs[f'target_{target}'] = target_input
                 else:
                     inputs[f'target_{target}'] = ''
                 if self.background_targets:
                     back_target_input = (str(give_taxonomy(str(self.background_targets), level=target))
                                          .replace('[[', '{').replace('\']]', '}')
-                                         .replace(', \'', ':').replace('\'], [', ';'))
+                                         .replace(', \'', ':').replace('\'], [', ';')
+                                         .replace('\n', ''))
                     inputs[f'target_{target}_background'] = back_target_input
                 else:
                     inputs[f'target_{target}_background'] = ''
                 if self.test_targets:
                     test_target_input = (str(give_taxonomy(str(self.test_targets), level=target))
                                          .replace('[[', '{').replace('\']]', '}')
-                                         .replace(', \'', ':').replace('\'], [', ';'))
+                                         .replace(', \'', ':').replace('\'], [', ';')
+                                         .replace('\n', ''))
                     inputs[f'target_{target}_test'] = test_target_input
                 else:
                     inputs[f'target_{target}_test'] = ''
@@ -203,19 +206,22 @@ class RibozymeDesign:
             if self.targets:
                 target_input = (str(give_taxonomy(str(self.targets), level=taxonomy))
                                 .replace('[[', '{').replace('\']]', '}')
-                                .replace(', \'', ':').replace('\'], [', ';'))
+                                .replace(', \'', ':').replace('\'], [', ';')
+                                .replace('\n', ''))
             else:
                 target_input = ''
             if self.background_targets:
                 background_target_input = (str(give_taxonomy(str(self.background_targets), level=taxonomy))
                                            .replace('[[', '{').replace('\']]', '}')
-                                           .replace(', \'', ':').replace('\'], [', ';'))
+                                           .replace(', \'', ':').replace('\'], [', ';')
+                                           .replace('\n', ''))
             else:
                 background_target_input = ''
             if self.test_targets:
                 test_target_input = (str(give_taxonomy(str(self.test_targets), level=taxonomy))
-                                           .replace('[[', '{').replace('\']]', '}')
-                                           .replace(', \'', ':').replace('\'], [', ';'))
+                                     .replace('[[', '{').replace('\']]', '}')
+                                     .replace(', \'', ':').replace('\'], [', ';')
+                                     .replace('\n', ''))
             else:
                 test_target_input = ''
             inputs[taxonomy] = target_input
@@ -594,7 +600,8 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
             time1 = time.perf_counter()
             print('Now applying designed ribozymes with background sequences and getting statistics...')
             optimized_seqs = ribo_checker(optimized_seqs, test_names_and_seqs, len(ref_name_and_seq[1]),
-                                          guide_length=guide_length, flexible_igs=True, n_limit=1, refine_selective=False,
+                                          guide_length=guide_length, flexible_igs=True, n_limit=1,
+                                          refine_selective=False,
                                           for_test=True, test_dataset_name=test_folder)
 
             time2 = time.perf_counter()
@@ -1204,14 +1211,14 @@ def check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, 
     designed_idxs = np.array(list(set(ribodesign.ref_idx - 1 for ribodesign in designs)))  # convert to base 0 indexing
     # Adding to maximum size because sometimes the alignment for the very end of a sequence does strange things
     max_len = max(designed_idxs.max(), ref_seq_len)
-    uracil_sites_targets = np.zeros((aligned_target_sequences.size, max_len + 1))
+    uracil_sites_targets = np.zeros((aligned_target_sequences.size, max_len), dtype=int)
     uracil_sites_targets[:, designed_idxs] = 1
 
     print('Finding U sites...')
     with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
         for i, target_sequence in enumerate(aligned_target_sequences):  # base 1 indexing
             # convert to base 0 indexing to match array indexing locations. Clip any weird indexes - larger indexes
-            # than ref_seq_len have happened when running test_ribo_design
+            # than max_len do not appear in our designs and should be ignored to increase speed
             temp_uracil_indexes = np.array([cat_site[1] - 1 for cat_site in
                                             target_sequence.cat_sites if cat_site[1] <= max_len])
             # everything that is a 2 is a U that appears in both the designs and the target sequence,
@@ -1244,14 +1251,26 @@ def check_igs_conservation(uracil_sites_targets, aligned_target_sequences):
     conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
 
     # convert to base 0
-    cat_sites_background = {(i, cat_site[1] - 1): str(cat_site[2]) for i, design in
-                            enumerate(aligned_target_sequences) for cat_site in design.cat_sites}
+    # # WARNING: This overwrites locations with more than one IGS (i.e. where a sequence had many gaps)
+    # cat_sites_background = {(i, cat_site[1] - 1): str(cat_site[2]) for i, design in
+    #                         enumerate(aligned_target_sequences) for cat_site in design.cat_sites}
+    #
+    # # Keep only the sites that are conserved for later.
+    # igs_sites_targets = np.array(np.clip(uracil_sites_targets, 0, 1), copy=True, dtype=str)
+    # with alive_bar(len(conserved_u_sites), spinner='fishes') as bar:
+    #     for row, col in conserved_u_sites:
+    #         try:
+    #             igs_sites_targets[row, col] = cat_sites_background[(row, col)]
+    #         except KeyError:
+    #             print('uh oh')  #row = 2369, col = 1541, does appear in uracil_sites_targets as 2
+    #         bar()
 
-    # Keep only the sites that are conserved for later.
-    igs_sites_targets = np.array(np.clip(uracil_sites_targets, 0, 1), copy=True, dtype=str)
-    with alive_bar(len(conserved_u_sites), spinner='fishes') as bar:
-        for row, col in conserved_u_sites:
-            igs_sites_targets[row, col] = cat_sites_background[(row, col)]
+    # replace with this (will have to fix implementation down the line in check_guide_stats)
+    igs_sites_targets = defaultdict(lambda: [])
+    with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
+        for i, design in enumerate(aligned_target_sequences):
+            for cat_site in design.cat_sites:
+                igs_sites_targets[(i, cat_site[1] - 1)].append(cat_site[2])
             bar()
 
     return igs_sites_targets, conserved_u_sites
@@ -1470,18 +1489,19 @@ def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign]
 
 
 def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_designs: list[np.ndarray[RibozymeDesign]],
-                selective_designs: list[np.ndarray[RibozymeDesign]], var_regs: list[tuple[int, int]],
-                save_fig: bool = False, file_loc: str = None, file_type: str = 'png', taxonomy: str = '',
-                data_file: str = '', save_file_loc: str = '', test_folders: [str] = None):
+                selective_designs: list[np.ndarray[RibozymeDesign]], ref_seq_designs: np.ndarray[RibozymeDesign] | list,
+                var_regs: list[tuple[int, int]], save_fig: bool = False, file_loc: str = None, file_type: str = 'png',
+                taxonomy: str = '', data_file: str = '', save_file_loc: str = '', test_folders: [str] = None):
     if not test_folders:
         print('Please provide test data')
         return
     # Make data into a pandas dataframe
     if not data_file:
-        all_data_array = np.hstack([control_designs] + universal_designs + selective_designs)
+        all_data_array = np.hstack([control_designs] + universal_designs + selective_designs + [ref_seq_designs])
         index_names = ['control'] * len(control_designs) + \
                       [f'universal_{i}' for i, data in enumerate(universal_designs) for _ in data] + \
-                      [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data]
+                      [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data] + \
+                      ['reference_seq'] * len(ref_seq_designs)
 
         all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in all_data_array],
                                                 index=index_names)
@@ -1494,6 +1514,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     # Extract top scores for each category - this way it will count for us!
     all_data_df.index.name = 'Index'
     labels = list(set(all_data_df.index))
+    labels = [label for label in labels if type(label) is str]
     universal_labels = [name for name in labels if name[0] == 'u']
     selective_labels = [name for name in labels if name[0] == 's']
     labels.sort()
@@ -1502,6 +1523,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     num_universal = len(universal_labels)
     selective_designs_df = all_data_df.loc[selective_labels]
     num_selective = len(selective_labels)
+    ref_seq_designs_df = all_data_df.loc['reference_seq']
 
     # get top scores in each: 1 control, one of each group of selective and universal
     top_score_control = control_designs_df.nlargest(1, 'composite_test_score')
@@ -1514,7 +1536,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         score_temp = selective_designs_df.loc[label].nlargest(1, 'delta_vs_background')
         top_scores_selective = pd.concat([top_scores_selective, score_temp])
 
-    top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
+    # top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
 
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30, 16)}
@@ -1522,13 +1544,17 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
 
+    # Fig 1: MG1655
+
     # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
     # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
     # E. coli MG1655 16s rRNA sequence.
-    target_names = ['bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
+    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
+    to_analyze = ['reference_seq', 'universal_0', 'universal_1', 'universal_2', 'universal_3']
 
+    max_vals = all_data_df.max(numeric_only=True)
     for i, target_name in enumerate(target_names):
-        universal_subset = all_data_df.loc[f'universal_{i}']
+        universal_subset = all_data_df.loc[to_analyze[i]]
 
         # Prepare axes
         jointplot_fig = plt.figure()
@@ -1573,13 +1599,13 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         # Set graph settings for pretti graphing
         jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
         jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
-        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
         jointplot_fig.axes[1].set(xlabel=None)
         jointplot_fig.axes[1].set_title('C', loc='left', fontsize=30)
         jointplot_fig.axes[2].set(ylabel=None)
-        jointplot_fig.axes[3].set(xlabel=None)
         jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
+        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
+        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
+        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
         jointplot_fig.axes[4].set(xlabel=None)
         jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
         jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
