@@ -1,5 +1,4 @@
 import glob
-import math
 import multiprocessing as mp
 import os
 import subprocess
@@ -11,7 +10,6 @@ import Bio.motifs
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
 import seaborn as sns
 from Bio import AlignIO
 from Bio.Align import AlignInfo, PairwiseAligner
@@ -1093,13 +1091,13 @@ def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: 
     uracil_sites_targets = check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, for_test)
 
     print('Done! Checking IGS conservation...')
-    igs_sites_targets, conserved_u_sites = check_igs_conservation(uracil_sites_targets, aligned_target_sequences)
+    igs_seqs_to_locs, conserved_u_sites = check_igs_conservation(uracil_sites_targets, aligned_target_sequences)
 
     print('Done! Now checking finding guide stats for all U sites...')
 
     # prepare data for starmap
     with alive_bar(unknown='fish', spinner='fishes') as bar:
-        in_data = [(design, igs_sites_targets, aligned_target_sequences, flexible_igs, conserved_u_sites, guide_length,
+        in_data = [(design, igs_seqs_to_locs, aligned_target_sequences, flexible_igs, conserved_u_sites, guide_length,
                     n_limit, refine_selective, target_background, for_test, test_dataset_name)
                    for design in designs]
 
@@ -1250,144 +1248,143 @@ def check_igs_conservation(uracil_sites_targets, aligned_target_sequences):
     # Keeps the indexes of where Us are conserved, so base 0 indexing
     conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
 
-    # convert to base 0
-    # # WARNING: This overwrites locations with more than one IGS (i.e. where a sequence had many gaps)
-    # cat_sites_background = {(i, cat_site[1] - 1): str(cat_site[2]) for i, design in
-    #                         enumerate(aligned_target_sequences) for cat_site in design.cat_sites}
-    #
-    # # Keep only the sites that are conserved for later.
-    # igs_sites_targets = np.array(np.clip(uracil_sites_targets, 0, 1), copy=True, dtype=str)
-    # with alive_bar(len(conserved_u_sites), spinner='fishes') as bar:
-    #     for row, col in conserved_u_sites:
-    #         try:
-    #             igs_sites_targets[row, col] = cat_sites_background[(row, col)]
-    #         except KeyError:
-    #             print('uh oh')  #row = 2369, col = 1541, does appear in uracil_sites_targets as 2
-    #         bar()
-
     # replace with this (will have to fix implementation down the line in check_guide_stats)
-    igs_sites_targets = defaultdict(lambda: [])
+    igs_seqs_to_locs = defaultdict(lambda: [])
     with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
         for i, design in enumerate(aligned_target_sequences):
             for cat_site in design.cat_sites:
-                igs_sites_targets[(i, cat_site[1] - 1)].append(cat_site[2])
+                igs_seqs_to_locs[cat_site[2]].append([i, cat_site[1] - 1])  # base 0 indexing
             bar()
+    # igs_sites_targets is now a dict of (row, col) keys and a list of all IGSes at that location as values.
+    # Convert back to dict for proper pickling later on
+    return dict(igs_seqs_to_locs), conserved_u_sites
 
-    return igs_sites_targets, conserved_u_sites
 
-
-def check_guide_stats(ribo_design: RibozymeDesign, igs_sites_targets: np.ndarray[float],
+def check_guide_stats(ribo_design: RibozymeDesign, igs_seqs_to_locs: dict,
                       aligned_target_sequences: np.ndarray[TargetSeq], flexible_igs: bool,
                       conserved_u_sites: np.ndarray[np.ndarray[int]], guide_length: int, n_limit: int,
                       refine_selective: bool = False, target_background: bool = False, for_test: bool = True,
                       test_dataset_name: str = ''):
-    # Now find how many conserved IGSes there are
-    # ref_idx is in base 1 indexing, indexes for arrays are base 0
-    check = np.argwhere(igs_sites_targets == ribo_design.igs)  # base 0 indexing
-    # Fill this with empty TargetSeq objects to later make finding taxonomy more easy
-    background_names = set(back_seq.full_name for back_seq in aligned_target_sequences[check[:, 0]])
-    if not for_test:
-        ribo_design.background_targets = background_names
-    else:
-        ribo_design.test_targets = background_names
-    # Convert to base 0 indexing
-    orgs_with_igs_on_target = check[np.argwhere(check[:, 1] == ribo_design.ref_idx - 1)][:, 0, 0]
-    on_target_count = orgs_with_igs_on_target.size
-    if on_target_count > 0:
-        true_perc_cov = on_target_count / aligned_target_sequences.size
-        orgs_with_igs = np.unique(check[:, 0])
-        perc_cov = orgs_with_igs.size / aligned_target_sequences.size
-        perc_on_target = true_perc_cov / perc_cov
-        if not for_test:
-            ribo_design.calc_background_percent_coverages(perc_cov_background_attr=perc_cov,
-                                                          true_perc_cov_background_attr=true_perc_cov,
-                                                          perc_on_target_background_attr=perc_on_target)
-        else:
-            ribo_design.true_perc_cov_test = true_perc_cov
-            ribo_design.perc_cov_test = perc_cov
-            ribo_design.perc_on_target_test = perc_on_target
-        # If the igs is not flexible, only check those that have a perfect igs upstream of the cat_site
-        if not flexible_igs:
-            # comparing two base 1 indexes, no conversion needed, but this will hold base 0
-            all_indexes_of_target_data = [np.argwhere(
-                np.array([cat_site[1] for cat_site
-                          in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
-                                          for target_number in orgs_with_igs_on_target]
-
-            guides_to_optimize = [str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
-                                  target, index_of_target_data in
-                                  zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
-        # Otherwise, extract all info in conserved cat_sites regardless of igs. As long at the catalytic U is on
-        # target, we'll extract those data
-        else:
-            # Convert to base 0 indexing
-            orgs_with_u_on_target = conserved_u_sites[
-                                        np.where(conserved_u_sites[:, 1] == ribo_design.ref_idx - 1)][:, 0]
-            # comparing two base 1 indexes, no conversion needed, but this will hold base 0
-            # I'm not sure why the following line won't work if I don't convert the list in np.argwhere into an array
-            all_indexes_of_target_data = [np.argwhere(
-                np.array([cat_site[1] for cat_site
-                          in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
-                                          for target_number in orgs_with_u_on_target]
-            guides_to_optimize = np.array([str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
-                                           target, index_of_target_data in
-                                           zip(orgs_with_u_on_target, all_indexes_of_target_data)])
-        # If necessary, optimize further:
-        if ribo_design.score < 1 and refine_selective and not for_test:
-            best_score = ribo_design.score
-
-            # Do a pairwise analysis: keep decreasing the ambiguity of our sequence
-            for other_guide in guides_to_optimize:
-                if best_score == 1:
-                    break
-
-                ribo_design.anti_guide = other_guide
-                new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=ribo_design, update_score=False,
-                                                           target_background=target_background, n_limit=1)
-
-                if new_seq_score > best_score:
-                    best_guide = new_seq
-                    best_score = new_seq_score
-                    ribo_design.guide = best_guide
-                    ribo_design.score = best_score
-        # Find average guide score
-        fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
-                                   excluded=['seq_b', 'score_type', 'only_consensus'])
-
-        scores = fn_pairwise(guides_to_optimize, seq_b=ribo_design.guide, score_type=ribo_design.score_type,
-                             only_consensus=True)
-        if not for_test:
-            ribo_design.update_to_background(background_score_attr=scores.mean(), new_guide=ribo_design.guide,
-                                             new_score=ribo_design.score, reset_guides=True)
-        else:
-            ribo_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
-
-        return ribo_design
-    else:
+    def set_no_targets(for_test_attr, ribo_design_attr, guide_len_attr, n_limit_attr, test_dataset_name_attr):
         # No hits in the background! filter out those that have too many Ns
         # Scores are set at 0 based on the assumption that if there is no catalytic U there is no splicing
         # activity
-        if not for_test:
-            ribo_design.calc_background_percent_coverages(perc_cov_background_attr=0,
-                                                          true_perc_cov_background_attr=0,
-                                                          perc_on_target_background_attr=0)
-        else:
-            ribo_design.true_perc_cov_test = 0
-            ribo_design.perc_cov_test = 0
-            ribo_design.perc_on_target_test = 0
+
         # remove designs with too many Ns
-        if ribo_design.guide.count('N') / guide_length <= n_limit:
+        if ribo_design_attr.guide.count('N') / guide_len_attr <= n_limit_attr:
             # Follow the same naming as the outputs of replace_ambiguity.
-            if not for_test:
-                ribo_design.update_to_background(background_score_attr=0, new_guide=ribo_design.guide,
-                                                 new_score=ribo_design.score, reset_guides=True)
+            if not for_test_attr:
+                ribo_design_attr.true_perc_cov_background = 0
+                ribo_design_attr.perc_cov_background = 0
+                ribo_design_attr.perc_on_target_background = 0
+                ribo_design_attr.update_to_background(background_score_attr=0, new_guide=ribo_design_attr.guide,
+                                                      new_score=ribo_design_attr.score, reset_guides=True)
             else:
-                ribo_design.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name)
-            return ribo_design
+                ribo_design_attr.true_perc_cov_test = 0
+                ribo_design_attr.perc_cov_test = 0
+                ribo_design_attr.perc_on_target_test = 0
+                ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
+            return ribo_design_attr
         else:
             # free up memory
-            del ribo_design
+            del ribo_design_attr
             return None
+
+    # Now find how many conserved IGSes there are
+    # ref_idx is in base 1 indexing, indexes for arrays are base 0
+    try:
+        matching_igses = np.array(igs_seqs_to_locs[ribo_design.igs])  # base 0 indexing
+        orgs_with_igs = np.unique(matching_igses[:, 0])
+        # Convert to base 0 indexing
+        orgs_with_igs_on_target = matching_igses[np.argwhere(matching_igses[:, 1] == ribo_design.ref_idx - 1)][:, 0, 0]
+        on_target_count = orgs_with_igs_on_target.size
+        true_perc_cov = on_target_count / aligned_target_sequences.size
+        perc_cov = orgs_with_igs.size / aligned_target_sequences.size
+        perc_on_target = true_perc_cov / perc_cov
+        # Fill this with empty TargetSeq objects to later make finding taxonomy easier
+        background_names = set(back_seq.full_name for back_seq in aligned_target_sequences[matching_igses[:, 0]])
+    except KeyError:
+        # If there are no IGSes on target, and we don't want to consider other matching catalytic sites, set no targets
+        if not flexible_igs:
+            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
+            return out
+        true_perc_cov = 0
+        perc_cov = 0
+        perc_on_target = 0
+        background_names = None
+
+    # If the igs is not flexible, only check those that have a perfect igs upstream of the cat_site
+    if not flexible_igs:
+        # Fill this with empty TargetSeq objects to later make finding taxonomy more easy
+        # comparing two base 1 indexes, no conversion needed, but this will hold base 0
+        all_indexes_of_target_data = [np.argwhere(
+            np.array([cat_site[1] for cat_site
+                      in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
+                                      for target_number in orgs_with_igs_on_target]
+
+        guides_to_optimize = [str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
+                              target, index_of_target_data in
+                              zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
+    # Otherwise, extract all info in conserved cat_sites regardless of igs. As long at the catalytic U is on
+    # target, we'll extract those data
+    else:
+        # Convert to base 0 indexing
+        orgs_with_u_on_target = conserved_u_sites[
+                                    np.where(conserved_u_sites[:, 1] == ribo_design.ref_idx - 1)][:, 0]
+        if not orgs_with_u_on_target.any():
+            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
+            return out
+        # if we want to keep only u targets
+        # background_names = set(back_seq.full_name for back_seq in aligned_target_sequences[orgs_with_u_on_target])
+        # comparing two base 1 indexes, no conversion needed, but this will hold base 0
+        # I'm not sure why the following line won't work if I don't convert the list in np.argwhere into an array
+        all_indexes_of_target_data = [np.argwhere(
+            np.array([cat_site[1] for cat_site
+                      in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
+                                      for target_number in orgs_with_u_on_target]
+        guides_to_optimize = np.array([str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
+                                       target, index_of_target_data in
+                                       zip(orgs_with_u_on_target, all_indexes_of_target_data)])
+
+    # If necessary, optimize further:
+    if ribo_design.score < 1 and refine_selective and not for_test:
+        best_score = ribo_design.score
+
+        # Do a pairwise analysis: keep decreasing the ambiguity of our sequence
+        for other_guide in guides_to_optimize:
+            if best_score == 1:
+                break
+
+            ribo_design.anti_guide = other_guide
+            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=ribo_design, update_score=False,
+                                                       target_background=target_background, n_limit=1)
+
+            if new_seq_score > best_score:
+                best_guide = new_seq
+                best_score = new_seq_score
+                ribo_design.guide = best_guide
+                ribo_design.score = best_score
+    # Find average guide score
+    fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
+                               excluded=['seq_b', 'score_type', 'only_consensus'])
+
+    scores = fn_pairwise(guides_to_optimize, seq_b=ribo_design.guide, score_type=ribo_design.score_type,
+                         only_consensus=True)
+    if not for_test:
+        ribo_design.true_perc_cov_background = true_perc_cov
+        ribo_design.perc_cov_background = perc_cov
+        ribo_design.perc_on_target_background = perc_on_target
+        ribo_design.background_targets = background_names
+        ribo_design.update_to_background(background_score_attr=scores.mean(), new_guide=ribo_design.guide,
+                                         new_score=ribo_design.score, reset_guides=True)
+    else:
+        ribo_design.true_perc_cov_test = true_perc_cov
+        ribo_design.perc_cov_test = perc_cov
+        ribo_design.perc_on_target_test = perc_on_target
+        ribo_design.test_targets = background_names
+        ribo_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
+
+    return ribo_design
 
 
 def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool = False,
@@ -1543,28 +1540,108 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
-
-    # Fig 1: MG1655
-
-    # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
-    # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
-    # E. coli MG1655 16s rRNA sequence.
     target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
     to_analyze = ['reference_seq', 'universal_0', 'universal_1', 'universal_2', 'universal_3']
 
     max_vals = all_data_df.max(numeric_only=True)
+
+    # Fig 1: MG1655
+    reference_subset = all_data_df[all_data_df['name_of_test_dataset'].str.contains('Bac')].loc['reference_seq']
+    bacterial_subset = all_data_df[all_data_df['name_of_test_dataset'].str.contains('Bac')].loc['universal_0']
+    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
+    # Only going to plot bacteria test dataset
+    # First, plot x = u conservation, y = igs conservation, hue = guide score
+
+    # Prepare axes
+    for graph, name in zip([reference_subset, bacterial_subset], ['reference seq', 'bacterial']):
+        # Prepare axes
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
+            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
+            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
+            3: jointplot_fig.add_subplot(gridspec[0:2, 0:6]),
+            4: jointplot_fig.add_subplot(gridspec[2:4, 0:6]),
+            5: jointplot_fig.add_subplot(gridspec[4:6, 0:6])
+        }
+        xvar = 'u_conservation_test'
+        yvar = 'true_%_cov_test'
+        hue_var = 'test_score'
+        # Plot scatter and kde plots
+        sns.scatterplot(x=xvar, y=yvar, hue=hue_var, data=graph, ax=joint_ax[0], alpha=0.5, legend=False)
+        jointplot_fig.axes[0].scatter(x=top_score_control_subset[xvar], y=top_score_control_subset[yvar],
+                                      alpha=1, c='#fde725', label='Control')
+        sns.kdeplot(x=xvar, data=graph, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False)
+        sns.kdeplot(y=yvar, data=graph, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False)
+        jointplot_fig.axes[0].legend(bbox_to_anchor=(1.6, -0.15), title='Guide score')
+        jointplot_fig.axes[0].set_xlabel('U conservation')
+        jointplot_fig.axes[0].set_ylabel('IGS true percent coverage')
+        # Set variable regions for location plots
+        plot_variable_regions(joint_ax[3], var_regs)
+        plot_variable_regions(joint_ax[4], var_regs)
+        plot_variable_regions(joint_ax[5], var_regs)
+        # Plot test data for each testing condition
+        sns.scatterplot(x='reference_idx', y='u_conservation_test', data=graph, ax=joint_ax[3], alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y='true_%_cov_test', data=graph, ax=joint_ax[4], alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y='test_score', data=graph, ax=joint_ax[5], alpha=0.5)
+        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
+        # Plot control data
+        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'],
+                                      y=top_score_control_subset['u_conservation_test'],
+                                      alpha=1, c='#fde725', label='control')
+        jointplot_fig.axes[3].set_ylabel('U site conservation')
+        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'],
+                                      y=top_score_control_subset['u_conservation_test'],
+                                      alpha=1, c='#fde725', label='control')
+        jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
+        jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'],
+                                      y=top_score_control_subset[yvar], alpha=1,
+                                      c='#fde725', label='control')
+        jointplot_fig.axes[5].set_ylabel('Guide score')
+        # Set graph settings for pretti graphing
+        jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
+        jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
+        jointplot_fig.axes[1].set(xlabel=None)
+        jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
+        jointplot_fig.axes[2].set(ylabel=None)
+        jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
+        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
+        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
+        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
+        jointplot_fig.axes[4].set(xlabel=None)
+        jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
+        jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
+        jointplot_fig.axes[5].set(xlabel='Reference 16s rRNA index')
+        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
+        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
+        jointplot_fig.axes[3].tick_params(labelbottom=False)
+        jointplot_fig.axes[4].tick_params(labelbottom=False)
+        jointplot_fig.suptitle(f'Designs from {name} target sequences against bacterial test datasets')
+
+        if save_fig:
+            plt.savefig(fname=f'{save_file_loc}/figure_1_{name}.{file_type}', format=file_type)
+        plt.show()
+
+
+    # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
+    # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
+    # E. coli MG1655 16s rRNA sequence.
     for i, target_name in enumerate(target_names):
         universal_subset = all_data_df.loc[to_analyze[i]]
 
         # Prepare axes
         jointplot_fig = plt.figure()
-        gridspec = jointplot_fig.add_gridspec(nrows=4, ncols=11)
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
         joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[1:4, 6:10]),
-            1: jointplot_fig.add_subplot(gridspec[0:1, 6:10]),
-            2: jointplot_fig.add_subplot(gridspec[1:4, 10:11]),
-            3: jointplot_fig.add_subplot(gridspec[0:2, 0:5]),
-            4: jointplot_fig.add_subplot(gridspec[2:4, 0:5]),
+            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
+            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
+            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
+            3: jointplot_fig.add_subplot(gridspec[0:2, 0:6]),
+            4: jointplot_fig.add_subplot(gridspec[2:4, 0:6]),
+            5: jointplot_fig.add_subplot(gridspec[4:6, 0:6])
         }
         xvar = 'true_%_cov_test'
         yvar = 'test_score'
@@ -1583,24 +1660,30 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         # Set variable regions for location plots
         plot_variable_regions(joint_ax[3], var_regs)
         plot_variable_regions(joint_ax[4], var_regs)
+        plot_variable_regions(joint_ax[5], var_regs)
         # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[3],
+        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[3],
                         alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[4],
+        sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[4],
+                        alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[5],
                         alpha=0.5)
         jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
         # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'], y=top_score_control[xvar], alpha=1,
+        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'], y=top_score_control['u_conservation_test'],
+                                      alpha=1, c='#fde725', label='control')
+        jointplot_fig.axes[3].set_ylabel('U site conservation')
+        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'], y=top_score_control[xvar],
+                                      alpha=1, c='#fde725', label='control')
+        jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
+        jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'], y=top_score_control[yvar], alpha=1,
                                       c='#fde725', label='control')
-        jointplot_fig.axes[3].set_ylabel('IGS true percent coverage')
-        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'], y=top_score_control[yvar], alpha=1,
-                                      c='#fde725', label='control')
-        jointplot_fig.axes[4].set_ylabel('Guide score')
+        jointplot_fig.axes[5].set_ylabel('Guide score')
         # Set graph settings for pretti graphing
         jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
         jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
         jointplot_fig.axes[1].set(xlabel=None)
-        jointplot_fig.axes[1].set_title('C', loc='left', fontsize=30)
+        jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
         jointplot_fig.axes[2].set(ylabel=None)
         jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
         jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
@@ -1608,16 +1691,19 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
         jointplot_fig.axes[4].set(xlabel=None)
         jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
+        jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
+        jointplot_fig.axes[5].set(xlabel='Reference 16s rRNA index')
         jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
         jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
         jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
         jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
         jointplot_fig.axes[3].tick_params(labelbottom=False)
+        jointplot_fig.axes[4].tick_params(labelbottom=False)
         legend = plt.legend(bbox_to_anchor=(1.6, -0.15), ncols=5, title='Test dataset')
-        for label in legend.get_texts():
-            txt = label.get_text().split('/')[-1][0:3]
-            new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
-            label.set_text(new_label[0])
+        # for label in legend.get_texts():
+        #     txt = label.get_text().split('/')[-1][0:3]
+        #     new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
+        #     label.set_text(new_label[0])
         jointplot_fig.suptitle(f'Designs from {target_name} target sequences against test datasets')
 
         if save_fig:
