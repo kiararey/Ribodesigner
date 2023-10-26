@@ -7,50 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely.">
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo_or_entero.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_only_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_only_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_only_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_only_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Enterobacterales_only_squished/Enterobacterales_only_by_Genus_5.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_5.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_5.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_All_Kingdoms/All_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_All_Kingdoms/All_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_All_Kingdoms/All_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_All_Kingdoms/All_by_Genus_5.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_5.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_5.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_2.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_3.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_4.fasta" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Ribodesigner_test_files/Datasets_used/SILVA_squished_datasets/SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_5.fasta" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
-    </list>
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -448,7 +405,7 @@
       <workItem from="1697599584140" duration="3000" />
       <workItem from="1697646150979" duration="46553000" />
       <workItem from="1698252784624" duration="37000" />
-      <workItem from="1698257249190" duration="19234000" />
+      <workItem from="1698257249190" duration="19732000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -793,7 +750,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="100" />
+    <option name="localTasksCounter" value="102" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
