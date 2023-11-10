@@ -597,15 +597,14 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                                task_timed=f'finding catalytic sites and indexing background sequences to reference')
             time1 = time.perf_counter()
             print('Now applying designed ribozymes with background sequences and getting statistics...')
-            optimized_seqs = ribo_checker(optimized_seqs, test_names_and_seqs, len(ref_name_and_seq[1]),
-                                          guide_length=guide_length, flexible_igs=True, n_limit=1,
-                                          refine_selective=False,
-                                          for_test=True, test_dataset_name=test_folder)
+            tested_seqs = ribo_checker(optimized_seqs.copy(), test_names_and_seqs, len(ref_name_and_seq[1]),
+                                       guide_length=guide_length, flexible_igs=True, n_limit=1, refine_selective=False,
+                                       for_test=True, test_dataset_name=test_folder)
 
             time2 = time.perf_counter()
             round_convert_time(start=time1, end=time2, round_to=4,
                                task_timed=f'testing designs')
-            all_designs.extend(optimized_seqs.copy())
+            all_designs.extend(tested_seqs.copy())
         if fileout:
             write_output_file(designs=all_designs, folder_path=folder_to_save, all_data=store_batch_results)
         end = time.perf_counter()
@@ -1233,6 +1232,8 @@ def check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, 
             u_values, u_counts = np.unique(uracil_sites_targets[:, i], return_counts=True)
             try:
                 percentage_of_cat_sites_conserved = u_counts[np.where(u_values == 2)[0][0]] / num_of_targets
+                if percentage_of_cat_sites_conserved is None:
+                    percentage_of_cat_sites_conserved = 0
             except IndexError:
                 percentage_of_cat_sites_conserved = 0
             if not for_test:
@@ -1248,7 +1249,7 @@ def check_igs_conservation(uracil_sites_targets, aligned_target_sequences):
     # Keeps the indexes of where Us are conserved, so base 0 indexing
     conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
 
-    # replace with this (will have to fix implementation down the line in check_guide_stats)
+    # replace with this
     igs_seqs_to_locs = defaultdict(lambda: [])
     with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
         for i, design in enumerate(aligned_target_sequences):
@@ -1286,12 +1287,22 @@ def check_guide_stats(ribo_design: RibozymeDesign, igs_seqs_to_locs: dict,
                 ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
             return ribo_design_attr
         else:
-            # free up memory
-            del ribo_design_attr
+            # # free up memory
+            # del ribo_design_attr
             return None
 
     # Now find how many conserved IGSes there are
     # ref_idx is in base 1 indexing, indexes for arrays are base 0
+
+    # See if we can skip computation all together because if no conserved u, no conserved IGS
+    if for_test:
+        if not ribo_design.u_conservation_test:
+            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
+            return out
+    else:
+        if not ribo_design.u_conservation_background:
+            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
+            return out
     try:
         matching_igses = np.array(igs_seqs_to_locs[ribo_design.igs])  # base 0 indexing
         orgs_with_igs = np.unique(matching_igses[:, 0])
@@ -1338,10 +1349,13 @@ def check_guide_stats(ribo_design: RibozymeDesign, igs_seqs_to_locs: dict,
         # background_names = set(back_seq.full_name for back_seq in aligned_target_sequences[orgs_with_u_on_target])
         # comparing two base 1 indexes, no conversion needed, but this will hold base 0
         # I'm not sure why the following line won't work if I don't convert the list in np.argwhere into an array
-        all_indexes_of_target_data = [np.argwhere(
-            np.array([cat_site[1] for cat_site
-                      in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
-                                      for target_number in orgs_with_u_on_target]
+        try:
+            all_indexes_of_target_data = [np.argwhere(
+                np.array([cat_site[1] for cat_site
+                          in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
+                                          for target_number in orgs_with_u_on_target]
+        except:
+            print('uh oh')
         guides_to_optimize = np.array([str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
                                        target, index_of_target_data in
                                        zip(orgs_with_u_on_target, all_indexes_of_target_data)])
@@ -1485,8 +1499,10 @@ def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign]
     return
 
 
-def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_designs: list[np.ndarray[RibozymeDesign]],
-                selective_designs: list[np.ndarray[RibozymeDesign]], ref_seq_designs: np.ndarray[RibozymeDesign] | list,
+def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
+                universal_designs: list[np.ndarray[RibozymeDesign]] | list[str],
+                selective_designs: list[np.ndarray[RibozymeDesign]] | list[str],
+                ref_seq_designs: np.ndarray[RibozymeDesign] | list | str,
                 var_regs: list[tuple[int, int]], save_fig: bool = False, file_loc: str = None, file_type: str = 'png',
                 taxonomy: str = '', data_file: str = '', save_file_loc: str = '', test_folders: [str] = None):
     if not test_folders:
@@ -1494,60 +1510,109 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         return
     # Make data into a pandas dataframe
     if not data_file:
-        all_data_array = np.hstack([control_designs] + universal_designs + selective_designs + [ref_seq_designs])
-        index_names = ['control'] * len(control_designs) + \
-                      [f'universal_{i}' for i, data in enumerate(universal_designs) for _ in data] + \
-                      [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data] + \
-                      ['reference_seq'] * len(ref_seq_designs)
+        if type(control_designs) is str:
+            all_data_df = pd.read_csv(control_designs)
+            all_data_df.index = ['control'] * len(all_data_df.values)
+        else:
+            all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in control_designs],
+                                                    index='control' * len(control_designs))
 
-        all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in all_data_array],
-                                                index=index_names)
+        if type(ref_seq_designs) is str:
+            ref_seq_designs_df = pd.read_csv(ref_seq_designs)
+            ref_seq_designs_df.index = ['reference_seq'] * len(ref_seq_designs_df.values)
+        else:
+            ref_seq_designs_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in ref_seq_designs],
+                                                           index='reference_seq' * len(ref_seq_designs))
+        all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
+
+        for i, sub_list in enumerate(universal_designs):
+            if type(sub_list) is str:
+                sub_list_df = pd.read_csv(sub_list)
+                sub_list_df.index = [f'universal_{i}'] * len(sub_list_df)
+            else:
+                sub_list_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in sub_list],
+                                                        index=f'universal_{i}' * len(sub_list))
+            all_data_df = pd.concat([all_data_df, sub_list_df])
+
+        for i, sub_list in enumerate(selective_designs):
+            if type(sub_list) is str:
+                sub_list_df = pd.read_csv(sub_list)
+                sub_list_df.index = [f'selective_{i}'] * len(sub_list_df)
+            else:
+                sub_list_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in sub_list],
+                                                        index=f'selective_{i}' * len(sub_list))
+            all_data_df = pd.concat([all_data_df, sub_list_df])
+        #
+        #
+        # all_data_array = np.hstack([control_designs] + universal_designs + selective_designs + [ref_seq_designs])
+        # index_names = ['control'] * len(control_designs) + \
+        #               [f'universal_{i}' for i, data in enumerate(universal_designs) for _ in data] + \
+        #               [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data] + \
+        #               ['reference_seq'] * len(ref_seq_designs)
+        #
+        # all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in all_data_array],
+        #                                         index=index_names)
         if os.path.exists(file_loc):
             os.remove(file_loc)
         all_data_df.to_csv(file_loc)
     else:
-        all_data_df = pd.read_csv(data_file, index_col=0)
+        all_data_df = pd.read_csv(data_file)
+        
 
     # Extract top scores for each category - this way it will count for us!
+    all_data_df.rename(columns={'Unnamed: 0': 'tested_targets'}, inplace=True )
     all_data_df.index.name = 'Index'
-    labels = list(set(all_data_df.index))
+    labels = list(set(all_data_df['tested_targets']))
     labels = [label for label in labels if type(label) is str]
     universal_labels = [name for name in labels if name[0] == 'u']
     selective_labels = [name for name in labels if name[0] == 's']
     labels.sort()
-    control_designs_df = all_data_df.loc['control']
-    universal_designs_df = all_data_df.loc[universal_labels]
+    control_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'control']
+    universal_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(universal_labels)]
     num_universal = len(universal_labels)
-    selective_designs_df = all_data_df.loc[selective_labels]
+    selective_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(selective_labels)]
     num_selective = len(selective_labels)
-    ref_seq_designs_df = all_data_df.loc['reference_seq']
+    ref_seq_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'reference_seq']
+
+    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
 
     # get top scores in each: 1 control, one of each group of selective and universal
-    top_score_control = control_designs_df.nlargest(1, 'composite_test_score')
-    top_scores_universal = universal_designs_df.loc[universal_labels[0]].nlargest(1, 'composite_test_score')
+    top_score_control = control_designs_df[control_designs_df[
+        'name_of_test_dataset'].str.contains('Bac')].nlargest(1, 'composite_test_score')
+    for name in target_names[1:]:
+        top_score_temp = control_designs_df[control_designs_df[
+            'tested_targets' == name]].nlargest(1, 'composite_test_score')
+        top_score_control = pd.concat([top_score_control, top_score_temp])
+
+    top_scores_universal = universal_designs_df.loc[universal_designs_df['tested_targets'] ==
+                                                    universal_labels[0]].nlargest(1, 'composite_test_score')
     for label in universal_labels[1:]:
-        score_temp = universal_designs_df.loc[label].nlargest(1, 'composite_test_score')
+        score_temp = universal_designs_df[universal_designs_df['tested_targets'] ==
+                                          label].nlargest(1, 'composite_test_score')
         top_scores_universal = pd.concat([top_scores_universal, score_temp])
-    top_scores_selective = selective_designs_df.loc[selective_labels[0]].nlargest(1, 'delta_vs_background')
+
+    top_scores_selective = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
+                                                    selective_labels[0]].nlargest(1, 'composite_test_score')
     for label in selective_labels[1:]:
-        score_temp = selective_designs_df.loc[label].nlargest(1, 'delta_vs_background')
+        score_temp = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
+                                              label].nlargest(1, 'composite_test_score')
         top_scores_selective = pd.concat([top_scores_selective, score_temp])
 
     # top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
 
     # Set plot parameters
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30, 16)}
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30*0.8, 16*0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
-    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
     to_analyze = ['reference_seq', 'universal_0', 'universal_1', 'universal_2', 'universal_3']
 
     max_vals = all_data_df.max(numeric_only=True)
 
     # Fig 1: MG1655
-    reference_subset = all_data_df[all_data_df['name_of_test_dataset'].str.contains('Bac')].loc['reference_seq']
-    bacterial_subset = all_data_df[all_data_df['name_of_test_dataset'].str.contains('Bac')].loc['universal_0']
+    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains('Bac')]
+    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains('Bac')]
+    bacterial_subset = bacterial_subset.loc[bacterial_subset['tested_targets'] == 'universal_0']
     top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
     # Only going to plot bacteria test dataset
     # First, plot x = u conservation, y = igs conservation, hue = guide score
@@ -1603,15 +1668,17 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
         jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
         jointplot_fig.axes[1].set(xlabel=None)
-        jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
+        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
         jointplot_fig.axes[2].set(ylabel=None)
-        jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
+        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
         jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
         jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
         jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
+        jointplot_fig.axes[5].sharex(jointplot_fig.axes[3])
+        jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
         jointplot_fig.axes[4].set(xlabel=None)
-        jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
-        jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
+        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
+        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
         jointplot_fig.axes[5].set(xlabel='Reference 16s rRNA index')
         jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
         jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
@@ -1625,12 +1692,11 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
             plt.savefig(fname=f'{save_file_loc}/figure_1_{name}.{file_type}', format=file_type)
         plt.show()
 
-
     # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
     # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
     # E. coli MG1655 16s rRNA sequence.
     for i, target_name in enumerate(target_names):
-        universal_subset = all_data_df.loc[to_analyze[i]]
+        universal_subset = all_data_df.loc[all_data_df['tested_targets'] == to_analyze[i]]
 
         # Prepare axes
         jointplot_fig = plt.figure()
@@ -1683,15 +1749,17 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
         jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
         jointplot_fig.axes[1].set(xlabel=None)
-        jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
+        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
         jointplot_fig.axes[2].set(ylabel=None)
-        jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
+        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
         jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
         jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
         jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
+        jointplot_fig.axes[5].sharex(jointplot_fig.axes[3])
+        jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
         jointplot_fig.axes[4].set(xlabel=None)
-        jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
-        jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
+        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
+        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
         jointplot_fig.axes[5].set(xlabel='Reference 16s rRNA index')
         jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
         jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
@@ -1699,11 +1767,11 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list, universal_de
         jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
         jointplot_fig.axes[3].tick_params(labelbottom=False)
         jointplot_fig.axes[4].tick_params(labelbottom=False)
-        legend = plt.legend(bbox_to_anchor=(1.6, -0.15), ncols=5, title='Test dataset')
-        # for label in legend.get_texts():
-        #     txt = label.get_text().split('/')[-1][0:3]
-        #     new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
-        #     label.set_text(new_label[0])
+        legend = plt.legend(bbox_to_anchor=(1.4, -0.15), ncols=5, title='Test dataset')
+        for label in legend.get_texts():
+            txt = label.get_text().split('/')[-1][0:3]
+            new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
+            label.set_text(new_label[0])
         jointplot_fig.suptitle(f'Designs from {target_name} target sequences against test datasets')
 
         if save_fig:

@@ -9,8 +9,8 @@ where you'll run ribodesigner on.
 
 Make sure you have Muscle5 installed in your path! More info found here: https://www.drive5.com/muscle/
 
-This program makes use of Biopython, numpy, pandas, seaborn, and matplotlib. I think the rest of the dependencies are
-default libraries but please let me know if this is not the case.
+This program makes use of Biopython, numpy, pandas, seaborn, and matplotlib, playsound, date_util, icecream, alive_progress. I think the rest of the dependencies are
+default libraries but please let me know if this is not the case. I'll make an environment file later too
 
 To run, I've honestly been opening main.py on Pycharm. if you're running this for the first time I highly suggest
 replacing all instances of ``test_data_folders`` with ``test_data_folders_test``. I also strongly suggest to set all 
