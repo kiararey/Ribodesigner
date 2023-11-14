@@ -1,4 +1,5 @@
 import glob
+import pickle
 import multiprocessing as mp
 import os
 import subprocess
@@ -576,6 +577,10 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
                                                                           'sequences')
+        
+        with open('optimized_seqs.pickle', 'wb') as handle:
+            pickle.dump(optimized_seqs, handle)
+
     if fileout:
         write_output_file(designs=optimized_seqs, folder_path=folder_to_save, all_data=store_batch_results)
 
@@ -615,6 +620,9 @@ def prepare_test_seqs(test_folder, fileout, ref_sequence_file, guide_length, igs
                                            return_test_seqs=True)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
+    
+    with open(f"test_seqs_{os.path.basename(test_folder)[:-6]}.pickle", "wb") as handle:
+                pickle.dump(test_seqs_dict, handle)
 
     if fileout:
         write_output_file(designs=test_seqs_dict, folder_path=folder_to_save, all_data=store_batch_results)
