@@ -576,48 +576,52 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
                                                                           'sequences')
-
-    if test_folders:
-        all_designs = []
-        for test_folder in test_folders:
-            time1 = time.perf_counter()
-            # Finally, test sequences against a test dataset
-            test_names_and_seqs = read_silva_fasta(in_file=test_folder)
-
-            print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
-
-            # first find the IGSes and locations of the background sequences. We do not want to hit these.
-            # Also align these to the reference sequence
-            with alive_bar(unknown='fish', spinner='fishes') as bar:
-                fn_align_to_ref(test_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
-                                guide_length=guide_length, min_length=min_length)
-                time2 = time.perf_counter()
-                bar()
-            round_convert_time(start=time1, end=time2, round_to=4,
-                               task_timed=f'finding catalytic sites and indexing background sequences to reference')
-            time1 = time.perf_counter()
-            print('Now applying designed ribozymes with background sequences and getting statistics...')
-            tested_seqs = ribo_checker(optimized_seqs.copy(), test_names_and_seqs, len(ref_name_and_seq[1]),
-                                       guide_length=guide_length, flexible_igs=True, n_limit=1, refine_selective=False,
-                                       for_test=True, test_dataset_name=test_folder)
-
-            time2 = time.perf_counter()
-            round_convert_time(start=time1, end=time2, round_to=4,
-                               task_timed=f'testing designs')
-            all_designs.extend(tested_seqs.copy())
-        if fileout:
-            write_output_file(designs=all_designs, folder_path=folder_to_save, all_data=store_batch_results)
-        end = time.perf_counter()
-        round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-        print('########################################################\n')
-        return all_designs
-    elif fileout:
+    if fileout:
         write_output_file(designs=optimized_seqs, folder_path=folder_to_save, all_data=store_batch_results)
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
     print('########################################################\n')
     return optimized_seqs
+
+
+def prepare_test_seqs(test_folder, fileout, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
+                      store_batch_results):
+    start = time.perf_counter()
+    test_names_and_seqs = read_silva_fasta(in_file=test_folder)
+    print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
+
+    if not ref_sequence_file:
+        # If we do not have a reference sequence, just choose one randomly
+        print('No reference sequence provided. Picking a random sequence as reference...')
+        ref_name_and_seq = np.random.choice(test_names_and_seqs)
+    else:
+        ref_name_and_seq = read_fasta(ref_sequence_file)[0]
+
+    fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
+                                   excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
+
+    # first find the IGSes and locations and also align these to the reference sequence
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        fn_align_to_ref(test_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
+                        guide_length=guide_length, min_length=min_length)
+        time2 = time.perf_counter()
+        bar()
+    round_convert_time(start=start, end=time2, round_to=4,
+                       task_timed=f'finding catalytic sites and indexing background sequences to reference')
+
+    time1 = time.perf_counter()
+    test_seqs_dict = filter_igs_candidates(aligned_targets=test_names_and_seqs, min_true_cov=0, igs_len=igs_length,
+                                           return_test_seqs=True)
+    time2 = time.perf_counter()
+    round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
+
+    if fileout:
+        write_output_file(designs=test_seqs_dict, folder_path=folder_to_save, all_data=store_batch_results)
+    end = time.perf_counter()
+    round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
+    print('########################################################\n')
+    return test_names_and_seqs
 
 
 def back_transcribe_seq_file(seq_file: str) -> Seq:
@@ -817,8 +821,8 @@ def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int =
     return target_sequence
 
 
-def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0, igs_len: float = 5) -> \
-        np.ndarray[RibozymeDesign]:
+def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0, igs_len: float = 5,
+                          return_test_seqs: bool = False) -> np.ndarray[RibozymeDesign]:
     """
     returns a dictionary of possible designs that meet our needs: checks each target sequence and filters the IGSes that
     work for the most targets. Returns a dictionary for each IGSid with the list of guides it needs to optimize, as
@@ -835,53 +839,86 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
     all_igs_ids = []
     counts_of_igs = defaultdict(int)
+    counts_of_ref_idx = defaultdict(int)
 
     # Extract all the IGS id numbers - that's the IGS sequence and the reference index number
     with alive_bar(aligned_targets.size, spinner='fishes') as bar:
         for seq in aligned_targets:
             igses = set()
+            ref_ids = set()
             for item in seq.cat_sites:
                 all_igs_ids.append(f'{item[2]}{item[1]}')
                 igses.add(f'{item[2]}')
+                ref_ids.add(item[1])
 
             for igs in igses:
                 if counts_of_igs[igs]:
                     counts_of_igs[igs] += 1
                 else:
                     counts_of_igs[igs] = 1
+            for ref_id in ref_ids:
+                if counts_of_ref_idx[ref_id]:
+                    counts_of_ref_idx[ref_id] += 1
+                else:
+                    counts_of_ref_idx[ref_id] = 1
             bar()
 
     # Measure true percent coverage of these and keep IGSes that are at least the minimum true percent coverage needed
     igs_ids_counted, igs_ids_counts = np.unique(all_igs_ids, return_counts=True)
-
-    # this gives us a dictionary where the ID is matched to the true percent coverage
-    igs_over_min_true_cov = {igs: [[], set(), counts / aligned_targets.size] for igs, counts
-                             in zip(igs_ids_counted, igs_ids_counts)
-                             if counts / aligned_targets.size >= min_true_cov}
-
-    # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
-    # in our initial aligned_targets array
-    igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
-                   seq.cat_sites]
-
     # get all the guides that have good IGSes
-    print('Filtering IGSes that meet our min true % coverage...')
-    with alive_bar(len(igs_subsets), spinner='fishes') as bar:
-        for igs_id, guide, target_num in igs_subsets:
-            if igs_id in igs_over_min_true_cov:
-                # Add guide to list
-                igs_over_min_true_cov[igs_id][0].append(guide)
-                # Add organism number to set. We can calculate the percent coverage with this number later on.
-                igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].full_name)
-            bar()
+    if return_test_seqs:
+        # IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
+        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / aligned_targets.size,
+                                       counts/counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
+                                 for igs, counts in zip(igs_ids_counted, igs_ids_counts)}
+        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
+        # in our initial aligned_targets array
+        igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
+                       seq.cat_sites]
+        print('Getting stats for putative target locations...')
+        output_dict = defaultdict(dict)
+        with alive_bar(len(igs_subsets), spinner='fishes') as bar:
+            for igs_id, guide, target_num in igs_subsets:
+                if igs_id in igs_over_min_true_cov:
+                    # Add guide to list
+                    igs_over_min_true_cov[igs_id][0].append(guide)
+                    # Add organism number to set. We can calculate the percent coverage with this number later on.
+                    igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].full_name)
+                    output_dict[int(igs_id[igs_len:])][igs_id] = igs_over_min_true_cov[igs_id]
+                bar()
 
-    print(f'{len(igs_over_min_true_cov)} putative designs found.')
-    # Now make an array of all of the putative designs for later use.
-    to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
-                                           true_perc_cov_attr=item[2],
-                                           perc_cov_attr=counts_of_igs[igs_id[:igs_len]] / aligned_targets.size)
-                            for igs_id, item in igs_over_min_true_cov.items()])
-    return to_optimize
+        # Now organize by ref_idx:
+        for ref_id, count_of_ref in counts_of_ref_idx.items():
+            output_dict[ref_id] = (output_dict[ref_id], count_of_ref)
+        return output_dict
+    else:
+        # this gives us a dictionary where the ID is matched to the true percent coverage
+        igs_over_min_true_cov = {igs: [[], set(), counts / aligned_targets.size] for igs, counts
+                                 in zip(igs_ids_counted, igs_ids_counts)
+                                 if counts / aligned_targets.size >= min_true_cov}
+
+        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
+        # in our initial aligned_targets array
+        igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
+                       seq.cat_sites]
+
+        print(f'{len(igs_over_min_true_cov)} putative designs found.')
+
+        print('Filtering IGSes that meet our min true % coverage...')
+        with alive_bar(len(igs_subsets), spinner='fishes') as bar:
+            for igs_id, guide, target_num in igs_subsets:
+                if igs_id in igs_over_min_true_cov:
+                    # Add guide to list
+                    igs_over_min_true_cov[igs_id][0].append(guide)
+                    # Add organism number to set. We can calculate the percent coverage with this number later on.
+                    igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].full_name)
+                bar()
+        # Now make an array of all of the putative designs for later use.
+        to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
+                                               true_perc_cov_attr=item[2],
+                                               perc_cov_attr=counts_of_igs[igs_id[:igs_len]] / aligned_targets.size)
+                                for igs_id, item in igs_over_min_true_cov.items()])
+        return to_optimize
 
 
 def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: int = 50,
@@ -1557,10 +1594,9 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
         all_data_df.to_csv(file_loc)
     else:
         all_data_df = pd.read_csv(data_file)
-        
 
     # Extract top scores for each category - this way it will count for us!
-    all_data_df.rename(columns={'Unnamed: 0': 'tested_targets'}, inplace=True )
+    all_data_df.rename(columns={'Unnamed: 0': 'tested_targets'}, inplace=True)
     all_data_df.index.name = 'Index'
     labels = list(set(all_data_df['tested_targets']))
     labels = [label for label in labels if type(label) is str]
@@ -1568,6 +1604,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
     selective_labels = [name for name in labels if name[0] == 's']
     labels.sort()
     control_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'control']
+    control_designs_df_1376 = control_designs_df[control_designs_df['reference_idx'] == 1376]
     universal_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(universal_labels)]
     num_universal = len(universal_labels)
     selective_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(selective_labels)]
@@ -1577,11 +1614,12 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
     target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
 
     # get top scores in each: 1 control, one of each group of selective and universal
-    top_score_control = control_designs_df[control_designs_df[
+    top_score_control = control_designs_df_1376[control_designs_df_1376[
         'name_of_test_dataset'].str.contains('Bac')].nlargest(1, 'composite_test_score')
-    for name in target_names[1:]:
-        top_score_temp = control_designs_df[control_designs_df[
-            'tested_targets' == name]].nlargest(1, 'composite_test_score')
+    file_name_checks = ['Bac', 'Euk', 'Arc', 'All']
+    for name in file_name_checks[1:]:
+        top_score_temp = control_designs_df_1376[control_designs_df_1376[
+            'name_of_test_dataset'].str.contains(name)].nlargest(1, 'composite_test_score')
         top_score_control = pd.concat([top_score_control, top_score_temp])
 
     top_scores_universal = universal_designs_df.loc[universal_designs_df['tested_targets'] ==
@@ -1601,7 +1639,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
     # top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
 
     # Set plot parameters
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30*0.8, 16*0.8)}
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 16 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
@@ -1652,15 +1690,15 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
         sns.scatterplot(x='reference_idx', y='test_score', data=graph, ax=joint_ax[5], alpha=0.5)
         jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
         # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'],
+        jointplot_fig.axes[3].scatter(x=top_score_control_subset['reference_idx'],
                                       y=top_score_control_subset['u_conservation_test'],
                                       alpha=1, c='#fde725', label='control')
         jointplot_fig.axes[3].set_ylabel('U site conservation')
-        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'],
+        jointplot_fig.axes[4].scatter(x=top_score_control_subset['reference_idx'],
                                       y=top_score_control_subset['u_conservation_test'],
                                       alpha=1, c='#fde725', label='control')
         jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
-        jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'],
+        jointplot_fig.axes[5].scatter(x=top_score_control_subset['reference_idx'],
                                       y=top_score_control_subset[yvar], alpha=1,
                                       c='#fde725', label='control')
         jointplot_fig.axes[5].set_ylabel('Guide score')
@@ -1711,7 +1749,7 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
         }
         xvar = 'true_%_cov_test'
         yvar = 'test_score'
-        legend_names = ['Bacteria only', 'Archaea only', 'Eukaryota only', 'All kingdoms', 'Control']
+        legend_names = ['Eukaryota only', 'Archaea only', 'Bacteria only', 'All kingdoms', 'Control']
         # Plot scatter and kde plots
         sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[0], alpha=0.5,
                         legend=False)
@@ -1728,7 +1766,8 @@ def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
         plot_variable_regions(joint_ax[4], var_regs)
         plot_variable_regions(joint_ax[5], var_regs)
         # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[3],
+        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset', data=universal_subset,
+                        ax=joint_ax[3],
                         alpha=0.5, legend=False)
         sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[4],
                         alpha=0.5, legend=False)
