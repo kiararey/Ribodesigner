@@ -7,9 +7,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Ok as expected the bug really messed up my analysis and so I have to make sure the test sequences are being correctly analyzed. To do that, I'm preparing this to run on the cluster with parallelization. Jordan is helping me with the output pickling thank youuuuu">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Slowly working through implementing parallelizing. I've made a skeleton for it, now I need to write the actual replacement function for check_guide_stats.&#10;&#10;There are a lot of things to do besides this:&#10;- Finish parallelization script&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -754,7 +753,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="104" />
+    <option name="localTasksCounter" value="105" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -784,7 +783,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Slowly working on ribochecker function" />
     <MESSAGE value="Finished rewriting most of the code, just need to write graph making functions!" />
     <MESSAGE value="Making a function to test an existing design on a set of sequences. &#10;&#10;Also made the outline for a graph making function." />
     <MESSAGE value="Making graphs, struggled with pandas and ready to go into matplotlib hell again." />
@@ -809,7 +807,8 @@
     <MESSAGE value="Found a pretty big oversight in check_igs_conservation where locations with more than one IGS (i.e. a location in a sequence where there were many gaps between the reference sequence and that target sequence) would be written over and only one IGS was conserved. Will start fixing this but it will take some major reworking of check_guide_stats" />
     <MESSAGE value="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely." />
     <MESSAGE value="Ok as expected the bug really messed up my analysis and so I have to make sure the test sequences are being correctly analyzed. To do that, I'm preparing this to run on the cluster with parallelization. Jordan is helping me with the output pickling thank youuuuu" />
-    <option name="LAST_COMMIT_MESSAGE" value="Ok as expected the bug really messed up my analysis and so I have to make sure the test sequences are being correctly analyzed. To do that, I'm preparing this to run on the cluster with parallelization. Jordan is helping me with the output pickling thank youuuuu" />
+    <MESSAGE value="Slowly working through implementing parallelizing. I've made a skeleton for it, now I need to write the actual replacement function for check_guide_stats.&#10;&#10;There are a lot of things to do besides this:&#10;- Finish parallelization script&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
+    <option name="LAST_COMMIT_MESSAGE" value="Slowly working through implementing parallelizing. I've made a skeleton for it, now I need to write the actual replacement function for check_guide_stats.&#10;&#10;There are a lot of things to do besides this:&#10;- Finish parallelization script&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -821,22 +820,22 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>2149</line>
+          <line>2192</line>
           <option name="timeStamp" value="147" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>2142</line>
+          <line>2185</line>
           <option name="timeStamp" value="148" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>2024</line>
+          <line>2067</line>
           <option name="timeStamp" value="234" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1397</line>
+          <line>1440</line>
           <option name="timeStamp" value="315" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">

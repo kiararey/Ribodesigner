@@ -1205,19 +1205,49 @@ def ribo_checker(coupled_designs_and_test_folder: str, worker_number: int, numbe
             # but immediately write that work out and checkpoint it as closely together as possible
             # so that you don't accidentally record finished work but fail to checkpoint it, and thereby duplicate results
             d.write(json.dumps({
-                           'test_idx': test_idx,
-                           'comparison_idx': comparison_idx,
-                           'result': pairwise_result
-                       } + '\n'
-                       ))
+                                   'test_idx': test_idx,
+                                   'comparison_idx': comparison_idx,
+                                   'result': pairwise_result
+                               } + '\n'
+                               ))
         with open('outputs/%d_checkpoints.txt' % worker_number, 'a') as d:
             d.write('\t'.join([str(i) for i in [test_idx, comparison_idx]]) + '\n')
 
-
     return
 
-def compare_to_test(coupled_design):
 
+def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
+    def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr, test_dataset_name_attr):
+        # No hits in the background! filter out those that have too many Ns
+        # Scores are set at 0 based on the assumption that if there is no catalytic U there is no splicing
+        # activity
+        guide_len = len(ribo_design_attr.guide)
+        # remove designs with too many Ns
+        if ribo_design_attr.guide.count('N') / guide_len <= n_limit_attr:
+            # Follow the same naming as the outputs of replace_ambiguity.
+            ribo_design_attr.true_perc_cov_test = 0
+            ribo_design_attr.perc_cov_test = 0
+            ribo_design_attr.perc_on_target_test = 0
+            ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
+            return ribo_design_attr
+        else:
+            # # free up memory
+            # del ribo_design_attr
+            return None
+
+    # See if we can skip computation all together because if no conserved u, no conserved IGS
+    if not coupled_design.u_conservation_test:
+        out = set_no_targets(coupled_design, n_limit, test_dataset_name)
+        return out
+
+    # Find average guide score
+    guides_to_optimize = coupled_design.background_guides
+    fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
+                               excluded=['seq_b', 'score_type', 'only_consensus'])
+
+    scores = fn_pairwise(guides_to_optimize, seq_b=coupled_design.guide, score_type=coupled_design.score_type,
+                         only_consensus=True)
+    coupled_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
 
     return coupled_design
 
