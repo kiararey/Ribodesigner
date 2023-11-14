@@ -1,6 +1,6 @@
 from playsound import playsound
 import numpy as np
-from ribodesigner import ribodesigner, compare_batches, test_ribo_design, make_graphs, prepare_test_seqs
+from ribodesigner import ribodesigner, compare_batches, ribo_checker, make_graphs, prepare_test_seqs
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     test_output_folder = 'test_output_files/test_outputs_parallelizing'
     test_file = 'test_dataset_for_graphs.csv'
     big_data_file_for_output = 'large_dataset.csv'
-    ref_analysis_folder = 'test_output_files/test_outputs_ribodesigner_v2/native ecoli mg1655 designs'
+    ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
 
     test_data_folders = [background_data_euk, background_data_arc, background_data_bac, background_data_all]
     test_data_folders_test = [bad_targets, big_data_entero_only]
@@ -66,16 +66,22 @@ if __name__ == '__main__':
     universal_datasets = []
     selective_datasets = []
 
-    prepare_test_seqs(test_folder=test_data_folders_test[0], fileout=True, ref_sequence_file=ref_path, guide_length=n,
-                      igs_length=m, min_length=minlen, folder_to_save=test_output_folder, store_batch_results=True)
+    test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data_folders_test[0], ref_sequence_file=ref_path,
+                                                   guide_length=n, igs_length=m, min_length=minlen,
+                                                   folder_to_save=test_output_folder)
 
-    # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
-    # # U site as guides in E. coli MG1655
-    # ref_seq_analysis = ribodesigner(target_sequences_folder=ref_path, ref_sequence_file=ref_path, igs_length=m,
-    #                                 guide_length=n, min_length=n, selective=False, min_true_cov=0, msa_fast=True,
-    #                                 score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-    #                                 gaps_allowed=False, fileout=True, random_guide_sample_size=10,
-    #                                 test_folders=test_data_folders, folder_to_save=ref_analysis_folder)
+    # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
+    # U site as guides in E. coli MG1655
+    ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=test_data_folders_test[0],
+                                            ref_sequence_file=ref_path, igs_length=m,
+                                            guide_length=n, min_length=n, selective=False, min_true_cov=0,
+                                            msa_fast=True,
+                                            score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+                                            gaps_allowed=False, fileout=True, random_guide_sample_size=10,
+                                            test_folders=test_data_folders, folder_to_save=test_output_folder)
+
+    ribo_checker(designs_input=ref_seq_pickle_file_name, test_seqs_input=test_seqs_pickle_file_name, guide_length=n,
+                 flexible_igs=True, target_background=False, n_limit=1, refine_selective=True, for_test=True)
     #
     # control_design = test_ribo_design(design=u1376, test_folders=test_data_folders, ref_seq_folder=ref_path, igs_len=m,
     #                                   score_type='weighted', file_out=True,

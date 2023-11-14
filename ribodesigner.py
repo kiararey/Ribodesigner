@@ -577,21 +577,26 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
                                                                           'sequences')
-        
-        with open('optimized_seqs.pickle', 'wb') as handle:
-            pickle.dump(optimized_seqs, handle)
+        # Remove any .fasta
+        pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_selective_vs_' + \
+                           background_sequences_folder.split('.')[0].split('/')[-1]
+    else:
+        # Remove any .fasta
+        pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
+    with open(f'{folder_to_save}/designs_{pickle_file_name}.pickle', 'wb') as handle:
+        pickle.dump(optimized_seqs, handle)
 
     if fileout:
-        write_output_file(designs=optimized_seqs, folder_path=folder_to_save, all_data=store_batch_results)
+        out_file = folder_to_save + '/designs_' + pickle_file_name
+        write_output_file(designs=optimized_seqs, folder_path=out_file, all_data=store_batch_results)
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
     print('########################################################\n')
-    return optimized_seqs
+    return f'{folder_to_save}/designs_{pickle_file_name}.pickle'
 
 
-def prepare_test_seqs(test_folder, fileout, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
-                      store_batch_results):
+def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save):
     start = time.perf_counter()
     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
     print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
@@ -620,16 +625,16 @@ def prepare_test_seqs(test_folder, fileout, ref_sequence_file, guide_length, igs
                                            return_test_seqs=True)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
-    
-    with open(f"test_seqs_{os.path.basename(test_folder)[:-6]}.pickle", "wb") as handle:
-                pickle.dump(test_seqs_dict, handle)
 
-    if fileout:
-        write_output_file(designs=test_seqs_dict, folder_path=folder_to_save, all_data=store_batch_results)
+    # remove .fasta from any files for pickle naming
+    pickle_file_name = test_folder.split('.')[0].split('/')[-1]
+    with open(f'{folder_to_save}/test_sequences_{pickle_file_name}.pickle', 'wb') as handle:
+        pickle.dump(test_seqs_dict, handle)
+
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
     print('########################################################\n')
-    return test_names_and_seqs
+    return f'{folder_to_save}/test_sequences_{pickle_file_name}.pickle'
 
 
 def back_transcribe_seq_file(seq_file: str) -> Seq:
@@ -877,7 +882,7 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
     if return_test_seqs:
         # IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
         igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / aligned_targets.size,
-                                       counts/counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
+                                       counts / counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
                                  for igs, counts in zip(igs_ids_counted, igs_ids_counts)}
         # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
         # in our initial aligned_targets array
@@ -1110,200 +1115,202 @@ def get_directional_score(opti_seq):
     return score
 
 
-def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: np.ndarray[TargetSeq], ref_seq_len: int,
-                 guide_length: int, flexible_igs: bool = False, target_background: bool = False, n_limit: float = 0.0,
-                 refine_selective: bool = True, process_num: int = mp.cpu_count(), for_test: bool = False,
-                 test_dataset_name: str = ''):
-    """
-    Checks generated designs against a set of sequences to either find how well they align to a given dataset.
-    Will return a set of sequences that match for each design as well as a score showing how well they matched.
-    :param target_background:
-    :param designs:
-    :param aligned_target_sequences:
-    :param ref_seq_len:
-    :param identity_thresh:
-    :param guide_length:
-    :param score_type:
-    :param gaps_allowed:
-    :param flexible_igs:
-    :param msa_fast:
-    :param n_limit: what percentage of Ns are acceptable?
-    :return:
-    """
+def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexible_igs: bool = False):
+    # Check if we've pre_processed designs correctly
+    if (designs_input[-7:] != '.pickle') | (test_seqs_input[-7:] != '.pickle'):
+        print('Make sure to prepare designs and test sequences properly first.')
+        return
 
-    # This should update designs and return uracil_sites_targets
-    uracil_sites_targets = check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, for_test)
+    # Extract design sequence data
+    with open(designs_input, 'rb') as handle:
+        designs = pickle.load(handle)
+    # Extract test sequences data
+    with open(test_seqs_input, 'rb') as handle:
+        test_seqs = pickle.load(handle)
 
-    print('Done! Checking IGS conservation...')
-    igs_seqs_to_locs, conserved_u_sites = check_igs_conservation(uracil_sites_targets, aligned_target_sequences)
-
-    print('Done! Now checking finding guide stats for all U sites...')
-
-    # prepare data for starmap
-    with alive_bar(unknown='fish', spinner='fishes') as bar:
-        in_data = [(design, igs_seqs_to_locs, aligned_target_sequences, flexible_igs, conserved_u_sites, guide_length,
-                    n_limit, refine_selective, target_background, for_test, test_dataset_name)
-                   for design in designs]
-
-        # multithread
-        with mp.Pool(processes=process_num) as pool:
-            designs_below_n_limit = pool.starmap(check_guide_stats, in_data)
-        bar()
-
-    if refine_selective:
-        print(
-            f'Out of {len(designs)} designs, {len(designs_below_n_limit)} '
-            f'have scores with < {n_limit * 100}% N content.')
-
-    filered_designs = list(filter(lambda item: item is not None, designs_below_n_limit))
-
-    return filered_designs
-
-
-def test_ribo_design(design: str, test_folders: list[str], ref_seq_folder: str, igs_len: int = 5,
-                     score_type: str = 'naive', file_out: bool = False, folder_to_save: str = '', taxonomy=''):
-    print('Testing ribozyme design!')
-    start = time.perf_counter()
-    # first, read in all our sequences
-    targets_to_test_list = []
-    for file in test_folders:
-        targets_to_test_list.append(read_silva_fasta(in_file=file))
-    ref_name_and_seq = read_fasta(ref_seq_folder)[0]
-    igs = design[-igs_len:]
-    design_guide = Seq(design[:-igs_len - 1]).upper().back_transcribe()  # recall there's a G between the igs and guide
-
-    time1 = time.perf_counter()
-    print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq[0].replace("_", " ")}...')
-    # Align the targets to test to our reference sequence
-    names_guides_etc = []
-    for i, targets_to_test in enumerate(targets_to_test_list):
-        print(f'Pre-processing dataset {i} with {len(targets_to_test)} sequences to test')
-        with alive_bar(unknown='fish', spinner='fishes') as bar:
-            fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
-                                           excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
-            fn_align_to_ref(targets_to_test, ref_name_and_seq=ref_name_and_seq, igs_length=igs_len,
-                            guide_length=len(design_guide), min_length=len(design_guide))
-            bar()
-        time2 = time.perf_counter()
-        round_convert_time(start=time1, end=time2, round_to=4,
-                           task_timed=f'finding catalytic sites and indexing target sequences to reference')
-
-        # get all guides and the name of their targets that have the correct igs: (og_idx, ref_idx, igs, guide)
-        time1 = time.perf_counter()
-        print('Finding matching IGSes and corresponding guides...')
-        names_temp = defaultdict(set)
-        guides_temp = defaultdict(list)
-        all_names_temp = set()
-        with alive_bar(len(targets_to_test), spinner='fishes') as bar:
-            for target in targets_to_test:
-                for putative_guide in target.cat_sites:
-                    if putative_guide[2] == igs:
-                        names_temp[putative_guide[1]].add(target.full_name)
-                        guides_temp[putative_guide[1]].append(putative_guide[3])
-                        all_names_temp.add(target.full_name)
-                bar()
-        names_guides_etc.append((names_temp, guides_temp, all_names_temp))
-
-    num_of_seqs_with_igs_list = [len(names) for _, _, names in names_guides_etc]
-    time2 = time.perf_counter()
-    round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'matching IGSes and guides.')
-
-    # Calculate coverage for each and make a ribozyme design for each
-    time1 = time.perf_counter()
-    print('Calculating coverage for putative locations targeted by guide...')
-
-    locations_and_scores_list = []
-    for (names, guides, all_names), num_of_seqs_with_igs, targets_to_test, test_folder in (
-            zip(names_guides_etc, num_of_seqs_with_igs_list, targets_to_test_list, test_folders)):
-        locations_and_scores = np.array([], dtype=RibozymeDesign)
-        with alive_bar(len(guides.items()), spinner='fishes') as bar:
-            for index, guide_list in guides.items():
-                perc_cov = num_of_seqs_with_igs / targets_to_test.size
-                true_perc_cov = len(guide_list) / targets_to_test.size
-                per_on_target = perc_cov / perc_cov
-                score = return_score_from_type(sequence_to_test=design_guide, score_type=score_type)
-                locations_and_scores = np.append(locations_and_scores,
-                                                 RibozymeDesign(id_attr=f'{igs}{index}', guide_attr=Seq(design_guide),
-                                                                score_attr=score,
-                                                                score_type_attr=score_type,
-                                                                perc_cov_test_attr=perc_cov,
-                                                                perc_on_target_test_attr=per_on_target,
-                                                                true_perc_cov_test_attr=true_perc_cov))
-                bar()
-        locations_and_scores = ribo_checker(locations_and_scores, targets_to_test, len(ref_name_and_seq[1]),
-                                            guide_length=len(design_guide), flexible_igs=True, n_limit=1,
-                                            refine_selective=False, for_test=True, test_dataset_name=test_folder)
-        locations_and_scores_list.extend(locations_and_scores)
-
-    time2 = time.perf_counter()
-    round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'scoring design against test sequences')
-
-    if file_out:
-        write_output_file(designs=locations_and_scores_list, folder_path=folder_to_save, taxonomy=taxonomy)
-
-    end = time.perf_counter()
-    round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-    print('########################################################\n')
-    return locations_and_scores
-
-
-def check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, for_test: bool = False):
-    designed_idxs = np.array(list(set(ribodesign.ref_idx - 1 for ribodesign in designs)))  # convert to base 0 indexing
-    # Adding to maximum size because sometimes the alignment for the very end of a sequence does strange things
-    max_len = max(designed_idxs.max(), ref_seq_len)
-    uracil_sites_targets = np.zeros((aligned_target_sequences.size, max_len), dtype=int)
-    uracil_sites_targets[:, designed_idxs] = 1
-
-    print('Finding U sites...')
-    with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
-        for i, target_sequence in enumerate(aligned_target_sequences):  # base 1 indexing
-            # convert to base 0 indexing to match array indexing locations. Clip any weird indexes - larger indexes
-            # than max_len do not appear in our designs and should be ignored to increase speed
-            temp_uracil_indexes = np.array([cat_site[1] - 1 for cat_site in
-                                            target_sequence.cat_sites if cat_site[1] <= max_len])
-            # everything that is a 2 is a U that appears in both the designs and the target sequence,
-            # a 1 is a U in the design
-            uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[
-                                                               i, temp_uracil_indexes] * 2  # base 0 index
-            bar()
-
-    num_of_targets = aligned_target_sequences.size
-    print('Found U sites. Checking how many are conserved...')
-    # Update designs
-    with alive_bar(len(designed_idxs), spinner='fishes') as bar:
-        for ribodesign_num, i in enumerate(designed_idxs):
-            u_values, u_counts = np.unique(uracil_sites_targets[:, i], return_counts=True)
-            try:
-                percentage_of_cat_sites_conserved = u_counts[np.where(u_values == 2)[0][0]] / num_of_targets
-                if percentage_of_cat_sites_conserved is None:
-                    percentage_of_cat_sites_conserved = 0
-            except IndexError:
-                percentage_of_cat_sites_conserved = 0
-            if not for_test:
-                designs[ribodesign_num].u_conservation_background = percentage_of_cat_sites_conserved
+    # Prepare data for check_guide_stats:
+    # Need the design, the aligned target sequences to test against for each design
+    with alive_bar(len(designs), spinner='fishes') as bar:
+        for design in designs:
+            matching_ref_idx_seqs = test_seqs[design.ref_idx]
+            # Set correct u conservation
+            design.u_conservation_test = matching_ref_idx_seqs[1]
+            # Set what targets have this IGS id
+            # Recall each inner dictionary is of form IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
+            design_id = design.igs + str(design.ref_idx)
+            design.test_targets = matching_ref_idx_seqs[0][design_id][1]
+            # Set igs stats
+            design.perc_cov_test = matching_ref_idx_seqs[0][design_id][2]
+            design.perc_on_target_test = matching_ref_idx_seqs[0][design_id][3]
+            design.true_perc_cov_test = matching_ref_idx_seqs[0][design_id][4]
+            # Extract the relevant guide sequences
+            # (same ref_idx, and either guides with same IGS OR all guides if IGS is flexible)
+            if not flexible_igs:
+                igses_to_test = design.igs + str(design.ref_idx)
             else:
-                designs[ribodesign_num].u_conservation_test = percentage_of_cat_sites_conserved
+                igses_to_test = matching_ref_idx_seqs[0].keys()
+
+            guides = []
+            for igs_id in igses_to_test:
+                guides.extend(matching_ref_idx_seqs[0][igs_id][0])
+            design.guides_to_use = guides
             bar()
-    return uracil_sites_targets
+
+    # save into a separate file
+    pickle_file_name = designs_input[:-7] + '_vs_' + test_seqs_input.split('.')[0].split('/')[-1] + '.coupled'
+    with open(pickle_file_name, 'wb') as handle:
+        pickle.dump(designs, handle)
+    return pickle_file_name
 
 
-def check_igs_conservation(uracil_sites_targets, aligned_target_sequences):
-    # What is the conservation of IGSes at a particular position for each design? # base 0 indexing
-    # Keeps the indexes of where Us are conserved, so base 0 indexing
-    conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
+def ribo_checker(coupled_designs_and_test_folder: str, worker_number: int, number_of_workers: int):
+    """
+    This is the parallelization script I need to work on.
+    """
+    # Check if we have anything to test
+    analysis_files = [file for file in coupled_designs_and_test_folder if file[-8:] == '.coupled']
+    if len(analysis_files) == 0:
+        print('Please make sure to couple designs with the appropriate test sequences')
+        return
 
-    # replace with this
-    igs_seqs_to_locs = defaultdict(lambda: [])
-    with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
-        for i, design in enumerate(aligned_target_sequences):
-            for cat_site in design.cat_sites:
-                igs_seqs_to_locs[cat_site[2]].append([i, cat_site[1] - 1])  # base 0 indexing
-            bar()
-    # igs_sites_targets is now a dict of (row, col) keys and a list of all IGSes at that location as values.
-    # Convert back to dict for proper pickling later on
-    return dict(igs_seqs_to_locs), conserved_u_sites
+    # Extract test sequences data
+    to_test = []
+    for file in analysis_files:
+        with open(file, 'rb') as handle:
+            to_test.append(pickle.load(handle))
+
+    # load any checkpoint files and remove things we already tested
+    # checkpoint_dir = '/'.join(coupled_designs_and_test.split('/')[:-1]) + '/checkpoints'
+    # checkpointfiles = [f for f in checkpoint_dir if f.startswith('checkpoint')]
+    # completed_work = []
+    # for checkpointfile in checkpointfiles:
+    #     with open(comparisonfilename, 'r'):
+    #         t = d.read()
+    #     lines = [line for line in t.split('\n') if line != '']
+    #     for line in lines:
+    #         this_completed_work = [int(i.strip()) for i in line.split('\t')]
+    #         completed_work.append(this_completed_work)
+
+    # Generate full work list and finished work list
+
+    # Call compare_to_test on each design
+    # now divvy up the work amongst the number of workers and have each worker pull its slice
+    numpyarrayworklist = np.array(finishedworklist)
+    thisworklist = array.split(numpyarrayworklist, worker_number, number_of_workers)[worker_number]
+
+    for design_to_test in thisworklist:
+        result = compare_to_test(design_to_test)
+
+        with open('outputs/%d_pairwise.txt' % worker_number, 'a') as d:
+            # but immediately write that work out and checkpoint it as closely together as possible
+            # so that you don't accidentally record finished work but fail to checkpoint it, and thereby duplicate results
+            d.write(json.dumps({
+                           'test_idx': test_idx,
+                           'comparison_idx': comparison_idx,
+                           'result': pairwise_result
+                       } + '\n'
+                       ))
+        with open('outputs/%d_checkpoints.txt' % worker_number, 'a') as d:
+            d.write('\t'.join([str(i) for i in [test_idx, comparison_idx]]) + '\n')
+
+
+    return
+
+def compare_to_test(coupled_design):
+
+
+    return coupled_design
+
+
+# def test_ribo_design(design: str, test_folders: list[str], ref_seq_folder: str, igs_len: int = 5,
+#                      score_type: str = 'naive', file_out: bool = False, folder_to_save: str = '', taxonomy=''):
+#     print('Testing ribozyme design!')
+#     start = time.perf_counter()
+#     # first, read in all our sequences
+#     targets_to_test_list = []
+#     for file in test_folders:
+#         targets_to_test_list.append(read_silva_fasta(in_file=file))
+#     ref_name_and_seq = read_fasta(ref_seq_folder)[0]
+#     igs = design[-igs_len:]
+#     design_guide = Seq(design[:-igs_len - 1]).upper().back_transcribe()  # recall there's a G between the igs and guide
+#
+#     time1 = time.perf_counter()
+#     print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq[0].replace("_", " ")}...')
+#     # Align the targets to test to our reference sequence
+#     names_guides_etc = []
+#     for i, targets_to_test in enumerate(targets_to_test_list):
+#         print(f'Pre-processing dataset {i} with {len(targets_to_test)} sequences to test')
+#         with alive_bar(unknown='fish', spinner='fishes') as bar:
+#             fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
+#                                            excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
+#             fn_align_to_ref(targets_to_test, ref_name_and_seq=ref_name_and_seq, igs_length=igs_len,
+#                             guide_length=len(design_guide), min_length=len(design_guide))
+#             bar()
+#         time2 = time.perf_counter()
+#         round_convert_time(start=time1, end=time2, round_to=4,
+#                            task_timed=f'finding catalytic sites and indexing target sequences to reference')
+#
+#         # get all guides and the name of their targets that have the correct igs: (og_idx, ref_idx, igs, guide)
+#         time1 = time.perf_counter()
+#         print('Finding matching IGSes and corresponding guides...')
+#         names_temp = defaultdict(set)
+#         guides_temp = defaultdict(list)
+#         all_names_temp = set()
+#         with alive_bar(len(targets_to_test), spinner='fishes') as bar:
+#             for target in targets_to_test:
+#                 for putative_guide in target.cat_sites:
+#                     if putative_guide[2] == igs:
+#                         names_temp[putative_guide[1]].add(target.full_name)
+#                         guides_temp[putative_guide[1]].append(putative_guide[3])
+#                         all_names_temp.add(target.full_name)
+#                 bar()
+#         names_guides_etc.append((names_temp, guides_temp, all_names_temp))
+#
+#     num_of_seqs_with_igs_list = [len(names) for _, _, names in names_guides_etc]
+#     time2 = time.perf_counter()
+#     round_convert_time(start=time1, end=time2, round_to=4,
+#                        task_timed=f'matching IGSes and guides.')
+#
+#     # Calculate coverage for each and make a ribozyme design for each
+#     time1 = time.perf_counter()
+#     print('Calculating coverage for putative locations targeted by guide...')
+#
+#     locations_and_scores_list = []
+#     for (names, guides, all_names), num_of_seqs_with_igs, targets_to_test, test_folder in (
+#             zip(names_guides_etc, num_of_seqs_with_igs_list, targets_to_test_list, test_folders)):
+#         locations_and_scores = np.array([], dtype=RibozymeDesign)
+#         with alive_bar(len(guides.items()), spinner='fishes') as bar:
+#             for index, guide_list in guides.items():
+#                 perc_cov = num_of_seqs_with_igs / targets_to_test.size
+#                 true_perc_cov = len(guide_list) / targets_to_test.size
+#                 per_on_target = perc_cov / perc_cov
+#                 score = return_score_from_type(sequence_to_test=design_guide, score_type=score_type)
+#                 locations_and_scores = np.append(locations_and_scores,
+#                                                  RibozymeDesign(id_attr=f'{igs}{index}', guide_attr=Seq(design_guide),
+#                                                                 score_attr=score,
+#                                                                 score_type_attr=score_type,
+#                                                                 perc_cov_test_attr=perc_cov,
+#                                                                 perc_on_target_test_attr=per_on_target,
+#                                                                 true_perc_cov_test_attr=true_perc_cov))
+#                 bar()
+#         locations_and_scores = ribo_checker(locations_and_scores, targets_to_test, len(ref_name_and_seq[1]),
+#                                             guide_length=len(design_guide), flexible_igs=True, n_limit=1,
+#                                             refine_selective=False, for_test=True, test_dataset_name=test_folder)
+#         locations_and_scores_list.extend(locations_and_scores)
+#
+#     time2 = time.perf_counter()
+#     round_convert_time(start=time1, end=time2, round_to=4,
+#                        task_timed=f'scoring design against test sequences')
+#
+#     if file_out:
+#         out_file = folder_to_save + '/tested_premade_design_'
+#         write_output_file(designs=locations_and_scores_list, folder_path=out_file, taxonomy=taxonomy)
+#
+#     end = time.perf_counter()
+#     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
+#     print('########################################################\n')
+#     return locations_and_scores
+#
 
 
 def check_guide_stats(ribo_design: RibozymeDesign, igs_seqs_to_locs: dict,
@@ -1538,9 +1545,9 @@ def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'n
 def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign], folder_path: str, taxonomy='',
                       all_data: bool = False):
     designs_df = pd.DataFrame.from_records([item.to_dict(taxonomy=taxonomy, all_data=all_data) for item in designs])
-    if os.path.exists(f'{folder_path}/Targeted designs against background above threshold.csv'):
-        os.remove(f'{folder_path}/Targeted designs against background above threshold.csv')
-    designs_df.to_csv(f'{folder_path}/Targeted designs against background above threshold.csv', index=False)
+    if os.path.exists(f'{folder_path}.csv'):
+        os.remove(f'{folder_path}.csv')
+    designs_df.to_csv(f'{folder_path}.csv', index=False)
     return
 
 
