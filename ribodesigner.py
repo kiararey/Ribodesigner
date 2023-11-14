@@ -6,6 +6,7 @@ import subprocess
 import time
 from collections import defaultdict
 from math import exp
+import json
 
 import Bio.motifs
 import matplotlib.pyplot as plt
@@ -1164,7 +1165,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexib
     return pickle_file_name
 
 
-def ribo_checker(coupled_designs_and_test_folder: str, worker_number: int, number_of_workers: int, n_limit: int = 0):
+def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int, n_limit: int = 0):
     """
     This is the parallelization script I need to work on.
     """
@@ -1174,6 +1175,7 @@ def ribo_checker(coupled_designs_and_test_folder: str, worker_number: int, numbe
     except NotADirectoryError:
         if coupled_designs_and_test_folder[-8:] == '.coupled':
             analysis_files = [coupled_designs_and_test_folder]
+        coupled_designs_and_test_folder = coupled_designs_and_test_folder.split('/')[:-1]
 
     if len(analysis_files) == 0:
         print('Please make sure to couple designs with the appropriate test sequences')
@@ -1182,50 +1184,31 @@ def ribo_checker(coupled_designs_and_test_folder: str, worker_number: int, numbe
     # Extract test sequences data
     to_test = []
     for file in analysis_files:
-        file_name = coupled_designs_and_test_folder.split('.')[0].split('/')[-1]
+        file_name = file.split('.')[0]
         with open(file, 'rb') as handle:
             to_test_temp = pickle.load(handle)
         for design in to_test_temp:
             to_test.append((design, file_name))
 
-    # testing if this works first
-    for design_to_test, file_name in to_test:
+    try:
+        with open(file_name + '_checkpoint.txt', 'r') as d:
+            last_design_analyzed = int(d.read())
+    except FileNotFoundError:
+        last_design_analyzed = 0
+
+    # This is where we will parallelize proper!!!
+    for current_design, (design_to_test, file_name) in enumerate(to_test):
+        if current_design < last_design_analyzed:
+            continue
         result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
+        result_dict = result.to_dict(all_data=False)
+        with open(file_name + '_results.txt', 'a') as d:
+            d.write(json.dumps(result_dict))
 
+        with open(file_name + '_checkpoint.txt', 'w') as d:
+            d.write(str(current_design))
 
-    # load any checkpoint files and remove things we already tested
-    # checkpoint_dir = '/'.join(coupled_designs_and_test.split('/')[:-1]) + '/checkpoints'
-    # checkpointfiles = [f for f in checkpoint_dir if f.startswith('checkpoint')]
-    # completed_work = []
-    # for checkpointfile in checkpointfiles:
-    #     with open(comparisonfilename, 'r'):
-    #         t = d.read()
-    #     lines = [line for line in t.split('\n') if line != '']
-    #     for line in lines:
-    #         this_completed_work = [int(i.strip()) for i in line.split('\t')]
-    #         completed_work.append(this_completed_work)
-
-    # Generate full work list and finished work list
-
-    # Call compare_to_test on each design
-    # now divvy up the work amongst the number of workers and have each worker pull its slice
-    numpyarrayworklist = np.array(finishedworklist)
-    thisworklist = array.split(numpyarrayworklist, worker_number, number_of_workers)[worker_number]
-
-    for design_to_test, file_name in thisworklist:
-        result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
-
-        with open('outputs/%d_pairwise.txt' % worker_number, 'a') as d:
-            # but immediately write that work out and checkpoint it as closely together as possible
-            # so that you don't accidentally record finished work but fail to checkpoint it, and thereby duplicate results
-            d.write(json.dumps({
-                                   'test_idx': test_idx,
-                                   'comparison_idx': comparison_idx,
-                                   'result': pairwise_result
-                               } + '\n'
-                               ))
-        with open('outputs/%d_checkpoints.txt' % worker_number, 'a') as d:
-            d.write('\t'.join([str(i) for i in [test_idx, comparison_idx]]) + '\n')
+        last_design_analyzed = current_design + 1
 
     return
 
