@@ -1,6 +1,8 @@
 from playsound import playsound
 import numpy as np
-from ribodesigner import ribodesigner, compare_batches, ribo_checker, make_graphs, prepare_test_seqs
+import multiprocessing as mp
+from ribodesigner import (ribodesigner, compare_batches, ribo_checker, make_graphs, prepare_test_seqs,
+                          couple_designs_to_test_seqs)
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -80,8 +82,16 @@ if __name__ == '__main__':
                                             gaps_allowed=False, fileout=True, random_guide_sample_size=10,
                                             test_folders=test_data_folders, folder_to_save=test_output_folder)
 
-    ribo_checker(designs_input=ref_seq_pickle_file_name, test_seqs_input=test_seqs_pickle_file_name, guide_length=n,
-                 flexible_igs=True, target_background=False, n_limit=1, refine_selective=True, for_test=True)
+    coupled_designs_pickle_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle_file_name,
+                                                                   test_seqs_input=test_seqs_pickle_file_name,
+                                                                   flexible_igs=True)
+
+    # coupled_designs_pickle_file_name = \
+    #     ('test_output_files/test_outputs_parallelizing/designs_Bacillus_halotolerans_universal_vs_test_sequences_'
+    #      'Bacillus_halotolerans.coupled')
+
+    ribo_checker(coupled_designs_and_test_folder=coupled_designs_pickle_file_name, worker_number=0,
+                 number_of_workers=mp.cpu_count(), n_limit=0)
     #
     # control_design = test_ribo_design(design=u1376, test_folders=test_data_folders, ref_seq_folder=ref_path, igs_len=m,
     #                                   score_type='weighted', file_out=True,
