@@ -168,7 +168,7 @@ if __name__ == '__main__':
     #     print(f'universal dataset {i + 1} fully tested!')
     #     universal_datasets.append(out_data_temp)
 
-    playsound('/System/Library/Sounds/Pop.aiff')
+    # playsound('/System/Library/Sounds/Pop.aiff')
     print(f'Test data done!\n########################################################\n')
 
     # ########################################################
