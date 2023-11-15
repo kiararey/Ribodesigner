@@ -7,11 +7,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="- Fix perc_on_target calculation in RibozymeDesign class --&gt; Done&#10;- Rework test_ribo_design to implement directly into ribodesigner --&gt; Done, a bit janky but I implemented it in coupled_designs&#10;&#10;To do:&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Working on parallelizing">
+      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parallelization_example/parallelization.py" beforeDir="false" afterPath="$PROJECT_DIR$/parallelization_example/parallelization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parallelization_example/parallelize.slurm" beforeDir="false" afterPath="$PROJECT_DIR$/parallelization_example/parallelize.slurm" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -755,7 +755,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="111" />
+    <option name="localTasksCounter" value="112" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -785,7 +785,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Ok have some graphs, but I'll remake the main function to analyze the universal designs as well" />
     <MESSAGE value="fixed a bug in ribo_checker" />
     <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
     <MESSAGE value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
@@ -810,7 +809,8 @@
     <MESSAGE value="I think the function compare_to_test should work as expected now.&#10;&#10;There are still a lot of things to do:&#10;- Finish parallelization script&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
     <MESSAGE value="Parallelizing script is almost ready to go. Just need to add the number of workers and then get the checkpoint file reading/ generation checked to make sure it is working as expected.&#10;&#10;There are still a lot of things to do besides this:&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
     <MESSAGE value="- Fix perc_on_target calculation in RibozymeDesign class --&gt; Done&#10;- Rework test_ribo_design to implement directly into ribodesigner --&gt; Done, a bit janky but I implemented it in coupled_designs&#10;&#10;To do:&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
-    <option name="LAST_COMMIT_MESSAGE" value="- Fix perc_on_target calculation in RibozymeDesign class --&gt; Done&#10;- Rework test_ribo_design to implement directly into ribodesigner --&gt; Done, a bit janky but I implemented it in coupled_designs&#10;&#10;To do:&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
+    <MESSAGE value="Working on parallelizing" />
+    <option name="LAST_COMMIT_MESSAGE" value="Working on parallelizing" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -837,7 +837,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>142</line>
+          <line>146</line>
           <option name="timeStamp" value="718" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -849,6 +849,11 @@
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
           <line>519</line>
           <option name="timeStamp" value="753" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
+          <line>1231</line>
+          <option name="timeStamp" value="785" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-defaults>
@@ -888,7 +893,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$IGSchecker.coverage" NAME="IGSchecker Coverage Results" MODIFIED="1659372428534" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner__1_.coverage" NAME="RiboDesigner (1) Coverage Results" MODIFIED="1681251351848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1700067781046" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1700068059672" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$findReferenceIdxScript.coverage" NAME="findReferenceIdxScript Coverage Results" MODIFIED="1660677370975" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SequencePrepper.coverage" NAME="SequencePrepper Coverage Results" MODIFIED="1661804956011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

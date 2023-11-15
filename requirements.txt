@@ -1,0 +1,10 @@
+playsound
+numpy
+glob2
+pickle4
+Bio
+matplotlib
+pandas
+seaborn
+alive_progress
+icecream

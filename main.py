@@ -1,4 +1,5 @@
 from playsound import playsound
+import sys
 import numpy as np
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, compare_batches, ribo_checker, make_graphs, prepare_test_seqs,
@@ -10,6 +11,9 @@ if __name__ == '__main__':
     m = 5
     n = 50
     minlen = 35
+
+    worker_number=sys.argv[1]
+    number_of_workers=sys.argv[2]
 
     # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
     barcode_seq_file = 'Common_sequences/sfGFP_2_seq_barcode.txt'
@@ -138,13 +142,13 @@ if __name__ == '__main__':
     #             test_folders=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
     #             save_fig=True, file_type='png')
 
-    #######################################################
-    # This is using the csv made with the code on top of this one
-    make_graphs(control_designs=[], selective_designs=[],
-                universal_designs=[], ref_seq_designs=[], var_regs=e_coli_var_regs,
-                data_file=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
-                test_folders=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
-                save_fig=True, file_type='svg')
+    # #######################################################
+    # # This is using the csv made with the code on top of this one
+    # make_graphs(control_designs=[], selective_designs=[],
+    #             universal_designs=[], ref_seq_designs=[], var_regs=e_coli_var_regs,
+    #             data_file=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
+    #             test_folders=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
+    #             save_fig=True, file_type='svg')
 
     # out_data_temp = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path, igs_length=m,
     #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0,
