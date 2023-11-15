@@ -1171,17 +1171,16 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexib
     return pickle_file_name
 
 
-def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int, n_limit: int = 0):
+def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int,
+                 worker_number: int, n_limit: int = 0):
     """
     This is the parallelization script I need to work on.
     """
     # Check if we have anything to test
-    try:
-        analysis_files = [file for file in os.listdir(coupled_designs_and_test_folder) if file[-8:] == '.coupled']
-    except NotADirectoryError:
-        if coupled_designs_and_test_folder[-8:] == '.coupled':
-            analysis_files = [coupled_designs_and_test_folder]
-        coupled_designs_and_test_folder = coupled_designs_and_test_folder.split('/')[:-1]
+    coupled_folder = f'{coupled_designs_and_test_folder}/coupled'
+    checkpoint_folder = f'{coupled_designs_and_test_folder}/checkpoints'
+    results_folder = f'{coupled_designs_and_test_folder}/results'
+    analysis_files = [file for file in os.listdir(f'{coupled_designs_and_test_folder}/coupled') if file.endswith('.coupled')]
 
     if len(analysis_files) == 0:
         print('Please make sure to couple designs with the appropriate test sequences')
@@ -1190,31 +1189,45 @@ def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int, n
     # Extract test sequences data
     to_test = []
     for file in analysis_files:
-        file_name = file.split('.')[0]
-        with open(file, 'rb') as handle:
+        file_name = os.path.join(coupled_folder, file)
+        with open(file_name, 'rb') as handle:
             to_test_temp = pickle.load(handle)
         for design in to_test_temp:
             to_test.append((design, file_name))
 
-    try:
-        with open(file_name + '_checkpoint.txt', 'r') as d:
-            last_design_analyzed = int(d.read())
-    except FileNotFoundError:
-        last_design_analyzed = 0
+    checkpoint_files = [file for file in os.listdir(checkpoint_folder) if file.endswith('_checkpoint.txt')]
+    finished_work = []
+    for file in checkpoint_files:
+        file_name = os.path.join(checkpoint_folder, file)
+        with open(file_name, 'r') as handle:
+            t = handle.read()
+            work_ids = [int(line) for line in t.split('\n') if line != '']
+            finished_work.extend(work_ids)
+
+    unfinished_work = []
+    for current_design_idx, design_to_test in enumerate(to_test):
+        if current_design_idx not in finished_work:
+            unfinished_work.append((design_to_test, current_design_idx))
+    this_worker_worklist = np.array_split(np.array(unfinished_work, dtype=tuple), number_of_workers)[worker_number]
+
+    total_work = len(to_test)
+    work_to_be_done = len(unfinished_work)
+    work_completed = total_work - work_to_be_done
+    print(f'Total work:{total_work}\nWork to be done: {work_to_be_done}\nWork completed:{work_completed}\n'
+          f'Work for this worker:{this_worker_worklist.shape[0]}')
 
     # This is where we will parallelize proper!!!
-    for current_design, (design_to_test, file_name) in enumerate(to_test):
-        if current_design < last_design_analyzed:
-            continue
+    for (design_to_test, file_name), current_design_idx in this_worker_worklist:
+
         result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
         result_dict = result.to_dict(all_data=False)
-        with open(file_name + '_results.txt', 'a') as d:
+        with open(f'{results_folder}/{worker_number}_results.txt', 'a') as d:
             d.write(json.dumps(result_dict))
 
-        with open(file_name + '_checkpoint.txt', 'w') as d:
-            d.write(str(current_design))
+        with open(f'{checkpoint_folder}/{worker_number}_checkpoint.txt', 'a') as d:
+            d.write(str(current_design_idx) + '\n')
 
-        last_design_analyzed = current_design + 1
+        last_design_analyzed = current_design_idx + 1
 
     return
 
