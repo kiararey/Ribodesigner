@@ -7,11 +7,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Working on parallelizing">
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Fixing for NOTS">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parallelization_example/parallelize.slurm" beforeDir="false" afterPath="$PROJECT_DIR$/parallelization_example/parallelize.slurm" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -755,7 +752,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="112" />
+    <option name="localTasksCounter" value="113" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -785,7 +782,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="fixed a bug in ribo_checker" />
     <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
     <MESSAGE value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
     <MESSAGE value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
@@ -810,7 +806,8 @@
     <MESSAGE value="Parallelizing script is almost ready to go. Just need to add the number of workers and then get the checkpoint file reading/ generation checked to make sure it is working as expected.&#10;&#10;There are still a lot of things to do besides this:&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
     <MESSAGE value="- Fix perc_on_target calculation in RibozymeDesign class --&gt; Done&#10;- Rework test_ribo_design to implement directly into ribodesigner --&gt; Done, a bit janky but I implemented it in coupled_designs&#10;&#10;To do:&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
     <MESSAGE value="Working on parallelizing" />
-    <option name="LAST_COMMIT_MESSAGE" value="Working on parallelizing" />
+    <MESSAGE value="Fixing for NOTS" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixing for NOTS" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
