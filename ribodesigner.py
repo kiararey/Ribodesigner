@@ -584,8 +584,11 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     else:
         # Remove any .fasta
         pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
-    with open(f'{folder_to_save}/designs_{pickle_file_name}.pickle', 'wb') as handle:
-        pickle.dump(optimized_seqs, handle)
+    print('Now pickling output file...')
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        with open(f'{folder_to_save}/designs_{pickle_file_name}.pickle', 'wb') as handle:
+            pickle.dump(optimized_seqs, handle)
+            bar()
 
     if fileout:
         out_file = folder_to_save + '/designs_' + pickle_file_name
@@ -1112,9 +1115,15 @@ def get_directional_score(opti_seq):
     return score
 
 
-def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexible_igs: bool = False, igs_len: int = 5,
-                                ref_idx_u_loc: int = 0, score_type: str = 'weighted', file_to_save: str = ''):
+def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_to_save: str = '',
+                                flexible_igs: bool = False, igs_len: int = 5, ref_idx_u_loc: int = 0,
+                                score_type: str = 'weighted'):
     # For now, you must tell the program the location of the U for random sequences to analyze.
+    # First, make a results folder, checkpoint, and coupled folder if they do not exist
+    subfile = file_to_save + '/coupled'
+    if not os.path.exists(subfile):
+        os.mkdir(subfile)
+
     # Check if we've pre_processed designs correctly
     if (designs_input[-7:] != '.pickle') | (test_seqs_input[-7:] != '.pickle'):
         if designs_input[-igs_len-1] not in ['G', 'g']:
@@ -1127,7 +1136,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexib
                                   score_type_attr=score_type)]
 
         # Rename designs_input to correctly name file later on
-        designs_input = file_to_save + '/' + igs_id + '.pickle'
+        designs_input = subfile + '/' + igs_id + '.pickle'
     else:
         # Extract design sequence data
         with open(designs_input, 'rb') as handle:
@@ -1141,16 +1150,32 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexib
     with alive_bar(len(designs), spinner='fishes') as bar:
         for design in designs:
             matching_ref_idx_seqs = test_seqs[design.ref_idx]
+            # If there are no test sequences with that index, set stats to zero and check the next one
+            if len(matching_ref_idx_seqs) == 0:
+                design.u_conservation_test = 0
+                design.perc_cov_test = 0
+                design.perc_on_target_test = 0
+                design.true_perc_cov_test = 0
+                bar()
+                continue
             # Set correct u conservation
             design.u_conservation_test = matching_ref_idx_seqs[1]
+
             # Set what targets have this IGS id
             # Recall each inner dictionary is of form IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
             design_id = design.igs + str(design.ref_idx)
-            design.test_targets = matching_ref_idx_seqs[0][design_id][1]
-            # Set igs stats
-            design.perc_cov_test = matching_ref_idx_seqs[0][design_id][2]
-            design.perc_on_target_test = matching_ref_idx_seqs[0][design_id][3]
-            design.true_perc_cov_test = matching_ref_idx_seqs[0][design_id][4]
+            try:
+                design.test_targets = matching_ref_idx_seqs[0][design_id][1]
+                # Set igs stats
+                design.perc_cov_test = matching_ref_idx_seqs[0][design_id][2]
+                design.perc_on_target_test = matching_ref_idx_seqs[0][design_id][3]
+                design.true_perc_cov_test = matching_ref_idx_seqs[0][design_id][4]
+            except KeyError:  # if there is not any matching IGSes
+                design.perc_cov_test = 0
+                design.perc_on_target_test = 0
+                design.true_perc_cov_test = 0
+                if not flexible_igs:
+                    continue
             # Extract the relevant guide sequences
             # (same ref_idx, and either guides with same IGS OR all guides if IGS is flexible)
             if not flexible_igs:
@@ -1171,16 +1196,21 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, flexib
     return pickle_file_name
 
 
-def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int,
-                 worker_number: int, n_limit: int = 0):
+def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0):
     """
     This is the parallelization script I need to work on.
     """
+    checkpoint_folder = f'{coupled_folder}/checkpoints'
+    results_folder = f'{coupled_folder}/results'
+
+    # Generate input results folders if they do not exist yet
+    if not os.path.exists(checkpoint_folder):
+        os.mkdir(checkpoint_folder)
+    if not os.path.exists(results_folder):
+        os.mkdir(results_folder)
+
     # Check if we have anything to test
-    coupled_folder = f'{coupled_designs_and_test_folder}/coupled'
-    checkpoint_folder = f'{coupled_designs_and_test_folder}/checkpoints'
-    results_folder = f'{coupled_designs_and_test_folder}/results'
-    analysis_files = [file for file in os.listdir(f'{coupled_designs_and_test_folder}/coupled') if file.endswith('.coupled')]
+    analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
 
     if len(analysis_files) == 0:
         print('Please make sure to couple designs with the appropriate test sequences')
@@ -1220,6 +1250,13 @@ def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int,
     for (design_to_test, file_name), current_design_idx in this_worker_worklist:
 
         result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
+
+        # If our result does not meet n_limit requirements, skip it
+        if not result:
+            with open(f'{checkpoint_folder}/{worker_number}_checkpoint.txt', 'a') as d:
+                d.write(str(current_design_idx) + '\n')
+            continue
+
         result_dict = result.to_dict(all_data=False)
         with open(f'{results_folder}/{worker_number}_results.txt', 'a') as d:
             d.write(json.dumps(result_dict))
@@ -1227,30 +1264,24 @@ def ribo_checker(coupled_designs_and_test_folder: str, number_of_workers: int,
         with open(f'{checkpoint_folder}/{worker_number}_checkpoint.txt', 'a') as d:
             d.write(str(current_design_idx) + '\n')
 
-        last_design_analyzed = current_design_idx + 1
-
     return
 
 
 def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
     def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr, test_dataset_name_attr):
         # No hits in the background! filter out those that have too many Ns
-        # Scores are set at 0 based on the assumption that if there is no catalytic U there is no splicing
-        # activity
+        # Score is set at 0 based if there is no u conservation or guide sequences
         guide_len = len(ribo_design_attr.guide)
         # remove designs with too many Ns
         if ribo_design_attr.guide.count('N') / guide_len <= n_limit_attr:
             # Follow the same naming as the outputs of replace_ambiguity.
-            ribo_design_attr.true_perc_cov_test = 0
-            ribo_design_attr.perc_cov_test = 0
-            ribo_design_attr.perc_on_target_test = 0
             ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
             return ribo_design_attr
         else:
             return None
 
     # See if we can skip computation all together because if no conserved u, no conserved IGS
-    if not coupled_design.u_conservation_test:
+    if coupled_design.u_conservation_test == 0 or len(coupled_design.guides_to_use) == 0:
         out = set_no_targets(coupled_design, n_limit, test_dataset_name)
         return out
 
@@ -1264,96 +1295,6 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
     coupled_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
 
     return coupled_design
-
-
-# def test_ribo_design(design: str, test_folders: list[str], ref_seq_folder: str, igs_len: int = 5,
-#                      score_type: str = 'naive', file_out: bool = False, folder_to_save: str = '', taxonomy=''):
-#     print('Testing ribozyme design!')
-#     start = time.perf_counter()
-#     # first, read in all our sequences
-#     targets_to_test_list = []
-#     for file in test_folders:
-#         targets_to_test_list.append(read_silva_fasta(in_file=file))
-#     ref_name_and_seq = read_fasta(ref_seq_folder)[0]
-#     igs = design[-igs_len:]
-#     design_guide = Seq(design[:-igs_len - 1]).upper().back_transcribe()  # recall there's a G between the igs and guide
-#
-#     time1 = time.perf_counter()
-#     print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq[0].replace("_", " ")}...')
-#     # Align the targets to test to our reference sequence
-#     names_guides_etc = []
-#     for i, targets_to_test in enumerate(targets_to_test_list):
-#         print(f'Pre-processing dataset {i} with {len(targets_to_test)} sequences to test')
-#         with alive_bar(unknown='fish', spinner='fishes') as bar:
-#             fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
-#                                            excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
-#             fn_align_to_ref(targets_to_test, ref_name_and_seq=ref_name_and_seq, igs_length=igs_len,
-#                             guide_length=len(design_guide), min_length=len(design_guide))
-#             bar()
-#         time2 = time.perf_counter()
-#         round_convert_time(start=time1, end=time2, round_to=4,
-#                            task_timed=f'finding catalytic sites and indexing target sequences to reference')
-#
-#         # get all guides and the name of their targets that have the correct igs: (og_idx, ref_idx, igs, guide)
-#         time1 = time.perf_counter()
-#         print('Finding matching IGSes and corresponding guides...')
-#         names_temp = defaultdict(set)
-#         guides_temp = defaultdict(list)
-#         all_names_temp = set()
-#         with alive_bar(len(targets_to_test), spinner='fishes') as bar:
-#             for target in targets_to_test:
-#                 for putative_guide in target.cat_sites:
-#                     if putative_guide[2] == igs:
-#                         names_temp[putative_guide[1]].add(target.full_name)
-#                         guides_temp[putative_guide[1]].append(putative_guide[3])
-#                         all_names_temp.add(target.full_name)
-#                 bar()
-#         names_guides_etc.append((names_temp, guides_temp, all_names_temp))
-#
-#     num_of_seqs_with_igs_list = [len(names) for _, _, names in names_guides_etc]
-#     time2 = time.perf_counter()
-#     round_convert_time(start=time1, end=time2, round_to=4,
-#                        task_timed=f'matching IGSes and guides.')
-#
-#     # Calculate coverage for each and make a ribozyme design for each
-#     time1 = time.perf_counter()
-#     print('Calculating coverage for putative locations targeted by guide...')
-#
-#     locations_and_scores_list = []
-#     for (names, guides, all_names), num_of_seqs_with_igs, targets_to_test, test_folder in (
-#             zip(names_guides_etc, num_of_seqs_with_igs_list, targets_to_test_list, test_folders)):
-#         locations_and_scores = np.array([], dtype=RibozymeDesign)
-#         with alive_bar(len(guides.items()), spinner='fishes') as bar:
-#             for index, guide_list in guides.items():
-#                 perc_cov = num_of_seqs_with_igs / targets_to_test.size
-#                 true_perc_cov = len(guide_list) / targets_to_test.size
-#                 per_on_target = perc_cov / perc_cov
-#                 score = return_score_from_type(sequence_to_test=design_guide, score_type=score_type)
-#                 locations_and_scores = np.append(locations_and_scores,
-#                                                  RibozymeDesign(id_attr=f'{igs}{index}', guide_attr=Seq(design_guide),
-#                                                                 score_attr=score,
-#                                                                 score_type_attr=score_type,
-#                                                                 perc_cov_test_attr=perc_cov,
-#                                                                 perc_on_target_test_attr=per_on_target,
-#                                                                 true_perc_cov_test_attr=true_perc_cov))
-#                 bar()
-#         locations_and_scores = ribo_checker(locations_and_scores, targets_to_test, len(ref_name_and_seq[1]),
-#                                             guide_length=len(design_guide), flexible_igs=True, n_limit=1,
-#                                             refine_selective=False, for_test=True, test_dataset_name=test_folder)
-#         locations_and_scores_list.extend(locations_and_scores)
-#
-#     time2 = time.perf_counter()
-#     round_convert_time(start=time1, end=time2, round_to=4,
-#                        task_timed=f'scoring design against test sequences')
-#
-#     if file_out:
-#         out_file = folder_to_save + '/tested_premade_design_'
-#         write_output_file(designs=locations_and_scores_list, folder_path=out_file, taxonomy=taxonomy)
-#
-#     end = time.perf_counter()
-#     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-#     print('########################################################\n')
-#     return locations_and_scores
 
 
 def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool = False,
