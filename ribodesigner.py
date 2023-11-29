@@ -1256,7 +1256,10 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0):
     """
     This is the parallelization script I need to work on.
+    MAKE IT LOAD ONE BY ONE
     """
+    worker_number = int(worker_number)
+    number_of_workers = int(number_of_workers)
     checkpoint_folder = f'{coupled_folder}/checkpoints'
     results_folder = f'{coupled_folder}/results'
 
@@ -1273,7 +1276,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
         print('Please make sure to couple designs with the appropriate test sequences')
         return
 
-    # Extract test sequences data
+    # Extract test sequences data - keep index of file, do not change input files till whole job is done
     to_test = []
     for file in analysis_files:
         file_name = os.path.join(coupled_folder, file)
