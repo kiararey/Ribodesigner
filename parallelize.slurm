@@ -1,12 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=ribodesigner_parallel
 #SBATCH --partition=scavenge
-#SBATCH --time=00:30:00
+#SBATCH --time=04:00:00
 #SBATCH --export=ALL
 #SBATCH --mail-user=kpr1@rice.edu
 #SBATCH --mail-type=ALL
-#SBATCH --array=0-9
+#SBATCH --array=0-49
 
+module purge
 module load GCCcore/12.3.0
 module load Python/3.11.3
 pip install --user -r requirements.txt
