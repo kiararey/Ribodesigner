@@ -219,4 +219,6 @@ if __name__ == '__main__':
     #     playsound('/System/Library/Sounds/Pop.aiff')
     #     print(f'Test data done!\n########################################################\n')
 
-    ########################################################
+    # # ########################################################
+    make_graphs(control_designs_path='test_output_files/test_outputs_parallelizing/coupled/results/0_results.txt',
+                var_regs=e_coli_var_regs)

@@ -66,7 +66,7 @@ class RibozymeDesign:
     'g': list[Seq]  # guides to use to later
     """
 
-    def __init__(self, id_attr: str, guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
+    def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
                  background_score_attr: float = None, perc_cov_background_attr: float = None,
@@ -75,102 +75,159 @@ class RibozymeDesign:
                  background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
                  u_consv_background_attr: float = None, tested_design_attr: bool = False,
                  perc_cov_test_attr: float = None,
-                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None):
-        self.id = id_attr
-        if igs_attr:
-            self.igs = igs_attr
+                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None,
+                 dict_initialize: dict = None):
+        if dict_initialize:
+            # First, do most data
+            self.id = dict_initialize['id']
+            self.igs = dict_initialize['igs']
+            self.ref_idx = dict_initialize['reference_idx']
+            self.optimized_to_targets = dict_initialize['optimized_to_targets']
+            self.optimized_to_background = dict_initialize['optimized_to_background']
+            self.tested = dict_initialize['tested']
+            self.tested_design = dict_initialize['tested_design']
+            self.guide = dict_initialize['guide']
+            self.number_of_targets = dict_initialize['num_of_targets']
+            self.score_type = dict_initialize['score_type']
+            self.score = dict_initialize['score']
+            self.perc_cov = dict_initialize['%_coverage']
+            self.perc_on_target = dict_initialize['%_on target']
+            self.true_perc_cov = dict_initialize['true_%_cov']
+            self.composite_score = dict_initialize['composite_score']
+            self.number_of_targets_background = dict_initialize['num_of_targets_background']
+            self.u_conservation_background = dict_initialize['u_conservation_background']
+            self.background_score = dict_initialize['background_score']
+            self.perc_cov_background = dict_initialize['%_coverage_background']
+            self.perc_on_target_background = dict_initialize['%_on target_background']
+            self.true_perc_cov_background = dict_initialize['true_%_cov_background']
+            self.composite_background_score = dict_initialize['composite_background_score']
+            self.delta_igs_vs_background = dict_initialize['delta_igs_vs_background']
+            self.delta_guide_vs_background = dict_initialize['delta_guide_vs_background']
+            self.delta_vs_background = dict_initialize['delta_vs_background']
+            self.name_of_test_dataset = dict_initialize['name_of_test_dataset']
+            self.number_of_targets_test = dict_initialize['num_of_targets_test']
+            self.u_conservation_test = dict_initialize['u_conservation_test']
+            self.test_score = dict_initialize['test_score']
+            self.perc_cov_test = dict_initialize['%_coverage_test']
+            self.perc_on_target_test = dict_initialize['%_on target_test']
+            self.true_perc_cov_test = dict_initialize['true_%_cov_test']
+            self.composite_test_score = dict_initialize['composite_test_score']
+            self.delta_igs_vs_test = dict_initialize['delta_igs_vs_test']
+            self.delta_guide_vs_test = dict_initialize['delta_guide_vs_test']
+            self.delta_vs_test = dict_initialize['delta_vs_test']
+            # Then, targets will be a bit messy. Should fix this later, right now I just need it to work
+            self.targets = zip(dict_initialize['target_Domain'], dict_initialize['target_Phylum'],
+                               dict_initialize['target_Class'], dict_initialize['target_Order'],
+                               dict_initialize['target_Family'], dict_initialize['target_Genus'],
+                               dict_initialize['target_Species'], dict_initialize['target_Taxon'])
+            self.test_targets = zip(dict_initialize['target_Domain_test'], dict_initialize['target_Phylum_test'],
+                                    dict_initialize['target_Class_test'], dict_initialize['target_Order_test'],
+                                    dict_initialize['target_Family_test'], dict_initialize['target_Genus_test'],
+                                    dict_initialize['target_Species_test'], dict_initialize['target_Taxon_test'])
+            self.background_targets = zip(dict_initialize['target_Domain_background'],
+                                          dict_initialize['target_Phylum_background'],
+                                          dict_initialize['target_Class_background'],
+                                          dict_initialize['target_Order_background'],
+                                          dict_initialize['target_Family_background'],
+                                          dict_initialize['target_Genus_background'],
+                                          dict_initialize['target_Species_background'],
+                                          dict_initialize['target_Taxon_background'])
         else:
-            self.igs = id_attr[:5]
-        if ref_idx_attr:
-            self.ref_idx = ref_idx_attr
-        else:
-            self.ref_idx = int(id_attr[5:])
-        self.guide = guide_attr
-        self.guides_to_use = guides_to_use_attr
-        self.targets = targets_attr
-        if targets_attr:
-            self.number_of_targets = len(targets_attr)
-        else:
-            self.number_of_targets = None
-        self.score = score_attr
-        self.score_type = score_type_attr
+            self.id = id_attr
+            if igs_attr:
+                self.igs = igs_attr
+            else:
+                self.igs = id_attr[:5]
+            if ref_idx_attr:
+                self.ref_idx = ref_idx_attr
+            else:
+                self.ref_idx = int(id_attr[5:])
+            self.guide = guide_attr
+            self.guides_to_use = guides_to_use_attr
+            self.targets = targets_attr
+            if targets_attr:
+                self.number_of_targets = len(targets_attr)
+            else:
+                self.number_of_targets = None
+            self.score = score_attr
+            self.score_type = score_type_attr
 
-        # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
-        self.calc_percent_coverages(perc_cov_attr=perc_cov_attr, perc_on_target_attr=perc_on_target_attr,
-                                    true_perc_cov_attr=true_perc_cov_attr)
+            # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
+            self.calc_percent_coverages(perc_cov_attr=perc_cov_attr, perc_on_target_attr=perc_on_target_attr,
+                                        true_perc_cov_attr=true_perc_cov_attr)
 
-        # If we initialized using an optimized design, set these attributes now.
-        if self.score and self.true_perc_cov:
-            self.composite_score = self.true_perc_cov * self.score
-        else:
-            self.composite_score = 0
-        if self.guide and self.score and self.score_type:
-            self.optimized_to_targets = True
-        else:
-            self.optimized_to_targets = False
-        self.tested_design = tested_design_attr
+            # If we initialized using an optimized design, set these attributes now.
+            if self.score and self.true_perc_cov:
+                self.composite_score = self.true_perc_cov * self.score
+            else:
+                self.composite_score = 0
+            if self.guide and self.score and self.score_type:
+                self.optimized_to_targets = True
+            else:
+                self.optimized_to_targets = False
+            self.tested_design = tested_design_attr
 
-        # For initialized targeted ribozyme designs only:
-        self.background_score = background_score_attr
-        self.background_targets = background_targets_attr
-        if background_targets_attr:
-            self.number_of_targets_background = len(background_targets_attr)
-        else:
-            self.number_of_targets_background = None
-        self.background_guides = background_guides_attr
-        self.u_conservation_background = u_consv_background_attr
-        self.anti_guide = anti_guide_attr
-        self.anti_guide_score = anti_guide_score_attr
-        self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
-                                               perc_on_target_background_attr=perc_on_target_background_attr,
-                                               true_perc_cov_background_attr=true_perc_cov_background_attr)
+            # For initialized targeted ribozyme designs only:
+            self.background_score = background_score_attr
+            self.background_targets = background_targets_attr
+            if background_targets_attr:
+                self.number_of_targets_background = len(background_targets_attr)
+            else:
+                self.number_of_targets_background = None
+            self.background_guides = background_guides_attr
+            self.u_conservation_background = u_consv_background_attr
+            self.anti_guide = anti_guide_attr
+            self.anti_guide_score = anti_guide_score_attr
+            self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
+                                                   perc_on_target_background_attr=perc_on_target_background_attr,
+                                                   true_perc_cov_background_attr=true_perc_cov_background_attr)
 
-        if self.true_perc_cov_background and background_score_attr:
-            self.composite_background_score = self.true_perc_cov_background * background_score_attr
-        else:
-            self.composite_background_score = None
+            if self.true_perc_cov_background and background_score_attr:
+                self.composite_background_score = self.true_perc_cov_background * background_score_attr
+            else:
+                self.composite_background_score = None
 
-        if self.composite_score and self.composite_background_score:
-            self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
-            self.delta_guide_vs_background = self.score - self.background_score
-            self.delta_vs_background = self.composite_score - self.composite_background_score
-        elif self.composite_score:
-            self.delta_igs_vs_background = self.true_perc_cov
-            self.delta_guide_vs_background = self.score
-            self.delta_vs_background = self.composite_score
-        else:
-            self.delta_igs_vs_background = 0
-            self.delta_guide_vs_background = 0
-            self.delta_vs_background = 0
+            if self.composite_score and self.composite_background_score:
+                self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
+                self.delta_guide_vs_background = self.score - self.background_score
+                self.delta_vs_background = self.composite_score - self.composite_background_score
+            elif self.composite_score:
+                self.delta_igs_vs_background = self.true_perc_cov
+                self.delta_guide_vs_background = self.score
+                self.delta_vs_background = self.composite_score
+            else:
+                self.delta_igs_vs_background = 0
+                self.delta_guide_vs_background = 0
+                self.delta_vs_background = 0
 
-        if self.composite_background_score:
-            self.optimized_to_background = True
-        else:
-            self.optimized_to_background = False
-        self.guide_batches = None
-        self.test_targets = None
-        self.u_conservation_test = None
-        self.perc_cov_test = perc_cov_test_attr
-        self.perc_on_target_test = perc_on_target_test_attr
-        self.true_perc_cov_test = true_perc_cov_test_attr
-        self.test_score = None
-        self.composite_test_score = None
+            if self.composite_background_score:
+                self.optimized_to_background = True
+            else:
+                self.optimized_to_background = False
+            self.guide_batches = None
+            self.test_targets = None
+            self.u_conservation_test = None
+            self.perc_cov_test = perc_cov_test_attr
+            self.perc_on_target_test = perc_on_target_test_attr
+            self.true_perc_cov_test = true_perc_cov_test_attr
+            self.test_score = None
+            self.composite_test_score = None
 
-        if self.composite_score and self.composite_test_score:
-            self.delta_igs_vs_test = self.true_perc_cov - self.true_perc_cov_test
-            self.delta_guide_vs_test = self.score - self.test_score
-            self.delta_vs_test = self.composite_score - self.composite_test_score
-        elif self.composite_score:
-            self.delta_igs_vs_test = self.true_perc_cov
-            self.delta_guide_vs_test = self.score
-            self.delta_vs_test = self.composite_score
-        else:
-            self.delta_igs_vs_test = None
-            self.delta_guide_vs_test = None
-            self.delta_vs_test = None
-        self.tested = False
-        self.number_of_targets_test = None
-        self.name_of_test_dataset = None
+            if self.composite_score and self.composite_test_score:
+                self.delta_igs_vs_test = self.true_perc_cov - self.true_perc_cov_test
+                self.delta_guide_vs_test = self.score - self.test_score
+                self.delta_vs_test = self.composite_score - self.composite_test_score
+            elif self.composite_score:
+                self.delta_igs_vs_test = self.true_perc_cov
+                self.delta_guide_vs_test = self.score
+                self.delta_vs_test = self.composite_score
+            else:
+                self.delta_igs_vs_test = None
+                self.delta_guide_vs_test = None
+                self.delta_vs_test = None
+            self.tested = False
+            self.number_of_targets_test = None
+            self.name_of_test_dataset = None
 
     def to_dict(self, taxonomy: str | list = '', all_data: bool = False):
         inputs = {}
@@ -1250,18 +1307,19 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     for (design_to_test, file_name), current_design_idx in this_worker_worklist:
 
         result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
+        naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
         # If our result does not meet n_limit requirements, skip it
         if not result:
-            with open(f'{checkpoint_folder}/{worker_number}_checkpoint.txt', 'a') as d:
+            with open(f'{checkpoint_folder}/{naming_for_file}_checkpoint.txt', 'a') as d:
                 d.write(str(current_design_idx) + '\n')
             continue
 
         result_dict = result.to_dict(all_data=False)
-        with open(f'{results_folder}/{worker_number}_results.txt', 'a') as d:
+        with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
             d.write(json.dumps(result_dict))
 
-        with open(f'{checkpoint_folder}/{worker_number}_checkpoint.txt', 'a') as d:
+        with open(f'{checkpoint_folder}/{naming_for_file}_checkpoint.txt', 'a') as d:
             d.write(str(current_design_idx) + '\n')
 
     return
@@ -1395,80 +1453,43 @@ def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign]
     return
 
 
-def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
-                universal_designs: list[np.ndarray[RibozymeDesign]] | list[str],
-                selective_designs: list[np.ndarray[RibozymeDesign]] | list[str],
-                ref_seq_designs: np.ndarray[RibozymeDesign] | list | str,
-                var_regs: list[tuple[int, int]], save_fig: bool = False, file_loc: str = None, file_type: str = 'png',
-                taxonomy: str = '', data_file: str = '', save_file_loc: str = '', test_folders: [str] = None):
-    if not test_folders:
-        print('Please provide test data')
-        return
-    # Make data into a pandas dataframe
-    if not data_file:
-        if type(control_designs) is str:
-            all_data_df = pd.read_csv(control_designs)
-            all_data_df.index = ['control'] * len(all_data_df.values)
+def extract_info(results_file_path: str, dataset: str):
+    with open(results_file_path, 'r') as read_file:
+        design_str = read_file.read()
+    # Now extact data here:
+    list_of_designs = design_str.split('}{')
+    initialized = False
+    for design in list_of_designs:
+        design_dict = {}
+        individual_attributes = design.strip(' {').split(', "')
+        for key_val in individual_attributes:
+            key, val = key_val.split('": ')
+            design_dict[key.strip('"')] = val.strip('"\'')
+        # Now that we have all the data, make it into a RibozymeDesign again. Warning this is going to look ugly
+        # extracted_design = RibozymeDesign(dict_initialize=design_dict)
+        extracted_design = pd.DataFrame(design_dict, index=[dataset])
+        if not initialized:
+            design_df = extracted_design
+            initialized = True
         else:
-            all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in control_designs],
-                                                    index='control' * len(control_designs))
+            design_df = pd.concat([design_df, extracted_design])
 
-        if type(ref_seq_designs) is str:
-            ref_seq_designs_df = pd.read_csv(ref_seq_designs)
-            ref_seq_designs_df.index = ['reference_seq'] * len(ref_seq_designs_df.values)
-        else:
-            ref_seq_designs_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in ref_seq_designs],
-                                                           index='reference_seq' * len(ref_seq_designs))
-        all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
+    return design_df
 
-        for i, sub_list in enumerate(universal_designs):
-            if type(sub_list) is str:
-                sub_list_df = pd.read_csv(sub_list)
-                sub_list_df.index = [f'universal_{i}'] * len(sub_list_df)
-            else:
-                sub_list_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in sub_list],
-                                                        index=f'universal_{i}' * len(sub_list))
-            all_data_df = pd.concat([all_data_df, sub_list_df])
+def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, universal_designs_path: str = '', selective_designs_path: str = '',
+                ref_seq_designs_path: str = '',  save_fig: bool = False,
+                file_type: str = 'png', save_file_loc: str = ''):
 
-        for i, sub_list in enumerate(selective_designs):
-            if type(sub_list) is str:
-                sub_list_df = pd.read_csv(sub_list)
-                sub_list_df.index = [f'selective_{i}'] * len(sub_list_df)
-            else:
-                sub_list_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in sub_list],
-                                                        index=f'selective_{i}' * len(sub_list))
-            all_data_df = pd.concat([all_data_df, sub_list_df])
-        #
-        #
-        # all_data_array = np.hstack([control_designs] + universal_designs + selective_designs + [ref_seq_designs])
-        # index_names = ['control'] * len(control_designs) + \
-        #               [f'universal_{i}' for i, data in enumerate(universal_designs) for _ in data] + \
-        #               [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data] + \
-        #               ['reference_seq'] * len(ref_seq_designs)
-        #
-        # all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in all_data_array],
-        #                                         index=index_names)
-        if os.path.exists(file_loc):
-            os.remove(file_loc)
-        all_data_df.to_csv(file_loc)
-    else:
-        all_data_df = pd.read_csv(data_file)
+    control_designs_df = extract_info(control_designs_path, 'control')
+    universal_designs_df = extract_info(universal_designs_path, 'universal')
+    all_data_df = pd.concat([control_designs_df, universal_designs_df])
+    selective_designs_df = extract_info(selective_designs_path, 'selective')
+    all_data_df = pd.concat([all_data_df, selective_designs_df])
+    ref_seq_designs_df = extract_info(ref_seq_designs_path, 'ref_seq')
+    all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
+    print('test')
 
-    # Extract top scores for each category - this way it will count for us!
-    all_data_df.rename(columns={'Unnamed: 0': 'tested_targets'}, inplace=True)
-    all_data_df.index.name = 'Index'
-    labels = list(set(all_data_df['tested_targets']))
-    labels = [label for label in labels if type(label) is str]
-    universal_labels = [name for name in labels if name[0] == 'u']
-    selective_labels = [name for name in labels if name[0] == 's']
-    labels.sort()
-    control_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'control']
     control_designs_df_1376 = control_designs_df[control_designs_df['reference_idx'] == 1376]
-    universal_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(universal_labels)]
-    num_universal = len(universal_labels)
-    selective_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(selective_labels)]
-    num_selective = len(selective_labels)
-    ref_seq_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'reference_seq']
 
     target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
 
