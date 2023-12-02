@@ -108,7 +108,7 @@ if __name__ == '__main__':
     #                                             gaps_allowed=False, fileout=False, random_guide_sample_size=10,
     #                                             test_folders=test_data_folders, folder_to_save=test_output_folder)
     #     universal_data_pickles.append(ref_seq_pickle_file_name)
-
+    #
     # for test_pickle in test_data_pickles:
     #     control_design_pickle_file_name = couple_designs_to_test_seqs(designs_input=u1376,
     #                                                                   test_seqs_input=test_pickle,
@@ -122,11 +122,6 @@ if __name__ == '__main__':
     #                                                                        flexible_igs=True,
     #                                                                        file_to_save=test_output_folder)
 
-    # control_design_pickle_file_name = couple_designs_to_test_seqs(designs_input=u1376,
-    #                                                               test_seqs_input=test_seqs_pickle_file_name,
-    #                                                               flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-    #                                                               score_type='weighted', file_to_save=test_output_folder)
-    #
     # coupled_designs_pickle_file_name = \
     #     ('test_output_files/test_outputs_parallelizing')
 
