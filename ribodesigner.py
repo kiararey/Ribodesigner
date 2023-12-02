@@ -1274,10 +1274,10 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0):
     """
     This is the parallelization script I need to work on.
-    MAKE IT LOAD ONE BY ONE
     """
     worker_number = int(worker_number)
     number_of_workers = int(number_of_workers)
+
     work_done_file = f'{coupled_folder}/work_done.txt'
     results_folder = f'{coupled_folder}/results'
 
@@ -1298,15 +1298,18 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
     # read each line as a tuple of three values - big index, file name, small index
     with open(coupled_folder + '/big_checkpoint.txt', 'r') as handle:
-        work_to_do_list = handle.read()
+        work_to_do_list = handle.read().splitlines()
 
     # Check the big work done checkpoint file and remove any indexes that are already there
-    with open(work_done_file) as handle:
-        work_done = handle.read()
+    if os.path.exists(work_done_file):
+        with open(work_done_file) as handle:
+            work_done = handle.read().splitlines()
+    else:
+        work_done = []
     # Big work done file only has the big indexes already completed
     work_done = set(work_done)
     #  Basically remove make an array that contains all lines NOT in big work done
-    work_to_do_list = [tuple(item.split('\t')) for item in work_to_do_list if item.split('\t')[0] not in work_done]
+    work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if item.split('\t')[0] not in work_done]
     work_to_do = len(work_to_do_list)
     work_completed = len(work_done)
 
@@ -1316,7 +1319,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
     files_to_open_dict = defaultdict(lambda: [])
     for big_idx, file_name, small_idx in this_worker_worklist:
-        files_to_open_dict[file_name].append((big_idx, small_idx))
+        files_to_open_dict[file_name].append((int(big_idx), int(small_idx)))
 
     # Print how much work is left to do
     print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed:{work_completed}\n'
@@ -1325,17 +1328,19 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     print('Opening files and extracting designs...')
     designs_to_test = []
     # Now only open the files relevant to this current worker and only extract the designs needed
-    with alive_bar(unknown='fish', spinner='fishes') as bar:
+    with alive_bar(len(files_to_open_dict.keys()), spinner='fishes') as bar:
         for file_name in files_to_open_dict.keys():
             with open(file_name, 'rb') as handle:
                 to_test_temp = pickle.load(handle)
             for big_idx, small_idx in files_to_open_dict[file_name]:
                 # Extract designs matching small index, save as (design, big index, file_name, small index)
                 designs_to_test.append((to_test_temp[small_idx], big_idx, file_name))
+            bar()
 
     # Analyze designs
+    print('Now analyzing designs...')
     with alive_bar(len(designs_to_test), spinner='fishes') as bar:
-        for (design_to_test, big_idx, file_name) in this_worker_worklist:
+        for (design_to_test, big_idx, file_name) in designs_to_test:
 
             result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
@@ -1344,6 +1349,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             if not result:
                 with open(work_done_file, 'a') as d:
                     d.write(str(big_idx) + '\n')
+                bar()
                 continue
 
             result_dict = result.to_dict(all_data=False)
@@ -1353,61 +1359,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             with open(work_done_file, 'a') as d:
                 d.write(str(big_idx) + '\n')
             bar()
-
     return
-
-    #
-    # # Extract test sequences data - keep index of file, do not change input files till whole job is done
-    # to_test = []
-    # for file in analysis_files:
-    #     file_name = os.path.join(coupled_folder, file)
-    #     with open(file_name, 'rb') as handle:
-    #         to_test_temp = pickle.load(handle)
-    #     for design in to_test_temp:
-    #         to_test.append((design, file_name))
-    #
-    # # See if any work has already been completed
-    # checkpoint_files = [file for file in os.listdir(checkpoint_folder) if file.endswith('_checkpoint.txt')]
-    # finished_work = []
-    # for file in checkpoint_files:
-    #     file_name = os.path.join(checkpoint_folder, file)
-    #     with open(file_name, 'r') as handle:
-    #         t = handle.read()
-    #         work_ids = [int(line) for line in t.split('\n') if line != '']
-    #         finished_work.extend(work_ids)
-    #
-    # unfinished_work = []
-    # for current_design_idx, design_to_test in enumerate(to_test):
-    #     if current_design_idx not in finished_work:
-    #         unfinished_work.append((design_to_test, current_design_idx))
-    # this_worker_worklist = np.array_split(np.array(unfinished_work, dtype=tuple), number_of_workers)[worker_number]
-    #
-    # total_work = len(to_test)
-    # work_to_be_done = len(unfinished_work)
-    # work_completed = total_work - work_to_be_done
-    # print(f'Total work:{total_work}\nWork to be done: {work_to_be_done}\nWork completed:{work_completed}\n'
-    #       f'Work for this worker:{this_worker_worklist.shape[0]}')
-    #
-    # # This is where we will parallelize proper!!!
-    # for (design_to_test, file_name), current_design_idx in this_worker_worklist:
-    #
-    #     result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
-    #     naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
-    #
-    #     # If our result does not meet n_limit requirements, skip it
-    #     if not result:
-    #         with open(f'{checkpoint_folder}/{naming_for_file}_checkpoint.txt', 'a') as d:
-    #             d.write(str(current_design_idx) + '\n')
-    #         continue
-    #
-    #     result_dict = result.to_dict(all_data=False)
-    #     with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
-    #         d.write(json.dumps(result_dict))
-    #
-    #     with open(f'{checkpoint_folder}/{naming_for_file}_checkpoint.txt', 'a') as d:
-    #         d.write(str(current_design_idx) + '\n')
-    #
-    # return
 
 
 def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
