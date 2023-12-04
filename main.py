@@ -1,4 +1,3 @@
-from playsound import playsound
 import sys
 import numpy as np
 import multiprocessing as mp
@@ -91,6 +90,9 @@ if __name__ == '__main__':
                               'designs_Bacteria_Only_by_Genus_2_universal.pickle']
     universal_data_pickles = [test_output_folder + '/' + item for item in universal_data_pickles]
 
+    ref_seq_pickle = test_output_folder + '/' + 'designs_e-coli-16s-mg1655_universal.pickle'
+
+    # # Here we make the designs
     # for test_data in test_data_folders:
     #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
     #                                                    guide_length=n, igs_length=m, min_length=minlen,
@@ -99,118 +101,60 @@ if __name__ == '__main__':
     #
     # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
     # # U site as guides in E. coli MG1655
+    # ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=ref_path,
+    #                                         ref_sequence_file=ref_path, igs_length=m,
+    #                                         guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+    #                                         msa_fast=True,
+    #                                         score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+    #                                         gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+    #                                         test_folders=test_data_folders, folder_to_save=test_output_folder)
+    # # finally, here is our universal designs
     # for universal_data in universal_data_files:
-    #     ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=universal_data,
+    #     universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data,
     #                                             ref_sequence_file=ref_path, igs_length=m,
     #                                             guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
     #                                             msa_fast=True,
     #                                             score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
     #                                             gaps_allowed=False, fileout=False, random_guide_sample_size=10,
     #                                             test_folders=test_data_folders, folder_to_save=test_output_folder)
-    #     universal_data_pickles.append(ref_seq_pickle_file_name)
-    #
-    # for test_pickle in test_data_pickles:
-    #     control_design_pickle_file_name = couple_designs_to_test_seqs(designs_input=u1376,
-    #                                                                   test_seqs_input=test_pickle,
-    #                                                                   flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-    #                                                                   score_type='weighted',
-    #                                                                   file_to_save=test_output_folder)
-    #
-    #     for universal_design_pickle in universal_data_pickles:
-    #         coupled_designs_pickle_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
-    #                                                                        test_seqs_input=test_pickle,
-    #                                                                        flexible_igs=True,
-    #                                                                        file_to_save=test_output_folder)
+    #     universal_data_pickles.append(universal_pickle_file_name)
 
-    files_to_test = test_output_folder + '/coupled'
-    ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=worker_number,
-                 n_limit=1)
 
-    #
-    # for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3, universal_data_4]):
-    #     out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
-    #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0,
-    #                                  msa_fast=True, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-    #                                  random_guide_sample_size=10, test_folders=test_data_folders,
-    #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
-    #     universal_datasets.append(out_data_temp)
-    #
-    # for i, datasets in enumerate([(big_data_entero_only, big_data_no_entero),
-    #                               (big_data_pseudo_only, big_data_no_pseudo),
-    #                               (big_data_no_entero_or_pseudo, big_data_only_entero_and_pseudo)]):
-    #     out_data_temp = ribodesigner(target_sequences_folder=datasets[0], ref_sequence_file=ref_path, igs_length=m,
-    #                                  guide_length=n, min_length=n, selective=True, min_true_cov=0,
-    #                                  background_sequences_folder=datasets[1], msa_fast=True,
-    #                                  percent_of_background_seqs_used=1, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-    #                                  random_guide_sample_size=10,
-    #                                  folder_to_save=test_output_folder + f'/selective dataset {i + 1}',
-    #                                  test_folders=test_data_folders)
-    #     selective_datasets.append(out_data_temp)
+    # Now we couple the designs with their test sequences to later test them
+    for test_pickle in test_data_pickles:
+        ref_seq_pickle_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
+                                                               test_seqs_input=test_pickle,
+                                                               flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
+                                                               score_type='weighted',
+                                                               file_to_save=test_output_folder)
 
-    # make_graphs(control_designs=test_output_folder + f'/control dataset', selective_designs=selective_datasets,
-    #             universal_designs=universal_datasets, ref_seq_designs=ref_analysis_folder, var_regs=e_coli_var_regs,
-    #             file_loc=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
-    #             test_folders=test_data_folders, save_fig=True, save_file_loc=test_output_folder + '/' + 'Figure outputs')
+        control_design_pickle_file_name = couple_designs_to_test_seqs(designs_input=u1376,
+                                                                      test_seqs_input=test_pickle,
+                                                                      flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
+                                                                      score_type='weighted',
+                                                                      file_to_save=test_output_folder)
+
+        for universal_design_pickle in universal_data_pickles:
+            coupled_designs_pickle_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
+                                                                           test_seqs_input=test_pickle,
+                                                                           flexible_igs=True,
+                                                                           file_to_save=test_output_folder)
+
+    # # finally, we test! Below is for local
+    # files_to_test = test_output_folder + '/coupled'
+    # for i in range(number_of_workers):
+    #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=i,
+    #                  n_limit=1)
+    # This is for NOTS
+    # ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=worker_number,
+    #              n_limit=1)
     #
-    # playsound('/System/Library/Sounds/Pop.aiff')
     # print(f'Test data done!\n########################################################\n')
 
-    # # This is using individual csvs
-    # name = 'Targeted designs against background above threshold.csv'
-    # make_graphs(control_designs=test_output_folder + f'/control dataset/{name}',
-    #             selective_designs=[test_output_folder + f'/selective dataset {i + 1}/{name}' for i in range(0, 3)],
-    #             universal_designs=[test_output_folder + f'/universal dataset {i + 1}/{name}' for i in range(0, 4)],
-    #             ref_seq_designs=ref_analysis_folder + f'/{name}', var_regs=e_coli_var_regs, taxonomy='Order',
-    #             file_loc=test_output_folder + '/' + big_data_file_for_output,
-    #             test_folders=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
-    #             save_fig=True, file_type='png')
-
-    # #######################################################
-    # # This is using the csv made with the code on top of this one
-    # make_graphs(control_designs=[], selective_designs=[],
-    #             universal_designs=[], ref_seq_designs=[], var_regs=e_coli_var_regs,
-    #             data_file=test_output_folder + '/' + big_data_file_for_output, taxonomy='Order',
-    #             test_folders=test_data_folders, save_file_loc=test_output_folder + '/' + 'Figure outputs',
-    #             save_fig=True, file_type='svg')
-
-    # out_data_temp = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path, igs_length=m,
-    #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0,
-    #                                  msa_fast=True, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-    #                                  random_guide_sample_size=10, test_folders=[background_data_bac],
-    #                                  folder_to_save=test_output_folder + f'/universal dataset 1')
-    # universal_datasets.append(out_data_temp)
-
-    # for i, dataset in enumerate([universal_data_1, universal_data_2, universal_data_3, universal_data_4]):
-    #     out_data_temp = ribodesigner(target_sequences_folder=dataset, ref_sequence_file=ref_path, igs_length=m,
-    #                                  guide_length=n, min_length=n, selective=False, min_true_cov=0,
-    #                                  msa_fast=True, score_type='weighted', n_limit=0,
-    #                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-    #                                  random_guide_sample_size=10, test_folders=test_data_folders,
-    #                                  folder_to_save=test_output_folder + f'/universal dataset {i + 1}')
-    #     print(f'universal dataset {i + 1} fully tested!')
-    #     universal_datasets.append(out_data_temp)
-
-    # playsound('/System/Library/Sounds/Pop.aiff')
-    print(f'Test data done!\n########################################################\n')
-
-    # ########################################################
-    # # Checking batch outputs
-    #     test_batch_outputs = []
-    #     for i in range(0, 10):
-    #         out_data_temp = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path, igs_length=m,
-    #                                      guide_length=n, min_length=n, selective=False, min_true_cov=0.7,
-    #                                      identity_thresh=0.5, msa_fast=True, score_type='weighted', n_limit=0,
-    #                                      percent_of_target_seqs_used=1, gaps_allowed=False, fileout=True,
-    #                                      random_guide_sample_size=10, store_batch_results=True,
-    #                                      folder_to_save=test_output_folder + f'/batch testing/{i}')
-    #         test_batch_outputs = np.append(test_batch_outputs, out_data_temp)
-    #     compare_batches(test_batch_outputs)
-    #     playsound('/System/Library/Sounds/Pop.aiff')
-    #     print(f'Test data done!\n########################################################\n')
-
-    # # ########################################################
-    make_graphs(control_designs_path='test_output_files/test_outputs_parallelizing/coupled/results/0_results.txt',
+    ########################################################
+    make_graphs(control_designs_path='test_output_files/test_outputs_parallelizing/coupled/results/1_designs_TTCAC1376_vs_test_sequences_All_by_Genus_1_worker_0_results.txt',
+                universal_designs_path='test_output_files/test_outputs_parallelizing/coupled/results/72490_designs_designs_Eukaryota_Only_by_Genus_2_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt',
+                ref_seq_designs_path='test_output_files/test_outputs_parallelizing/coupled/results/304_designs_designs_e-coli-16s-mg1655_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt',
                 var_regs=e_coli_var_regs)
+
+    print(f'Graphs generated :)\n########################################################\n')

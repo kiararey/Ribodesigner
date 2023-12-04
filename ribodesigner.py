@@ -1,12 +1,12 @@
 import glob
-import pickle
+import json
 import multiprocessing as mp
 import os
+import pickle
 import subprocess
 import time
 from collections import defaultdict
 from math import exp
-import json
 
 import Bio.motifs
 import matplotlib.pyplot as plt
@@ -957,7 +957,9 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
         # Now organize by ref_idx:
         for ref_id, count_of_ref in counts_of_ref_idx.items():
-            output_dict[ref_id] = (output_dict[ref_id], count_of_ref)
+            output_dict[ref_id] = (output_dict[ref_id], count_of_ref/len(aligned_targets))
+            if count_of_ref/len(aligned_targets) > 1:
+                print('uh oh')
         return output_dict
     else:
         # this gives us a dictionary where the ID is matched to the true percent coverage
@@ -1183,12 +1185,12 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
     # Check if we've pre_processed designs correctly
     if (designs_input[-7:] != '.pickle') | (test_seqs_input[-7:] != '.pickle'):
-        if designs_input[-igs_len-1] not in ['G', 'g']:
+        if designs_input[-igs_len - 1] not in ['G', 'g']:
             print('Sequence does not seem to have a U in the indicated igs length. Please adjust.')
             return
         igs = str(Seq(designs_input[-igs_len:]).upper().back_transcribe())
-        guide = Seq(designs_input[:-igs_len-1]).upper().back_transcribe()
-        igs_id = igs+str(ref_idx_u_loc)
+        guide = Seq(designs_input[:-igs_len - 1]).upper().back_transcribe()
+        igs_id = igs + str(ref_idx_u_loc)
         designs = [RibozymeDesign(id_attr=igs_id, guide_attr=guide, igs_attr=igs, ref_idx_attr=ref_idx_u_loc,
                                   score_type_attr=score_type)]
 
@@ -1204,7 +1206,8 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
     # Prepare data for check_guide_stats:
     # Need the design, the aligned target sequences to test against for each design
-    coupled_datasets_name = designs_input.split('.')[0].split('/')[-1] + '_vs_' + test_seqs_input.split('.')[0].split('/')[-1]
+    coupled_datasets_name = designs_input.split('.')[0].split('/')[-1] + '_vs_' + \
+                            test_seqs_input.split('.')[0].split('/')[-1]
     print(f'Coupling designs for {coupled_datasets_name}')
     with alive_bar(len(designs), spinner='fishes') as bar:
         for design in designs:
@@ -1309,7 +1312,8 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     # Big work done file only has the big indexes already completed
     work_done = set(work_done)
     #  Basically remove make an array that contains all lines NOT in big work done
-    work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if item.split('\t')[0] not in work_done]
+    work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if
+                       item.split('\t')[0] not in work_done]
     work_to_do = len(work_to_do_list)
     work_completed = len(work_done)
 
@@ -1494,37 +1498,61 @@ def extract_info(results_file_path: str, dataset: str):
     with open(results_file_path, 'r') as read_file:
         design_str = read_file.read()
     # Now extact data here:
+    column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
+                    'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
+                    'num_of_targets': int, 'score_type': str, 'score': float, '%_coverage': float, '%_on target': float,
+                    'true_%_cov': float, 'composite_score': float, 'num_of_targets_background': int,
+                    'u_conservation_background': float, 'background_score': float, '%_coverage_background': float,
+                    '%_on target_background': float, 'true_%_cov_background': float,
+                    'composite_background_score': float,
+                    'delta_igs_vs_background': float, 'delta_guide_vs_background': float, 'delta_vs_background': float,
+                    'name_of_test_dataset': str, 'num_of_targets_test': int, 'u_conservation_test': float,
+                    'test_score': float, '%_coverage_test': float, '%_on target_test': float, 'true_%_cov_test': float,
+                    'composite_test_score': float, 'delta_igs_vs_test': float, 'delta_guide_vs_test': float,
+                    'delta_vs_test': float, 'target_Domain': str, 'target_Domain_background': str,
+                    'target_Domain_test': str, 'target_Phylum': str, 'target_Phylum_background': str,
+                    'target_Phylum_test': str, 'target_Class': str, 'target_Class_background': str,
+                    'target_Class_test': str, 'target_Order': str, 'target_Order_background': str,
+                    'target_Order_test': str, 'target_Family': str, 'target_Family_background': str,
+                    'target_Family_test': str, 'target_Genus': str, 'target_Genus_background': str,
+                    'target_Genus_test': str, 'target_Species': str, 'target_Species_background': str,
+                    'target_Species_test': str, 'target_Taxon': str, 'target_Taxon_background': str,
+                    'target_Taxon_test': str}
+    design_df = pd.DataFrame({c: pd.Series(dtype=t) for c, t in column_types.items()})
     list_of_designs = design_str.split('}{')
-    initialized = False
     for design in list_of_designs:
         design_dict = {}
         individual_attributes = design.strip(' {').split(', "')
         for key_val in individual_attributes:
             key, val = key_val.split('": ')
-            design_dict[key.strip('"')] = val.strip('"\'')
+            key = key.strip('"')
+            try:
+                val_typed = column_types[key](val.strip('"\''))
+            except ValueError:
+                if column_types[key] == int or column_types[key] == float:
+                    val_typed = column_types[key](0)
+                else:
+                    print(column_types[key])
+            design_dict[key] = val_typed
         # Now that we have all the data, make it into a RibozymeDesign again. Warning this is going to look ugly
         # extracted_design = RibozymeDesign(dict_initialize=design_dict)
         extracted_design = pd.DataFrame(design_dict, index=[dataset])
-        if not initialized:
-            design_df = extracted_design
-            initialized = True
-        else:
-            design_df = pd.concat([design_df, extracted_design])
+        design_df = pd.concat([design_df, extracted_design])
 
     return design_df
 
-def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, universal_designs_path: str = '', selective_designs_path: str = '',
-                ref_seq_designs_path: str = '',  save_fig: bool = False,
-                file_type: str = 'png', save_file_loc: str = ''):
 
+def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, universal_designs_path: str = '',
+                selective_designs_path: str = '',
+                ref_seq_designs_path: str = '', save_fig: bool = False,
+                file_type: str = 'png', save_file_loc: str = ''):
     control_designs_df = extract_info(control_designs_path, 'control')
     universal_designs_df = extract_info(universal_designs_path, 'universal')
     all_data_df = pd.concat([control_designs_df, universal_designs_df])
-    selective_designs_df = extract_info(selective_designs_path, 'selective')
-    all_data_df = pd.concat([all_data_df, selective_designs_df])
+    # selective_designs_df = extract_info(selective_designs_path, 'selective')
+    # all_data_df = pd.concat([all_data_df, selective_designs_df])
     ref_seq_designs_df = extract_info(ref_seq_designs_path, 'ref_seq')
     all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
-    print('test')
 
     control_designs_df_1376 = control_designs_df[control_designs_df['reference_idx'] == 1376]
 
@@ -1539,21 +1567,23 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
             'name_of_test_dataset'].str.contains(name)].nlargest(1, 'composite_test_score')
         top_score_control = pd.concat([top_score_control, top_score_temp])
 
-    top_scores_universal = universal_designs_df.loc[universal_designs_df['tested_targets'] ==
-                                                    universal_labels[0]].nlargest(1, 'composite_test_score')
-    for label in universal_labels[1:]:
-        score_temp = universal_designs_df[universal_designs_df['tested_targets'] ==
-                                          label].nlargest(1, 'composite_test_score')
-        top_scores_universal = pd.concat([top_scores_universal, score_temp])
+    top_scores_universal = universal_designs_df.loc[universal_designs_df.index ==
+                                                    'universal'].nlargest(1, 'composite_test_score')
 
-    top_scores_selective = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
-                                                    selective_labels[0]].nlargest(1, 'composite_test_score')
-    for label in selective_labels[1:]:
-        score_temp = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
-                                              label].nlargest(1, 'composite_test_score')
-        top_scores_selective = pd.concat([top_scores_selective, score_temp])
+    # for label in universal_labels[1:]:
+    #     score_temp = universal_designs_df[universal_designs_df['tested_targets'] ==
+    #                                       label].nlargest(1, 'composite_test_score')
+    #     top_scores_universal = pd.concat([top_scores_universal, score_temp])
+    #
+    # top_scores_selective = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
+    #                                                 selective_labels[0]].nlargest(1, 'composite_test_score')
+    # for label in selective_labels[1:]:
+    #     score_temp = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
+    #                                           label].nlargest(1, 'composite_test_score')
+    #     top_scores_selective = pd.concat([top_scores_selective, score_temp])
 
     # top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
+    top_test_scores = pd.concat([top_score_control, top_scores_universal])
 
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 16 * 0.8)}
@@ -1565,10 +1595,16 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
     max_vals = all_data_df.max(numeric_only=True)
 
     # Fig 1: MG1655
-    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains('Bac')]
-    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains('Bac')]
-    bacterial_subset = bacterial_subset.loc[bacterial_subset['tested_targets'] == 'universal_0']
-    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
+    testing_subset = 'All'
+    # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains('Bac')]
+    # bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains('Bac')]
+    # bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
+    # top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
+
+    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
+    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
+    bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
+    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(testing_subset)]
     # Only going to plot bacteria test dataset
     # First, plot x = u conservation, y = igs conservation, hue = guide score
 
@@ -1641,7 +1677,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
         jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
         jointplot_fig.axes[3].tick_params(labelbottom=False)
         jointplot_fig.axes[4].tick_params(labelbottom=False)
-        jointplot_fig.suptitle(f'Designs from {name} target sequences against bacterial test datasets')
+        jointplot_fig.suptitle(f'Designs from {name} target sequences against all kingdoms test dataset')
 
         if save_fig:
             plt.savefig(fname=f'{save_file_loc}/figure_1_{name}.{file_type}', format=file_type)
@@ -1651,7 +1687,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
     # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
     # E. coli MG1655 16s rRNA sequence.
     for i, target_name in enumerate(target_names):
-        universal_subset = all_data_df.loc[all_data_df['tested_targets'] == to_analyze[i]]
+        universal_subset = all_data_df.loc[all_data_df.index == to_analyze[i]]
 
         # Prepare axes
         jointplot_fig = plt.figure()

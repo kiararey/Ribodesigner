@@ -1,4 +1,3 @@
-playsound
 numpy
 glob2
 pickle4
