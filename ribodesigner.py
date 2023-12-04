@@ -1345,7 +1345,6 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     print('Now analyzing designs...')
     with alive_bar(len(designs_to_test), spinner='fishes') as bar:
         for (design_to_test, big_idx, file_name) in designs_to_test:
-
             result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
@@ -1358,7 +1357,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
             result_dict = result.to_dict(all_data=False)
             with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
-                d.write(json.dumps(result_dict))
+                d.write(json.dumps(result_dict) + '\n')
 
             with open(work_done_file, 'a') as d:
                 d.write(str(big_idx) + '\n')
@@ -1496,7 +1495,7 @@ def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign]
 
 def extract_info(results_file_path: str, dataset: str):
     with open(results_file_path, 'r') as read_file:
-        design_str = read_file.read()
+        list_of_designs = read_file.readlines()
     # Now extact data here:
     column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
                     'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
@@ -1519,7 +1518,6 @@ def extract_info(results_file_path: str, dataset: str):
                     'target_Species_test': str, 'target_Taxon': str, 'target_Taxon_background': str,
                     'target_Taxon_test': str}
     design_df = pd.DataFrame({c: pd.Series(dtype=t) for c, t in column_types.items()})
-    list_of_designs = design_str.split('}{')
     for design in list_of_designs:
         design_dict = {}
         individual_attributes = design.strip(' {').split(', "')
@@ -1556,8 +1554,6 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
 
     control_designs_df_1376 = control_designs_df[control_designs_df['reference_idx'] == 1376]
 
-    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
-
     # get top scores in each: 1 control, one of each group of selective and universal
     top_score_control = control_designs_df_1376[control_designs_df_1376[
         'name_of_test_dataset'].str.contains('Bac')].nlargest(1, 'composite_test_score')
@@ -1590,21 +1586,24 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
-    to_analyze = ['reference_seq', 'universal_0', 'universal_1', 'universal_2', 'universal_3']
+
+    # target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
+    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
+    to_analyze = ['ref_seq', 'universal', 'control']
 
     max_vals = all_data_df.max(numeric_only=True)
 
     # Fig 1: MG1655
-    testing_subset = 'All'
-    # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains('Bac')]
-    # bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains('Bac')]
-    # bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
-    # top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
-
-    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
-    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
+    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains('Bac')]
+    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains('Bac')]
     bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
-    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(testing_subset)]
+    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
+
+    # testing_subset = 'All'
+    # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
+    # bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
+    # bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
+    # top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(testing_subset)]
     # Only going to plot bacteria test dataset
     # First, plot x = u conservation, y = igs conservation, hue = guide score
 
@@ -1761,8 +1760,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
         jointplot_fig.axes[4].tick_params(labelbottom=False)
         legend = plt.legend(bbox_to_anchor=(1.4, -0.15), ncols=5, title='Test dataset')
         for label in legend.get_texts():
-            txt = label.get_text().split('/')[-1][0:3]
-            new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
+            txt = label.get_text().split('/')[-1].split('vs_test_sequences')[-1].replace('_', ' ')
+            new_label = [name for name in legend_names if name.casefold() in txt.casefold()]
             label.set_text(new_label[0])
         jointplot_fig.suptitle(f'Designs from {target_name} target sequences against test datasets')
 
