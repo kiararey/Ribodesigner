@@ -67,7 +67,8 @@ if __name__ == '__main__':
     background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
     background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
     background_data_all = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta'
-    test_output_folder = 'test_output_files/test_outputs_parallelizing'
+    # test_output_folder = 'test_output_files/test_outputs_parallelizing'
+    test_output_folder = 'first_round_of_data'
     test_file = 'test_dataset_for_graphs.csv'
     big_data_file_for_output = 'large_dataset.csv'
     ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
@@ -125,7 +126,7 @@ if __name__ == '__main__':
     # coupled_designs_pickle_file_name = \
     #     ('test_output_files/test_outputs_parallelizing')
 
-    files_to_test = 'test_output_files/test_outputs_parallelizing/coupled'
+    files_to_test = test_output_folder + '/coupled'
     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=worker_number,
                  n_limit=1)
 
