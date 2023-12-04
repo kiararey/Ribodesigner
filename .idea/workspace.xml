@@ -7,9 +7,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="This should be ready to go test on NOTS now! Will work on making file structure better first though.">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Cleaned up file structure a bit">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parallelize_test.slurm" beforeDir="false" afterPath="$PROJECT_DIR$/parallelize_test.slurm" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -753,7 +753,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="124" />
+    <option name="localTasksCounter" value="125" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -783,7 +783,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Added a note to fix muscle5 installation if it breaks again.&#10;Also fixed graphs making, made better output .csv files, and removed some unnecessary computation when optimizing guides." />
     <MESSAGE value="Messing with graphs." />
     <MESSAGE value="Messing with graphs again, and modified test_design to be consistent with ribochecker" />
     <MESSAGE value="Will rework graphs completely, pushing this to have a record of the graphs before i do this saved" />
@@ -808,7 +807,8 @@
     <MESSAGE value="This should be ready to go test on NOTS now! Will work on cleaning up file structure first." />
     <MESSAGE value="This should be ready to go test on NOTS now!" />
     <MESSAGE value="This should be ready to go test on NOTS now! Will work on making file structure better first though." />
-    <option name="LAST_COMMIT_MESSAGE" value="This should be ready to go test on NOTS now! Will work on making file structure better first though." />
+    <MESSAGE value="Cleaned up file structure a bit" />
+    <option name="LAST_COMMIT_MESSAGE" value="Cleaned up file structure a bit" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
