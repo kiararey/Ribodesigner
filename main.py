@@ -156,13 +156,13 @@ if __name__ == '__main__':
 
 
     # # finally, we test! Below is for local
-    files_to_test = test_output_folder + '/coupled'
+    files_to_test =  test_output_folder + '/coupled'
     # for i in range(number_of_workers):
     #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
     #                  n_limit=1)
     # This is for NOTS
-    ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=1,
-                 n_limit=1)
+    ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + files_to_test, number_of_workers=number_of_workers,
+                 worker_number=worker_number, n_limit=1)
 
     print(f'Test data done!\n########################################################\n')
 

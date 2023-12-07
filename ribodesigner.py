@@ -1374,7 +1374,6 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
             # If our result does not meet n_limit requirements, skip it
-
             if not result:
                 with open(work_done_file, 'a') as d:
                     d.write(str(big_idx) + '\n')
