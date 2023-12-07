@@ -7,12 +7,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Graphs are being made. Will work on trying to make this a lil faster">
-      <change afterPath="$PROJECT_DIR$/graph_making.py" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Ok made the split graph function for QC IGSes and U conservation. Will work on sequence logo graphs now for more QC">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -428,7 +424,7 @@
       <workItem from="1698257249190" duration="75448000" />
       <workItem from="1701655114158" duration="15442000" />
       <workItem from="1701721727910" duration="256000" />
-      <workItem from="1701722019187" duration="30456000" />
+      <workItem from="1701722019187" duration="32767000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -773,7 +769,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="128" />
+    <option name="localTasksCounter" value="129" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -803,7 +799,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Found a pretty big oversight in check_igs_conservation where locations with more than one IGS (i.e. a location in a sequence where there were many gaps between the reference sequence and that target sequence) would be written over and only one IGS was conserved. Will start fixing this but it will take some major reworking of check_guide_stats" />
     <MESSAGE value="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely." />
     <MESSAGE value="Ok as expected the bug really messed up my analysis and so I have to make sure the test sequences are being correctly analyzed. To do that, I'm preparing this to run on the cluster with parallelization. Jordan is helping me with the output pickling thank youuuuu" />
     <MESSAGE value="Slowly working through implementing parallelizing. I've made a skeleton for it, now I need to write the actual replacement function for check_guide_stats.&#10;&#10;There are a lot of things to do besides this:&#10;- Finish parallelization script&#10;- Fix perc_on_target calculation in RibozymeDesign class&#10;- Rework test_ribo_design to implement directly into ribodesigner&#10;- Rewrite selective designs step - it was using ribo_checker, but now will need a separate function!" />
@@ -828,7 +823,8 @@
     <MESSAGE value="Fixed how u_conservation was being calculated when preparing test sequences" />
     <MESSAGE value="Fixed how u_conservation was being calculated when preparing test sequences&#10;&#10;Also working on graph making" />
     <MESSAGE value="Graphs are being made. Will work on trying to make this a lil faster" />
-    <option name="LAST_COMMIT_MESSAGE" value="Graphs are being made. Will work on trying to make this a lil faster" />
+    <MESSAGE value="Ok made the split graph function for QC IGSes and U conservation. Will work on sequence logo graphs now for more QC" />
+    <option name="LAST_COMMIT_MESSAGE" value="Ok made the split graph function for QC IGSes and U conservation. Will work on sequence logo graphs now for more QC" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

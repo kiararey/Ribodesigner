@@ -161,7 +161,7 @@ if __name__ == '__main__':
     #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
     #                  n_limit=1)
     # This is for NOTS
-    ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=worker_number,
+    ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=1,
                  n_limit=1)
 
     print(f'Test data done!\n########################################################\n')

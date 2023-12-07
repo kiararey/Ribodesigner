@@ -1300,7 +1300,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     worker_number = int(worker_number)
     number_of_workers = int(number_of_workers)
 
-    work_done_file = f'{coupled_folder}/work_done.txt'
+    work_done_file = f'{coupled_folder}/work_done_{worker_number}.txt'
     results_folder = f'{coupled_folder}/results'
 
     # Generate input results folder if it does not exist yet
@@ -1323,11 +1323,17 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
         work_to_do_list = handle.read().splitlines()
 
     # Check the big work done checkpoint file and remove any indexes that are already there
-    if os.path.exists(work_done_file):
+    work_done_files = [f'{coupled_folder}/{f}' for f in os.listdir(coupled_folder) if f.startswith('work_done_')]
+    work_done = []
+    for work_done_file in work_done_files:
         with open(work_done_file) as handle:
-            work_done = handle.read().splitlines()
-    else:
-        work_done = []
+            work_done.extend(handle.read().splitlines())
+    #
+    # if os.path.exists(work_done_file):
+    #     with open(work_done_file) as handle:
+    #         work_done = handle.read().splitlines()
+    # else:
+    #     work_done = []
     # Big work done file only has the big indexes already completed
     work_done = set(work_done)
     #  Basically remove make an array that contains all lines NOT in big work done
@@ -1368,6 +1374,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
             # If our result does not meet n_limit requirements, skip it
+
             if not result:
                 with open(work_done_file, 'a') as d:
                     d.write(str(big_idx) + '\n')
