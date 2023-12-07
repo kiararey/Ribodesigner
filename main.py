@@ -1,6 +1,7 @@
 import sys
 
-from ribodesigner import (ribo_checker, make_graphs, couple_designs_to_test_seqs)
+from ribodesigner import (ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs)
+from graph_making import make_graphs
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -93,7 +94,8 @@ if __name__ == '__main__':
     # for test_data in test_data_folders:
     #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
     #                                                    guide_length=n, igs_length=m, min_length=minlen,
-    #                                                    folder_to_save=test_output_folder)
+    #                                                    folder_to_save=test_output_folder, graph_results=True,
+    #                                                    var_regs=e_coli_var_regs, graph_file_type='png')
     #     test_data_pickles.append(test_seqs_pickle_file_name)
     #
     # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
@@ -153,23 +155,24 @@ if __name__ == '__main__':
     #                                                                   file_to_save=test_output_folder)
 
 
-    # finally, we test! Below is for local
+    # # finally, we test! Below is for local
     files_to_test = test_output_folder + '/coupled'
-    for i in range(number_of_workers):
-        ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
-                     n_limit=1)
-    # # This is for NOTS
-    # # ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=worker_number,
-    # #              n_limit=1)
-    # #
-    # # print(f'Test data done!\n########################################################\n')
+    # for i in range(number_of_workers):
+    #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
+    #                  n_limit=1)
+    # This is for NOTS
+    ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=worker_number,
+                 n_limit=1)
 
-    control_design_coupled_file_name = test_output_folder + '/coupled/results/1_designs_TTCAC1376_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    universal_designs_coupled_file_name = test_output_folder + '/coupled/results/77193_designs_designs_Bacteria_Only_by_Genus_2_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    ref_seq_coupled_file_name = test_output_folder + '/coupled/results/304_designs_designs_e-coli-16s-mg1655_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    make_graphs(control_designs_path=control_design_coupled_file_name,
-                universal_designs_path=universal_designs_coupled_file_name,
-                ref_seq_designs_path=ref_seq_coupled_file_name, var_regs=e_coli_var_regs)
+    print(f'Test data done!\n########################################################\n')
+
+    # control_design_coupled_file_name = test_output_folder + '/coupled/results/1_designs_TTCAC1376_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
+    # universal_designs_coupled_file_name = test_output_folder + '/coupled/results/77193_designs_designs_Bacteria_Only_by_Genus_2_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
+    # ref_seq_coupled_file_name = test_output_folder + '/coupled/results/304_designs_designs_e-coli-16s-mg1655_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
+    # make_graphs(control_designs_path=control_design_coupled_file_name,
+    #             universal_designs_path=universal_designs_coupled_file_name,
+    #             ref_seq_designs_path=ref_seq_coupled_file_name, var_regs=e_coli_var_regs, save_fig=False,
+    #             save_file_loc='test_output_files/test_outputs_parallelizing/coupled/figures')
     #
     # ########################################################
     # make_graphs(

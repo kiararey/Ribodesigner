@@ -7,3 +7,4 @@ pandas
 seaborn
 alive_progress
 icecream
+logomaker
