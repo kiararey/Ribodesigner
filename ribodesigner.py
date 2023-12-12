@@ -1350,6 +1350,10 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     for big_idx, file_name, small_idx in this_worker_worklist:
         files_to_open_dict[file_name].append((int(big_idx), int(small_idx)))
 
+    if total_work != work_to_do + work_completed:
+        print(f'big_checkpoint.txt corrupted. Please delete and couple datasets again.')
+        return -1
+
     # Print how much work is left to do
     print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed:{work_completed}\n'
           f'Work for this worker:{this_worker_worklist.shape[0]}')

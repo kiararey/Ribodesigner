@@ -1,9 +1,15 @@
 import matplotlib.pyplot as plt
+import pickle
 import numpy as np
+from collections import defaultdict
 import pandas as pd
 import seaborn as sns
 from alive_progress import alive_bar
-import logomaker
+import logomaker as lm
+import random
+import icecream as ic
+import ribodesigner as rd
+import Bio.motifs
 
 
 def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, universal_designs_path: str = '',
@@ -81,7 +87,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: str, univ
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
 
     # target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
-    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
+    # target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
+    target_names = ['reference', 'bacterial']
     to_analyze = ['ref_seq', 'universal', 'control']
 
     max_vals = all_data_df.max(numeric_only=True)
@@ -613,21 +620,222 @@ def extract_info(results_file_path: str, dataset: str):
     return design_df
 
 
-def make_sequence_logo_graph(data):
-    # Pick out 3 positions at edge cases and one in the middle
+def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_data_path: str, save_fig: bool = False,
+                             file_type: str = 'png', save_file_loc: str = ''):
+    # Set plot parameters
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 16 * 0.8)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+
+    # Extract data
+    with open(test_data_path, 'rb') as handle:
+        test_seqs = pickle.load(handle)
+    design_data_df = extract_info(design_data_path, 'universal')
+    ref_data_df = extract_info(ref_data_path, 'universal')
+
+    # The test data is formatted for analysis so it will be a little clunky to extract necessary data here
+    # Extract all positions all that one of the requirements below
+    # 'high, high' = at least 0.9 in each
+    # 'low, high' = at least 0.9 in u, at most 0.1 in igs
+    # 'low, low' = at most 0.1 in each
+    # 'mid, mid' = between 0.45 and 0.55 in each
+    key_names = ['high, high', 'high, low', 'low, low', 'mid, mid']
+    # matching_test_ref_idx = {key: {} for key in key_names}
+    # igs_data = {}
+    # igs_ids_in_pos = defaultdict(lambda: set())
+
+    def truth_table(to_test_u, to_test_igs):
+        truth_dict = {
+            'high, high': lambda u, igs: (u >= 0.9) and (igs >= 0.9),
+            'high, low': lambda u, igs: (u >= 0.9) and (igs <= 0.1),
+            'low, low': lambda u, igs: (u <= 0.1) and (igs <= 0.1),
+            'mid, mid': lambda u, igs: (0.40 <= u <= 0.60) and (0.40 <= igs <= 0.60),
+        }
+        for i in truth_dict.keys():
+            if truth_dict[i](to_test_u, to_test_igs):
+                return i
+        return
+
+    test_data_dicts = []
+    for ref_idx, u_vals in test_seqs.items():
+        u_conservation_test = u_vals[1]
+
+        # Recall each inner dictionary is of form IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
+        for design_id, igs_vals in u_vals[0].items():
+            igs = design_id[0:5]
+            igs_true_perc_cov = igs_vals[4]
+            condition = truth_table(u_conservation_test, igs_true_perc_cov)
+            if not condition:
+                continue
+            # if igs.contains('N'):
+            #     continue
+            test_data_dicts.extend([{'condition': condition, 'id': design_id, 'reference_idx': ref_idx, 'igs': igs,
+                                     'guide': str(single_guide), 'u_conservation': u_conservation_test,
+                                     'igs_true_perc_cov': igs_true_perc_cov} for single_guide in igs_vals[0]])
+
+            # matching_test_ref_idx[condition][ref_idx] = (u_conservation_test, igs_vals[0])
+            # igs_ids_in_pos[ref_idx].update([design_id])
+            # igs_data[design_id] = igs_true_perc_cov
+            # matching_test_igs_id[condition][design_id] = (u_conservation_test, igs_true_perc_cov, igs_vals[0])
+    test_data_df = pd.DataFrame.from_records(test_data_dicts, index=['test seqs'] * len(test_data_dicts))
 
     # Find designs and ref_sequence guides at those positions
+    data_to_graph_u = {key: [] for key in key_names}
+    data_to_graph_igs = {key: [] for key in key_names}
+    u_sites_not_in_both = []
+    igs_sites_not_in_both = []  # This will make it a bit easier to later extract information
+    for key in key_names:
+        vals = test_data_df[test_data_df['condition'] == key]
+        matching_designs = design_data_df[design_data_df['reference_idx'].isin(vals['reference_idx'])]
+        matching_ref_seqs = ref_data_df[ref_data_df['reference_idx'].isin(vals['reference_idx'])]
+        # doing a set because pandas is being temperamental with inner joins and so am I
+        matching_idxes = set(matching_designs['reference_idx']) & set(matching_ref_seqs['reference_idx'])
 
-    # Ok, now find all IGSes in the dataset at that position
+        if not matching_idxes:
+            if not set(matching_designs['reference_idx']) and set(matching_ref_seqs['reference_idx']):
+                u_sites_not_in_both.append(('only_in_ref', [set(matching_ref_seqs['reference_idx'])]))
+            elif set(matching_designs['reference_idx']) and not set(matching_ref_seqs['reference_idx']):
+                u_sites_not_in_both.append(('only_in_design', [set(matching_designs['reference_idx'])]))
+            else:  # should be empty
+                u_sites_not_in_both.append(('neither', [set(matching_designs['reference_idx']),
+                                                        set(matching_ref_seqs['reference_idx'])]))
+            continue
+        # Ok now extract the data for only the indexes that match:
+        ref_data = matching_ref_seqs[matching_ref_seqs['reference_idx'].isin(matching_idxes)][
+            ['id', 'reference_idx', 'igs', 'guide', 'composite_test_score']]
+        design_data = matching_designs[matching_designs['reference_idx'].isin(matching_idxes)][
+            ['id', 'reference_idx', 'igs', 'guide', 'composite_test_score']]
+        matching_igses_test = set([igs for idx in matching_idxes for igs in vals[vals['reference_idx'] == idx]['id']])
+        matching_igses = set(design_data['id']) & set(ref_data['id']) & matching_igses_test
 
-    # Graph them in a sequence logo with probability on the y axis
-    # And add the consensus motif underneath, and the design at that location, and the ref_sequence at that location
-    # Also add the consensus score between the test sequences, between the design and consensus, and between the refseq
-    # and the consensus.
+        # We only want to graph igses that we can analyze is both designs and ref_seqs
+        if not matching_igses:
+            if not set(design_data['igs']) and set(ref_data['igs']):
+                igs_sites_not_in_both.append(('only_in_ref', [set(ref_data['igs'])]))
+            elif set(design_data['igs']) and not set(ref_data['igs']):
+                igs_sites_not_in_both.append(('only_in_design', [set(design_data['igs'])]))
+            else:  # should be empty
+                igs_sites_not_in_both.append(('neither', [set(ref_data['igs']), set(design_data['igs'])]))
+            continue
 
-    # Find all guide sequences in the dataset at that position
+        idx_with_igs = set(int(igs_id[5:]) for igs_id in matching_igses)
+        with alive_bar(len(idx_with_igs), spinner='fishes') as bar:
+            for idx in idx_with_igs:
+                # Extract data to graph for each dataset
+                # separate into two steps so we can use the dataframe in the next loop
+                ref_data_temp = ref_data[ref_data['reference_idx'] == idx][['id', 'igs', 'guide']]
+                ref_u_counted = lm.alignment_to_matrix(ref_data_temp['igs'])
+                design_data_temp = design_data[design_data['reference_idx'] == idx][['id', 'igs', 'guide', 'composite_test_score']]
+                design_u_counted = lm.alignment_to_matrix(design_data_temp['igs'])
+                test_data_temp = test_data_df[test_data_df['reference_idx'] == idx][['id', 'igs', 'guide']]
+                test_u_counted = lm.alignment_to_matrix(test_data_temp['igs'])
+                best_score_design = design_data_temp.nlargest(1, 'composite_test_score')
+                best_u_counted = lm.alignment_to_matrix(best_score_design['igs'])
 
-    # Pull out corresponding design and ref sequence
+                # get consensus sequence for test dataset
+                test_consensus = Bio.motifs.create(test_data_temp['igs'], alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                # And now get score for best U and ref U with the consensus
+                design_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus,
+                                                        seq_b=best_score_design['igs'].values[0],
+                                                        score_type='weighted', only_consensus=True)
+                ref_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus, seq_b=ref_data_temp['igs'].values[0],
+                                                     score_type='weighted', only_consensus=True)
+
+                # Save in a tuple with:
+                # (idx, [extracted_data_test, best_design, extracted_data_design, extracted_data_ref], u_cons)
+                data_to_graph_u[key].append((idx, [test_u_counted, best_u_counted, design_u_counted, ref_u_counted],
+                                             vals['u_conservation'].iloc[0], design_vs_test_u, ref_vs_test_u))
+                to_scan = set([igs for igs in vals[vals['reference_idx'] == idx]['id']])
+                for igs_id in to_scan:
+                    if igs_id not in matching_igses:
+                        continue
+                    # Extract data to graph for each dataset
+                    igs_true_perc_cov = vals[vals['id'] == igs_id]['igs_true_perc_cov']
+                    if len(igs_true_perc_cov.unique() )!= 1:
+                        print('uh oh')
+                    try:
+                        for_best_finding = design_data[design_data['id'] == igs_id]
+                        ref_data_igs_id = ref_data_temp[ref_data_temp['id'] == igs_id]
+                        ref_igs_counted = lm.alignment_to_matrix(ref_data_igs_id['guide'])
+                        design_igs_counted = lm.alignment_to_matrix(for_best_finding['guide'])
+                        test_igs_counted = lm.alignment_to_matrix(test_data_temp[test_data_temp['id'] == igs_id]
+                                                                  ['guide'])
+                        # get consensus sequence for test dataset
+                        test_consensus = Bio.motifs.create(test_data_temp['guide'],
+                                                           alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                        # And now get score for best U and ref U with the consensus
+                        design_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus,
+                                                                    seq_b=for_best_finding['guide'].values[0],
+                                                                    score_type='weighted', only_consensus=True)
+                        ref_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus,
+                                                                 seq_b=ref_data_igs_id['guide'].values[0],
+                                                                 score_type='weighted', only_consensus=True)
+
+                        # best_igs_counted = lm.alignment_to_matrix(for_best_finding.nlargest(1, 'composite_test_score')
+                        #                                           ['guide'])
+
+                        # Save in a tuple with:
+                        # (idx, [extracted_data_test, extracted_data_design, extracted_data_ref], igs_true_%_cov)
+                        data_to_graph_igs[key].append((igs_id, [test_igs_counted, design_igs_counted, ref_igs_counted],
+                                                       igs_true_perc_cov.iloc[0], design_vs_test_igs, ref_vs_test_igs))
+                    except lm.src.error_handling.LogomakerError:
+                        print(f'{key}: {igs_id} does not have the same length in all guides in test sequences.')
+                        # basically if not all guides are the same length. This will happen if minlen was given
+                        # or if the guide is at the end of the test sequence
+                        continue
+                bar()
+
+    # Now plot!
+    titles = {key_names[0]: 'Hign U, high IGS', key_names[1]: 'High U, low IGS', key_names[2]: 'Low U, low IGS',
+              key_names[3]: 'Medium U, medium IGS'}
+
+    for key in key_names:
+        random_num = random.sample(range(len(data_to_graph_igs[key])), 1)[0]
+        # for igs_id, data, u_con in data_to_graph_u[key][random_num]:
+        igs_id, data, u_con, design_v_test_igs, ref_v_test_igs = data_to_graph_u[key][random_num]
+        fig, ax = plt.subplots(4, 1)
+        lm.Logo(data[0], ax=ax[0], stack_order='small_on_top', color_scheme='colorblind_safe')
+        lm.Logo(data[1], ax=ax[1], stack_order='small_on_top', color_scheme='colorblind_safe')
+        lm.Logo(data[2], ax=ax[2], stack_order='small_on_top', color_scheme='colorblind_safe')
+        lm.Logo(data[3], ax=ax[3], stack_order='small_on_top', color_scheme='colorblind_safe')
+
+        ax[0].set_title('Testing sequences', loc='left')
+        ax[1].set_title(f'Best composite score design - conservation with consensus test: '
+                        f'{round(design_v_test_igs, 4)}', loc='left')
+        ax[2].set_title('All design sequences', loc='left')
+        ax[3].set_title(f'Reference sequence - conservation with consensus test: '
+                        f'{round(ref_v_test_igs, 4)}', loc='left')
+
+        fig.suptitle(f'{titles[key]} igs data at position {igs_id}\nU conservation = {round(u_con, 4)}')
+        plt.tight_layout()
+
+        if save_fig:
+            plt.savefig(fname=f'{save_file_loc}/igs_alignments_at_U_{key}.{file_type}', format=file_type)
+        plt.show()
+
+        plt.show()
+
+        igs_id, data, igs_con, design_v_test_guide, ref_v_test_guide = data_to_graph_igs[key][random_num]
+        fig, ax = plt.subplots(3, 1)
+        lm.Logo(data[0], ax=ax[0], stack_order='small_on_top', color_scheme='colorblind_safe')
+        lm.Logo(data[1], ax=ax[1], stack_order='small_on_top', color_scheme='colorblind_safe')
+        lm.Logo(data[2], ax=ax[2], stack_order='small_on_top', color_scheme='colorblind_safe')
+
+        ax[0].set_title('Testing sequences', loc='left')
+        ax[1].set_title(f'Design sequence at position - conservation with consensus test: '
+                        f'{round(design_v_test_guide, 4)}',
+                        loc='left')
+        ax[2].set_title(f'Reference sequence - conservation with consensus test: '
+                        f'{round(ref_v_test_guide, 4)}', loc='left')
+
+        fig.suptitle(f'{titles[key]} guide data for igs {igs_id}\nIGS true % coverage = {round(igs_con, 4)}')
+        plt.tight_layout()
+
+        if save_fig:
+            plt.savefig(fname=f'{save_file_loc}/guide_alignments_at_igs_{key}.{file_type}', format=file_type)
+        plt.show()
+
+        plt.show()
+
 
     # Graph them in a sequence logo with probability on the y axis
     # And add the consensus motif underneath, and the design at that location, and the ref_sequence at that location
