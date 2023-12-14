@@ -173,10 +173,10 @@ if __name__ == '__main__':
     #                                                                   file_to_save=test_output_folder)
 
     # # finally, we test! Below is for local
-    files_to_test = test_output_folder + '/coupled'
-    for i in range(number_of_workers):
-        ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
-                     n_limit=1)
+    # files_to_test = test_output_folder + '/coupled'
+    # for i in range(number_of_workers):
+    #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
+    #                  n_limit=1)
     # # This is for NOTS
     # files_to_test = test_output_folder + '/coupled'
     # ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + files_to_test, number_of_workers=number_of_workers,
@@ -187,31 +187,36 @@ if __name__ == '__main__':
     control_design_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/1_designs_TTCAC1376_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
     universal_designs_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/77193_designs_designs_Bacteria_Only_by_Genus_2_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
     ref_seq_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/304_designs_designs_e-coli-16s-mg1655_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    random_seq_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
+    random_seq_results_file_name_1 = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
+    random_seq_results_file_name_2 = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt'
+    random_seq_results_file_name_3 = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Archaea_Only_by_Genus_1_worker_0_results.txt'
 
     folder_for_ref_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is MG1655'
-    folder_for_random_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is L shirota'
+    folder_for_random_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is L casei'
     # make_graphs(control_designs_path=control_design_results_file_name,
     #             universal_designs_path=universal_designs_results_file_name,
     #             ref_seq_designs_path=ref_seq_results_file_name, var_regs=e_coli_var_regs, save_fig=False,
     #             save_file_loc='test_output_files/test_outputs_parallelizing/coupled/figures')
     #
     # ########################################################
-    make_graphs(control_designs_path=control_design_results_file_name,
-                universal_designs_path=universal_designs_results_file_name,
-                ref_seq_designs_path=ref_seq_results_file_name, var_regs=e_coli_var_regs,
-                save_fig=True, save_file_loc=folder_for_ref_seq_results)
+    # make_graphs(control_designs_path=[control_design_results_file_name],
+    #             universal_designs_path=[universal_designs_results_file_name],
+    #             ref_seq_designs_path=[ref_seq_results_file_name], var_regs=e_coli_var_regs,
+    #             save_fig=True, save_file_loc=folder_for_ref_seq_results)
 
-    make_graphs(control_designs_path=control_design_results_file_name,
-                universal_designs_path=universal_designs_results_file_name,
-                ref_seq_designs_path=random_seq_results_file_name, var_regs=e_coli_var_regs, save_fig=True,
-                save_file_loc=folder_for_random_seq_results)
+    # make_graphs(control_designs_path=[control_design_results_file_name],
+    #             universal_designs_path=[universal_designs_results_file_name],
+    #             ref_seq_designs_path=[random_seq_results_file_name_1, random_seq_results_file_name_2,
+    #                                   random_seq_results_file_name_3], var_regs=e_coli_var_regs, save_fig=True,
+    #             save_file_loc=folder_for_random_seq_results)
+
+    # make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
+    #                          ref_data_path=ref_seq_results_file_name, save_fig=True,
+    #                          save_file_loc=folder_for_ref_seq_results)
 
     make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
-                             ref_data_path=ref_seq_results_file_name)
-
-    make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
-                             ref_data_path=random_seq_results_file_name)
+                             ref_data_path=random_seq_results_file_name_1, save_fig=True,
+                             save_file_loc=folder_for_random_seq_results)
 
     print(f'Graphs done!\n########################################################\n')
 
