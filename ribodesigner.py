@@ -6,7 +6,7 @@ import pickle
 import subprocess
 import time
 from collections import defaultdict
-from math import exp
+from math import exp, log
 from graph_making import make_split_graph
 
 import Bio.motifs
@@ -699,8 +699,8 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         for igs_id, igs_id_count in igs_ids_counts.items():
             ref_idx = int(igs_id[igs_length:])
             ref_idxes_list.append(ref_idx)
-            u_conservation_list.append(counts_of_ref_idx[ref_idx]/num_of_seqs)
-            igs_true_perc_cov_list.append(igs_id_count/num_of_seqs)
+            u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
+            igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
 
         title = test_folder.split('.')[0].split('/')[-1]
         save_file_name = f'{folder_to_save}/test_sequences_{title}'
@@ -978,7 +978,7 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
         # Now organize by ref_idx:
         for ref_id, count_of_ref in counts_of_ref_idx.items():
-            output_dict[ref_id] = (output_dict[ref_id], count_of_ref/len(aligned_targets))
+            output_dict[ref_id] = (output_dict[ref_id], count_of_ref / len(aligned_targets))
         return output_dict, igs_ids_counts, counts_of_ref_idx
     else:
         # this gives us a dictionary where the ID is matched to the true percent coverage
@@ -1081,8 +1081,8 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
                 break
 
             to_optimize.anti_guide = other_guide
-            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=to_optimize, target_background=True, n_limit=1,
-                                                       update_score=False)
+            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=to_optimize, target_background=True,
+                                                       opti_len=guide_len, n_limit=1, update_score=False)
 
             if new_seq_score > best_score:
                 best_guide = new_seq
@@ -1099,13 +1099,14 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
     return to_optimize
 
 
-def get_naive_score(opti_seq):
-    score = 1 - str(opti_seq).count('N') / len(opti_seq)
+def get_naive_score(opti_seq, opti_len):
+    # This version penalizes sequences that are too short
+    score = 1 - str(opti_seq).count('N') / opti_len
     return score
 
 
 def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = None, count_gaps: bool = True,
-                           penalize_trailing_gaps: bool = False):
+                           penalize_trailing_gaps: bool = False, priori: list[float] = [0.25, 0.25, 0.25, 0.25]):
     """
     :param alignments:
     :param left_seq:
@@ -1151,44 +1152,46 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
         sum_probabilities += pos_prob / seq_num
 
     # Replace gaps with N since we can't order gaps when ordering oligos
-    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
-                                                                                                                  'N')
+    mat = words2countmatrix(alignments, priori=priori)
+    opti_seq = consensus(mat, priori=priori)
+    # opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
+    #                                                                                                               'N')
     score = sum_probabilities / len(left_seq)
 
     return score, opti_seq
 
 
 # noinspection DuplicatedCode
-def get_weighted_score(opti_seq):
+def get_weighted_score(opti_seq, opti_len):
+    # This version penalizes sequences that are too short
     # prepare scoring matrix a(x)
-    a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-         'H': 1 / 3, 'B': 1 / 3, 'D': 1 / 3, 'V': 1 / 3, 'N': 0, '-': 0}
-    n = len(opti_seq)
+    a = give_scoring_dict()
 
     prelim_score = 0
     for i, x in enumerate(str(opti_seq)):
         prelim_score += a[x]
-    score = prelim_score / n
+    score = prelim_score / opti_len
 
     return score
 
 
 # noinspection DuplicatedCode
-def get_directional_score(opti_seq):
+def get_directional_score(opti_seq, opti_len):
+    # This version penalizes sequences that are too short
     # prepare scoring matrix a(x)
-    a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-         'H': 1 / 3, 'B': 1 / 3, 'D': 1 / 3, 'V': 1 / 3, 'N': 0, '-': 0}
-    n = len(opti_seq)
+    print('CAREFUL: Directional score calculation has not been fixed yet!!!')
+    a = give_scoring_dict()
+
     # This is broken, have not fixed yet
     # score based on extended identity and position of the bases
     weight_sum = 0
     weight_score_sum = 0
 
     for i, x in enumerate(str(opti_seq)):
-        w = exp(n - i)  # Calculate weight based on proximity to IGS
+        w = exp(opti_len - i)  # Calculate weight based on proximity to IGS
         weight_sum += w
         weight_score_sum += w * a[x]
-        i += 1  # move downstream
+        i += 1  # move downstream (closer to igs)
     score = weight_score_sum / weight_sum
     return score
 
@@ -1256,6 +1259,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
                 design.perc_on_target_test = 0
                 design.true_perc_cov_test = 0
                 if not flexible_igs:
+                    bar()
                     continue
             # Extract the relevant guide sequences
             # (same ref_idx, and either guides with same IGS OR all guides if IGS is flexible)
@@ -1395,12 +1399,13 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
 
 def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
-    def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr, test_dataset_name_attr):
+    def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr: int, test_dataset_name_attr: str,
+                       guide_len_attr: int):
         # No hits in the background! filter out those that have too many Ns
         # Score is set at 0 based if there is no u conservation or guide sequences
-        guide_len = len(ribo_design_attr.guide)
+
         # remove designs with too many Ns
-        if ribo_design_attr.guide.count('N') / guide_len <= n_limit_attr:
+        if ribo_design_attr.guide.count('N') / ribo_design_attr <= n_limit_attr:
             # Follow the same naming as the outputs of replace_ambiguity.
             ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
             return ribo_design_attr
@@ -1408,6 +1413,7 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
             return None
 
     # See if we can skip computation all together because if no conserved u, no conserved IGS
+    guide_len = len(coupled_design.guide)
     if coupled_design.u_conservation_test == 0 or len(coupled_design.guides_to_use) == 0:
         out = set_no_targets(coupled_design, n_limit, test_dataset_name)
         return out
@@ -1415,16 +1421,16 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
     # Find average guide score
     guides_to_optimize = np.array([str(guide) for guide in coupled_design.guides_to_use])
     fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
-                               excluded=['seq_b', 'score_type', 'only_consensus'])
+                               excluded=['seq_b', 'score_type', 'only_consensus', 'opti_len'])
 
     scores = fn_pairwise(guides_to_optimize, seq_b=coupled_design.guide, score_type=coupled_design.score_type,
-                         only_consensus=True)
+                         only_consensus=True, opti_len=guide_len)
     coupled_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
 
     return coupled_design
 
 
-def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool = False,
+def replace_ambiguity(sequence_to_fix: RibozymeDesign, opti_len: int, target_background: bool = False,
                       n_limit: float = 1, update_score: bool = True):
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
@@ -1485,16 +1491,20 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
     if update_score:
         # Now do a pairwise sequence with the target sequence to see the delta score:
         new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
-                                                            score_type=sequence_to_fix.score_type)
+                                                            score_type=sequence_to_fix.score_type, opti_len=opti_len)
         sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
                                              new_score=new_seq_score, reset_guides=True)
         return
     else:
-        new_seq_score = return_score_from_type(sequence_to_test=new_seq, score_type=sequence_to_fix.score_type)
+        new_seq_score = return_score_from_type(sequence_to_test=new_seq, score_type=sequence_to_fix.score_type,
+                                               opti_len=opti_len)
         return new_seq_score, new_seq
 
 
-def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False):
+def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False,
+                        opti_len: int = None, priori: list[float] = [0.25, 0.25, 0.25, 0.25]):
+    # If optilen is not given, then will assume the optimum length is the length of the longest sequence
+
     if len(seq_a) != len(seq_b):
         pad = '-' * abs(len(seq_a) - len(seq_b))
         if len(seq_a) > len(seq_b):
@@ -1502,14 +1512,21 @@ def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'n
         else:
             seq_a += pad
 
-    pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b],
-                                                      alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
-    pairwise_score = return_score_from_type(sequence_to_test=pairwise_comparison_consensus, score_type=score_type)
+    mat = words2countmatrix([seq_a, seq_b], priori=priori)
+    pairwise_comparison_consensus = consensus(mat, priori=priori)
+
+    # pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b],
+    #                                                   alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
+    if not opti_len:
+        opti_len = len(pairwise_comparison_consensus)
+
+    pairwise_score = return_score_from_type(sequence_to_test=pairwise_comparison_consensus, score_type=score_type,
+                                            opti_len=opti_len)
 
     if only_consensus:
         return pairwise_score
     else:
-        seq_a_score = return_score_from_type(sequence_to_test=seq_a, score_type=score_type)
+        seq_a_score = return_score_from_type(sequence_to_test=seq_a, score_type=score_type, opti_len=opti_len)
         return seq_a_score, pairwise_score
 
 
@@ -1550,9 +1567,8 @@ def give_taxonomy(silva_name: str | TargetSeq, level: str):
         return None
 
 
-
 def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: str, msa_fast: bool,
-                       score_type: str, guide_len: int):
+                       score_type: str, guide_len: int, priori: list[float] = [0.25, 0.25, 0.25, 0.25]):
     # First create a dummy file with all the guides we want to optimize
     with open(f'to_align_{name_of_file}.fasta', 'w') as f:
         for i, line in enumerate(sequences_to_align):
@@ -1576,29 +1592,31 @@ def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: s
     summary_align = AlignInfo.SummaryInfo(msa)
     alignments = [record.seq for record in summary_align.alignment]
 
-    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+    mat = words2countmatrix(alignments, priori=priori)
+    opti_seq = consensus(mat, priori=priori)
+    # opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
     # Make sure our sequence is our desired length
     truncated_seq = opti_seq[-guide_len:]
 
-    score = return_score_from_type(sequence_to_test=truncated_seq, score_type=score_type)
+    score = return_score_from_type(sequence_to_test=truncated_seq, score_type=score_type, opti_len=guide_len)
 
     return truncated_seq, score
 
 
-def return_score_from_type(sequence_to_test: Seq | str, score_type: str):
+def return_score_from_type(sequence_to_test: Seq | str, score_type: str, opti_len: int):
     if score_type == 'naive':
         # Naively tell me what the percent identity is: 1- ambiguity codons/ length
-        score = get_naive_score(sequence_to_test)
+        score = get_naive_score(sequence_to_test, opti_len)
 
     elif score_type == 'weighted':
-        score = get_weighted_score(sequence_to_test)
+        score = get_weighted_score(sequence_to_test, opti_len)
 
     elif score_type == 'directional':
-        score = get_directional_score(sequence_to_test)
+        score = get_directional_score(sequence_to_test, opti_len)
 
     else:
         print('Score type not recognized. Defaulting to naive scoring')
-        score = get_naive_score(sequence_to_test)
+        score = get_naive_score(sequence_to_test, opti_len)
     return score
 
 
@@ -1640,3 +1658,102 @@ def compare_batches(input_designs: np.ndarray[RibozymeDesign]):
     # plot sequence map of final guide per id
 
     return
+
+
+def give_scoring_dict():
+    score_dict = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
+                  'H': 1 / 3, 'B': 1 / 3, 'D': 1 / 3, 'V': 1 / 3, 'N': 0, '-': 0}
+    return score_dict
+
+
+"""
+The functions below are from From
+    https://github.com/rsa-tools/rsat-code/blob/68048c6135224d5007abb388e2f64837ff57bc72/python-scripts/lib/matrix.py
+Thank you so so so much for making this! For my reference here is the citation: 
+https://github.com/rsa-tools/rsat-code/blob/master/CITATION.cff
+"""
+
+
+def words2countmatrix(words, priori):
+    """
+    Convert a list of words to a simple count matrix.
+    """
+    w = len(words[0])
+    m = [[0.0] * 4 for i in range(w)]
+    N = len(words)
+    for i in range(w):
+        for s in range(N):
+            try:
+                letter = words[s][i]
+            except IndexError:
+                letter = 'N'
+            if letter == 'A':
+                m[i][0] = m[i][0] + 1.0
+            elif letter == 'C':
+                m[i][1] = m[i][1] + 1.0
+            elif letter == 'G':
+                m[i][2] = m[i][2] + 1.0
+            elif letter == 'T':
+                m[i][3] = m[i][3] + 1.0
+            elif letter == 'N':
+                m[i][0] = m[i][0] + priori[0]
+                m[i][1] = m[i][1] + priori[1]
+                m[i][2] = m[i][2] + priori[2]
+                m[i][3] = m[i][3] + priori[3]
+    return m
+
+
+'''
+A                       (Adenine) 
+C                       (Cytosine)
+G                       (Guanine)
+T                       (Thymine)
+R       = A or G        (puRines)
+Y       = C or T        (pYrimidines)
+W       = A or T        (Weak hydrogen bonding)
+S       = G or C        (Strong hydrogen bonding)
+M       = A or C        (aMino group at common position)
+K       = G or T        (Keto group at common position)
+H       = A, C or T     (not G)
+B       = G, C or T     (not A)
+V       = G, A, C       (not T)
+D       = G, A or T     (not C)
+N       = G, A, C or T  (aNy)
+'''
+CONSENSUS = {'A': 'A',
+             'C': 'C',
+             'G': 'G',
+             'T': 'T',
+             'AG': 'R',
+             'CT': 'Y',
+             'AT': 'W',
+             'CG': 'S',
+             'AC': 'M',
+             'GT': 'K',
+             'ACT': 'H',
+             'CGT': 'B',
+             'ACG': 'V',
+             'AGT': 'D',
+             'ACGT': 'N'
+             }
+
+
+def consensus(matrix, priori, mask=False):
+    w = len(matrix)
+
+    str = []
+    for i in range(w):
+        letter = ''
+        for b in range(4):
+            if matrix[i][b] != 0.0 and log(matrix[i][b] / priori[b]) >= 0:
+                letter = letter + 'ACGT'[b]
+        if mask and (len(letter) == 4 or len(letter) == 3 or len(letter) == 2 or len(letter) == 0):
+            letter = 'n'
+        else:
+            letter = CONSENSUS[letter]
+
+        # if len(letter) != 1:
+        #    letter = '[' + letter + ']'
+
+        str.append(letter)
+    return ''.join(str)

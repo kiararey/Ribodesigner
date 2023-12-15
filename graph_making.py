@@ -741,10 +741,10 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
                 test_consensus = Bio.motifs.create(test_data_temp['igs'], alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
                 # And now get score for best U and ref U with the consensus
                 design_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus,
-                                                        seq_b=best_score_design['igs'].values[0],
-                                                        score_type='weighted', only_consensus=True)
+                                                          seq_b=best_score_design['igs'].values[0], opti_len=guide_len,
+                                                          score_type='weighted', only_consensus=True)
                 ref_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus, seq_b=ref_data_temp['igs'].values[0],
-                                                     score_type='weighted', only_consensus=True)
+                                                       score_type='weighted', only_consensus=True, opti_len=guide_len)
 
                 # Save in a tuple with:
                 # (idx, [extracted_data_test, best_design, extracted_data_design, extracted_data_ref], u_cons)
@@ -778,10 +778,10 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
                                                            alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
                         # And now get score for best U and ref U with the consensus
                         # there should only be one design per igs, so take the first one
-                        design_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus,
+                        design_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
                                                                     seq_b=design_data_igs_id['guide'].values[0],
                                                                     score_type='weighted', only_consensus=True)
-                        ref_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus,
+                        ref_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
                                                                  seq_b=ref_data_igs_id['guide'].values[0],
                                                                  score_type='weighted', only_consensus=True)
 

@@ -80,7 +80,6 @@ if __name__ == '__main__':
     selective_datasets = []
 
     test_data_pickles = ['test_sequences_All_by_Genus_1.pickle', 'test_sequences_Archaea_Only_by_Genus_1.pickle',
-                         'test_sequences_Bacillus_halotolerans.pickle',
                          'test_sequences_Bacteria_Only_by_Genus_1.pickle',
                          'test_sequences_Eukaryota_Only_by_Genus_1.pickle']
     test_data_pickles = [test_output_folder + '/' + item for item in test_data_pickles]
@@ -94,67 +93,67 @@ if __name__ == '__main__':
     ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
     random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
 
-    # # Here we make the designs
-    # for test_data in test_data_folders:
-    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
-    #                                                    guide_length=n, igs_length=m, min_length=minlen,
-    #                                                    folder_to_save=test_output_folder, graph_results=True,
-    #                                                    var_regs=e_coli_var_regs, graph_file_type='png')
-    #     test_data_pickles.append(test_seqs_pickle_file_name)
-    #
-    # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
-    # # U site as guides in E. coli MG1655
-    # ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=ref_path,
-    #                                         ref_sequence_file=ref_path, igs_length=m,
-    #                                         guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
-    #                                         msa_fast=True,
-    #                                         score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-    #                                         gaps_allowed=False, fileout=False, random_guide_sample_size=10,
-    #                                         test_folders=test_data_folders, folder_to_save=test_output_folder)
-    # Similarly, what if we chose another sequence
-    # random_seq_pickle_file_name = ribodesigner(target_sequences_folder=random_seq_path,
-    #                                         ref_sequence_file=ref_path, igs_length=m,
-    #                                         guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
-    #                                         msa_fast=True,
-    #                                         score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-    #                                         gaps_allowed=False, fileout=False, random_guide_sample_size=10,
-    #                                         test_folders=test_data_folders, folder_to_save=test_output_folder)
-    # # finally, here is our universal designs
-    # for universal_data in universal_data_files:
-    #     universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data,
-    #                                             ref_sequence_file=ref_path, igs_length=m,
-    #                                             guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
-    #                                             msa_fast=True,
-    #                                             score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-    #                                             gaps_allowed=False, fileout=False, random_guide_sample_size=10,
-    #                                             test_folders=test_data_folders, folder_to_save=test_output_folder)
-    #     universal_data_pickles.append(universal_pickle_file_name)
+    # Here we make the designs
+    for test_data in test_data_folders:
+        test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+                                                       guide_length=n, igs_length=m, min_length=minlen,
+                                                       folder_to_save=test_output_folder, graph_results=True,
+                                                       var_regs=e_coli_var_regs, graph_file_type='png')
+        test_data_pickles.append(test_seqs_pickle_file_name)
 
-    # # Now we couple the designs with their test sequences to later test them
-    # for test_pickle in test_data_pickles:
-    #     random_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=random_seq_pickle,
-    #                                                             test_seqs_input=test_pickle,
-    #                                                             flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-    #                                                             score_type='weighted',
-    #                                                             file_to_save=test_output_folder)
-    #
-    #     ref_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
-    #                                                            test_seqs_input=test_pickle,
-    #                                                            flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-    #                                                            score_type='weighted',
-    #                                                            file_to_save=test_output_folder)
-    #
-    #     control_design_coupled_file_name = couple_designs_to_test_seqs(designs_input=u1376,
-    #                                                                   test_seqs_input=test_pickle,
-    #                                                                   flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-    #                                                                   score_type='weighted',
-    #                                                                   file_to_save=test_output_folder)
-    #
-    #     for universal_design_pickle in universal_data_pickles:
-    #         universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
-    #                                                                        test_seqs_input=test_pickle,
-    #                                                                        flexible_igs=True,
-    #                                                                        file_to_save=test_output_folder)
+    # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
+    # U site as guides in E. coli MG1655
+    ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=ref_path,
+                                            ref_sequence_file=ref_path, igs_length=m,
+                                            guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+                                            msa_fast=True,
+                                            score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+                                            gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+                                            test_folders=test_data_folders, folder_to_save=test_output_folder)
+    # Similarly, what if we chose another sequence
+    random_seq_pickle_file_name = ribodesigner(target_sequences_folder=random_seq_path,
+                                               ref_sequence_file=ref_path, igs_length=m,
+                                               guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+                                               msa_fast=True,
+                                               score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+                                               gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+                                               test_folders=test_data_folders, folder_to_save=test_output_folder)
+    # finally, here is our universal designs
+    for universal_data in universal_data_files:
+        universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data,
+                                                  ref_sequence_file=ref_path, igs_length=m,
+                                                  guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+                                                  msa_fast=True,
+                                                  score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+                                                  gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+                                                  test_folders=test_data_folders, folder_to_save=test_output_folder)
+        universal_data_pickles.append(universal_pickle_file_name)
+
+    # Now we couple the designs with their test sequences to later test them
+    for test_pickle in test_data_pickles:
+        random_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=random_seq_pickle,
+                                                                   test_seqs_input=test_pickle,
+                                                                   flexible_igs=True, igs_len=m,
+                                                                   score_type='weighted',
+                                                                   file_to_save=test_output_folder)
+
+        ref_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
+                                                                test_seqs_input=test_pickle,
+                                                                flexible_igs=True, igs_len=m,
+                                                                score_type='weighted',
+                                                                file_to_save=test_output_folder)
+
+        control_design_coupled_file_name = couple_designs_to_test_seqs(designs_input=u1376,
+                                                                       test_seqs_input=test_pickle,
+                                                                       flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
+                                                                       score_type='weighted',
+                                                                       file_to_save=test_output_folder)
+
+        for universal_design_pickle in universal_data_pickles:
+            universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
+                                                                              test_seqs_input=test_pickle,
+                                                                              flexible_igs=True,
+                                                                              file_to_save=test_output_folder)
 
     # # Below we're making coupled files for testing purposes =
     # test_pickle = test_output_folder + '/test_sequences_Bacteria_Only_by_Genus_1.pickle'
@@ -172,11 +171,11 @@ if __name__ == '__main__':
     #                                                                   test_seqs_input=test_pickle, flexible_igs=True,
     #                                                                   file_to_save=test_output_folder)
 
-    # # finally, we test! Below is for local
-    # files_to_test = test_output_folder + '/coupled'
-    # for i in range(number_of_workers):
-    #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
-    #                  n_limit=1)
+    # finally, we test! Below is for local
+    files_to_test = test_output_folder + '/coupled'
+    for i in range(number_of_workers):
+        ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
+                     n_limit=1)
     # # This is for NOTS
     # files_to_test = test_output_folder + '/coupled'
     # ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + files_to_test, number_of_workers=number_of_workers,
@@ -214,9 +213,8 @@ if __name__ == '__main__':
     #                          ref_data_path=ref_seq_results_file_name, save_fig=True,
     #                          save_file_loc=folder_for_ref_seq_results)
 
-    make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
-                             ref_data_path=random_seq_results_file_name_1, save_fig=True,
-                             save_file_loc=folder_for_random_seq_results)
-
-    print(f'Graphs done!\n########################################################\n')
-
+    # make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
+    #                          ref_data_path=random_seq_results_file_name_1, save_fig=True,
+    #                          save_file_loc=folder_for_random_seq_results)
+    #
+    # print(f'Graphs done!\n########################################################\n')
