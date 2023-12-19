@@ -1106,7 +1106,7 @@ def get_naive_score(opti_seq, opti_len):
 
 
 def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = None, count_gaps: bool = True,
-                           penalize_trailing_gaps: bool = False, priori: list[float] = [0.25, 0.25, 0.25, 0.25]):
+                           penalize_trailing_gaps: bool = False, priori=None):
     """
     :param alignments:
     :param left_seq:
@@ -1118,6 +1118,8 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
     # a modified version of BioPython'string_to_analyze PSSM function that counts gaps by default and also gives us
     # the quantitative score. This quantitative score is as follows:
 
+    if priori is None:
+        priori = [0.25, 0.25, 0.25, 0.25]
     if chars_to_ignore is None:
         chars_to_ignore = []
     if not isinstance(chars_to_ignore, list):
@@ -1297,7 +1299,8 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
     return pickle_file_name
 
 
-def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0):
+def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0,
+                 display_bar: bool = True):
     """
     This is the parallelization script I need to work on.
     """
@@ -1307,16 +1310,16 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     work_done_file = f'{coupled_folder}/work_done_{worker_number}.txt'
     results_folder = f'{coupled_folder}/results'
 
-    # Generate input results folder if it does not exist yet
-    if not os.path.exists(results_folder):
-        os.mkdir(results_folder)
-
     # Check if we have anything to test
     analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
 
     if len(analysis_files) == 0:
         print('Please make sure to couple designs with the appropriate test sequences')
         return
+
+    # Generate input results folder if it does not exist yet
+    if not os.path.exists(results_folder):
+        os.mkdir(results_folder)
 
     # check the amount of work by summing the number of designs on each file in the coupled folder
     lengths = [int(name.split('/')[-1].split('_')[0]) for name in analysis_files]
@@ -1332,13 +1335,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     for work_done_file in work_done_files:
         with open(work_done_file) as handle:
             work_done.extend(handle.read().splitlines())
-    #
-    # if os.path.exists(work_done_file):
-    #     with open(work_done_file) as handle:
-    #         work_done = handle.read().splitlines()
-    # else:
-    #     work_done = []
-    # Big work done file only has the big indexes already completed
+
     work_done = set(work_done)
     #  Basically remove make an array that contains all lines NOT in big work done
     work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if
@@ -1354,29 +1351,62 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     for big_idx, file_name, small_idx in this_worker_worklist:
         files_to_open_dict[file_name].append((int(big_idx), int(small_idx)))
 
+    # test = [file for file in files_to_open_dict.keys() if 'Bacteria' in file]
+    # if len(test) == 0:
+    #     return
+
     if total_work != work_to_do + work_completed:
         print(f'big_checkpoint.txt corrupted. Please delete and couple datasets again.')
         return -1
 
     # Print how much work is left to do
-    print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed:{work_completed}\n'
-          f'Work for this worker:{this_worker_worklist.shape[0]}')
+    print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed: {work_completed} '
+          f'({round(work_to_do/total_work*100, 2)}% done)\n'
+          f'Work for worker {worker_number}: {this_worker_worklist.shape[0]}\n')
 
     print('Opening files and extracting designs...')
     designs_to_test = []
     # Now only open the files relevant to this current worker and only extract the designs needed
-    with alive_bar(len(files_to_open_dict.keys()), spinner='fishes') as bar:
+    if display_bar:
+        with alive_bar(len(files_to_open_dict.keys()), spinner='fishes') as bar:
+            for file_name in files_to_open_dict.keys():
+                with open(file_name, 'rb') as handle:
+                    to_test_temp = pickle.load(handle)
+                for big_idx, small_idx in files_to_open_dict[file_name]:
+                    # Extract designs matching small index, save as (design, big index, file_name, small index)
+                    designs_to_test.append((to_test_temp[small_idx], big_idx, file_name))
+                bar()
+    else:
         for file_name in files_to_open_dict.keys():
             with open(file_name, 'rb') as handle:
                 to_test_temp = pickle.load(handle)
             for big_idx, small_idx in files_to_open_dict[file_name]:
                 # Extract designs matching small index, save as (design, big index, file_name, small index)
                 designs_to_test.append((to_test_temp[small_idx], big_idx, file_name))
-            bar()
 
     # Analyze designs
     print('Now analyzing designs...')
-    with alive_bar(len(designs_to_test), spinner='fishes') as bar:
+    if display_bar:
+        with alive_bar(len(designs_to_test), spinner='fishes') as bar:
+            for (design_to_test, big_idx, file_name) in designs_to_test:
+                result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
+                naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
+
+                # If our result does not meet n_limit requirements, skip it
+                if not result:
+                    with open(work_done_file, 'a') as d:
+                        d.write(str(big_idx) + '\n')
+                    bar()
+                    continue
+
+                result_dict = result.to_dict(all_data=False)
+                with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
+                    d.write(json.dumps(result_dict) + '\n')
+
+                with open(work_done_file, 'a') as d:
+                    d.write(str(big_idx) + '\n')
+                bar()
+    else:
         for (design_to_test, big_idx, file_name) in designs_to_test:
             result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
@@ -1385,7 +1415,6 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             if not result:
                 with open(work_done_file, 'a') as d:
                     d.write(str(big_idx) + '\n')
-                bar()
                 continue
 
             result_dict = result.to_dict(all_data=False)
@@ -1394,7 +1423,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
             with open(work_done_file, 'a') as d:
                 d.write(str(big_idx) + '\n')
-            bar()
+
     return
 
 
@@ -1405,7 +1434,7 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
         # Score is set at 0 based if there is no u conservation or guide sequences
 
         # remove designs with too many Ns
-        if ribo_design_attr.guide.count('N') / ribo_design_attr <= n_limit_attr:
+        if ribo_design_attr.guide.count('N') / guide_len_attr <= n_limit_attr:
             # Follow the same naming as the outputs of replace_ambiguity.
             ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
             return ribo_design_attr
@@ -1415,7 +1444,7 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
     # See if we can skip computation all together because if no conserved u, no conserved IGS
     guide_len = len(coupled_design.guide)
     if coupled_design.u_conservation_test == 0 or len(coupled_design.guides_to_use) == 0:
-        out = set_no_targets(coupled_design, n_limit, test_dataset_name)
+        out = set_no_targets(coupled_design, n_limit, test_dataset_name, guide_len)
         return out
 
     # Find average guide score
@@ -1502,21 +1531,22 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, opti_len: int, target_bac
 
 
 def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False,
-                        opti_len: int = None, priori: list[float] = [0.25, 0.25, 0.25, 0.25]):
+                        opti_len: int = None, priori=None):
     # If optilen is not given, then will assume the optimum length is the length of the longest sequence
 
+    if priori is None:
+        priori = [0.25, 0.25, 0.25, 0.25]
     if len(seq_a) != len(seq_b):
         pad = '-' * abs(len(seq_a) - len(seq_b))
         if len(seq_a) > len(seq_b):
             seq_b += pad
         else:
             seq_a += pad
-
+    if opti_len == 50 | len(seq_a) != opti_len:
+        print('uh oh')
     mat = words2countmatrix([seq_a, seq_b], priori=priori)
     pairwise_comparison_consensus = consensus(mat, priori=priori)
 
-    # pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b],
-    #                                                   alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
     if not opti_len:
         opti_len = len(pairwise_comparison_consensus)
 
@@ -1568,8 +1598,10 @@ def give_taxonomy(silva_name: str | TargetSeq, level: str):
 
 
 def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: str, msa_fast: bool,
-                       score_type: str, guide_len: int, priori: list[float] = [0.25, 0.25, 0.25, 0.25]):
+                       score_type: str, guide_len: int, priori=None):
     # First create a dummy file with all the guides we want to optimize
+    if priori is None:
+        priori = [0.25, 0.25, 0.25, 0.25]
     with open(f'to_align_{name_of_file}.fasta', 'w') as f:
         for i, line in enumerate(sequences_to_align):
             f.write('>seq' + str(i) + '\n' + str(line) + '\n')
@@ -1594,7 +1626,7 @@ def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: s
 
     mat = words2countmatrix(alignments, priori=priori)
     opti_seq = consensus(mat, priori=priori)
-    # opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
+
     # Make sure our sequence is our desired length
     truncated_seq = opti_seq[-guide_len:]
 
@@ -1666,23 +1698,54 @@ def give_scoring_dict():
     return score_dict
 
 
+def combine_data(folder_path):
+    # Get all files in the folder that end in .txt
+    files = [f'{folder_path}/{f}' for f in os.listdir(folder_path) if f.endswith('.txt')]
+    file_names_to_split = ['_'.join(f.split('_')[:-3]) for f in files]
+    only_names = [(name.split('/')[-1], name) for name in file_names_to_split]
+
+    # Divide into batches of files with the same name but different worker
+    worker_batched_file_names = {}
+    for file_name, folder_name in only_names:
+        worker_batched_file_names[f'{folder_path}/combined/{file_name}.txt'] = (file for file in files if file.startswith(folder_name))
+
+    # Append the data from each file in a batch to combined name file
+    # (will be the same appending as we used to generate the data basically)
+    if not os.path.exists(f'{folder_path}/combined'):
+        os.mkdir(f'{folder_path}/combined')
+    else:
+        for file in os.listdir(f'{folder_path}/combined'):
+            os.remove(f'{folder_path}/combined/{file}')
+
+    for new_file_name, items_to_write in worker_batched_file_names.items():
+        for item in items_to_write:
+            with open(item, 'r') as r:
+                designs = r.readlines()
+            with open(new_file_name, 'a') as d:
+                for line in designs:
+                    d.write(line)
+
+    return
+
+
 """
-The functions below are from From
+The functions below are from
     https://github.com/rsa-tools/rsat-code/blob/68048c6135224d5007abb388e2f64837ff57bc72/python-scripts/lib/matrix.py
 Thank you so so so much for making this! For my reference here is the citation: 
 https://github.com/rsa-tools/rsat-code/blob/master/CITATION.cff
 """
 
 
+# Changed some variable names
 def words2countmatrix(words, priori):
     """
     Convert a list of words to a simple count matrix.
     """
     w = len(words[0])
     m = [[0.0] * 4 for i in range(w)]
-    N = len(words)
+    n = len(words)
     for i in range(w):
-        for s in range(N):
+        for s in range(n):
             try:
                 letter = words[s][i]
             except IndexError:
@@ -1720,6 +1783,8 @@ V       = G, A, C       (not T)
 D       = G, A or T     (not C)
 N       = G, A, C or T  (aNy)
 '''
+
+# Modified to include a gap
 CONSENSUS = {'A': 'A',
              'C': 'C',
              'G': 'G',
@@ -1734,26 +1799,28 @@ CONSENSUS = {'A': 'A',
              'CGT': 'B',
              'ACG': 'V',
              'AGT': 'D',
-             'ACGT': 'N'
+             'ACGT': 'N',
+             '': '-'
              }
 
 
+# Changed some variable names
 def consensus(matrix, priori, mask=False):
     w = len(matrix)
 
-    str = []
+    str_list = []
     for i in range(w):
         letter = ''
         for b in range(4):
             if matrix[i][b] != 0.0 and log(matrix[i][b] / priori[b]) >= 0:
                 letter = letter + 'ACGT'[b]
         if mask and (len(letter) == 4 or len(letter) == 3 or len(letter) == 2 or len(letter) == 0):
-            letter = 'n'
+            letter = 'N'
         else:
             letter = CONSENSUS[letter]
 
         # if len(letter) != 1:
         #    letter = '[' + letter + ']'
 
-        str.append(letter)
-    return ''.join(str)
+        str_list.append(letter)
+    return ''.join(str_list)

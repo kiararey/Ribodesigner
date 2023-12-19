@@ -12,14 +12,23 @@ import ribodesigner as rd
 import Bio.motifs
 
 
-def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str], universal_designs_path: list[str] = '',
-                selective_designs_path: list[str] = '',
-                ref_seq_designs_path: list[str] = '', save_fig: bool = False,
+def import_data_to_df(designs_path, name):
+    designs_df = extract_info(designs_path[0], name)
+    for i in range(1, len(designs_path)):
+        temp = extract_info(designs_path[i], name)
+        designs_df = pd.concat([designs_df, temp])
+    return designs_df
+
+
+def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str],
+                universal_designs_path: list[str] = '', selective_designs_path: list[str] = '',
+                ref_seq_designs_path: list[str] = '', random_seq_designs_path: list[str] = '', save_fig: bool = False,
                 file_type: str = 'png', save_file_loc: str = ''):
     print('Loading data...')
     fn = lambda x: int(x.split('/')[-1].split('_')[0])
     percentages = []
-    for paths in [control_designs_path, universal_designs_path, selective_designs_path, ref_seq_designs_path]:
+    for paths in [control_designs_path, universal_designs_path, selective_designs_path, ref_seq_designs_path,
+                  random_seq_designs_path]:
         if not paths:
             percentages.append(0)
             continue
@@ -29,18 +38,12 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     total_designs = sum(percentages)
     # percentages = [perc/total_designs for perc in percentages]
     with alive_bar(total=total_designs, spinner='fishes') as bar:
-        control_designs_df = extract_info(control_designs_path[0], 'control')
-        for i in range(1, len(control_designs_path)):
-            temp = extract_info(control_designs_path[i], 'control')
-            control_designs_path = pd.concat([control_designs_path, temp])
+        control_designs_df = import_data_to_df(control_designs_path, 'control')
         bar(percentages[0])
         print('Control data loaded!')
         if universal_designs_path:
             print('Now loading universal data...')
-            universal_designs_df = extract_info(universal_designs_path[0], 'universal')
-            for i in range(1, len(universal_designs_path)):
-                temp = extract_info(universal_designs_path[i], 'universal')
-                universal_designs_df = pd.concat([universal_designs_df, temp])
+            universal_designs_df = import_data_to_df(universal_designs_path, 'universal')
             bar(percentages[1])
             print('Universal data loaded!')
             all_data_df = pd.concat([control_designs_df, universal_designs_df])
@@ -48,22 +51,22 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             all_data_df = control_designs_df
         if selective_designs_path:
             print('Now loading selective data...')
-            selective_designs_df = extract_info(selective_designs_path[0], 'selective')
-            for i in range(1, len(selective_designs_path)):
-                temp = extract_info(selective_designs_path[i], 'selective')
-                selective_designs_df = pd.concat([selective_designs_df, temp])
+            selective_designs_df = import_data_to_df(selective_designs_path, 'selective')
             bar(percentages[2])
             print('Selective data loaded!')
             all_data_df = pd.concat([all_data_df, selective_designs_df])
         if ref_seq_designs_path:
             print('Now loading reference data...')
-            ref_seq_designs_df = extract_info(ref_seq_designs_path[0], 'ref_seq')
-            for i in range(1, len(ref_seq_designs_path)):
-                temp = extract_info(ref_seq_designs_path[i], 'ref_seq')
-                ref_seq_designs_df = pd.concat([ref_seq_designs_df, temp])
+            ref_seq_designs_df = import_data_to_df(ref_seq_designs_path, 'ref_seq')
             bar(percentages[3])
             print('Reference sequence data loaded!')
             all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
+        if random_seq_designs_path:
+            print('Now loading random sequence data...')
+            random_seq_designs_df = import_data_to_df(random_seq_designs_path, 'ref_seq')
+            bar(percentages[4])
+            print('Reference sequence data loaded!')
+            all_data_df = pd.concat([all_data_df, random_seq_designs_df])
 
     control_designs_df_1376 = control_designs_df[control_designs_df['reference_idx'] == 1376]
 
@@ -107,11 +110,27 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     max_vals = all_data_df.max(numeric_only=True)
 
     # Fig 1: MG1655
-    test_name = 'vs_test_sequences_Bac'
-    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(test_name)]
-    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(test_name)]
-    bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
-    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(test_name)]
+    test_file_names = ['vs_test_sequences_Bac', 'vs_test_sequences_Arc', 'vs_test_sequences_Euk', 'vs_test_sequences_All']
+    target_file_names = ['_designs_Bac', 'designs_Arc', 'designs_Euk', 'designs_All']
+    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
+    random_seq_subset = random_seq_designs_df[random_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
+
+    subsets = []
+    for test_name, target_name in zip(test_file_names, target_file_names):
+        target_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(test_name)]
+        target_subset = target_subset.loc[target_subset.index == 'universal']
+        top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(test_name)]
+        # We also want to graph the reference and random seq against their appropriate dataset
+        if target_name == '_designs_Bac':
+            subsets.append((reference_subset, top_score_control_subset))
+            subsets.append((random_seq_subset, top_score_control_subset))
+        subsets.append((target_subset, top_score_control_subset))
+
+    # test_name = 'vs_test_sequences_Bac'
+    # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(test_name)]
+    # bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(test_name)]
+    # bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
+    # top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(test_name)]
 
     # testing_subset = 'All'
     # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
@@ -194,8 +213,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # E. coli MG1655 16s rRNA sequence.
     for i, target_name in enumerate(target_names):
         universal_subset = all_data_df[all_data_df.index == to_analyze[i]]
-        if universal_subset[universal_subset.index != 'control'].empty:
-            continue
+        # if universal_subset[universal_subset.index != 'control'].empty:
+        #     continue
 
         # Prepare axes
         jointplot_fig = plt.figure()
@@ -626,8 +645,9 @@ def extract_info(results_file_path: str, dataset: str):
     return design_df
 
 
-def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_data_path: str, save_fig: bool = False,
-                             file_type: str = 'png', save_file_loc: str = '', guide_len: int = 50):
+def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], ref_data_path: list[str],
+                             save_fig: bool = False,
+                             file_type: str = 'png', save_file_loc: str = '', guide_len: int = 50, igs_len: int = 5):
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 16 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
@@ -635,8 +655,9 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
     # Extract data
     with open(test_data_path, 'rb') as handle:
         test_seqs = pickle.load(handle)
-    design_data_df = extract_info(design_data_path, 'universal')
-    ref_data_df = extract_info(ref_data_path, 'ref_data')
+
+    design_data_df = import_data_to_df(design_data_path, 'universal')
+    ref_data_df = import_data_to_df(ref_data_path, 'ref_data')
 
     # The test data is formatted for analysis so it will be a little clunky to extract necessary data here
     # Extract all positions all that one of the requirements below
@@ -645,6 +666,7 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
     # 'low, low' = at most 0.1 in each
     # 'mid, mid' = between 0.45 and 0.55 in each
     key_names = ['high, high', 'high, low', 'low, low', 'mid, mid']
+
     # matching_test_ref_idx = {key: {} for key in key_names}
     # igs_data = {}
     # igs_ids_in_pos = defaultdict(lambda: set())
@@ -730,7 +752,8 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
                 # separate into two steps so we can use the dataframe in the next loop
                 ref_data_temp = ref_data[ref_data['reference_idx'] == idx][['id', 'igs', 'guide']]
                 ref_u_counted = lm.alignment_to_matrix(ref_data_temp['igs'])
-                design_data_temp = design_data[design_data['reference_idx'] == idx][['id', 'igs', 'guide', 'composite_test_score']]
+                design_data_temp = design_data[design_data['reference_idx'] == idx][
+                    ['id', 'igs', 'guide', 'composite_test_score']]
                 design_u_counted = lm.alignment_to_matrix(design_data_temp['igs'])
                 test_data_temp = test_data_df[test_data_df['reference_idx'] == idx][['id', 'igs', 'guide']]
                 test_u_counted = lm.alignment_to_matrix(test_data_temp['igs'])
@@ -738,13 +761,14 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
                 best_u_counted = lm.alignment_to_matrix(best_score_design['igs'])
 
                 # get consensus sequence for test dataset
-                test_consensus = Bio.motifs.create(test_data_temp['igs'], alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                test_consensus = Bio.motifs.create(test_data_temp['igs'],
+                                                   alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
                 # And now get score for best U and ref U with the consensus
                 design_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus,
-                                                          seq_b=best_score_design['igs'].values[0], opti_len=guide_len,
+                                                          seq_b=best_score_design['igs'].values[0], opti_len=igs_len,
                                                           score_type='weighted', only_consensus=True)
                 ref_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus, seq_b=ref_data_temp['igs'].values[0],
-                                                       score_type='weighted', only_consensus=True, opti_len=guide_len)
+                                                       score_type='weighted', only_consensus=True, opti_len=igs_len)
 
                 # Save in a tuple with:
                 # (idx, [extracted_data_test, best_design, extracted_data_design, extracted_data_ref], u_cons)
@@ -759,44 +783,49 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
                     if len(igs_true_perc_cov.unique()) != 1:
                         print('uh oh')
                     igs_probs = lm.alignment_to_matrix(['G' + igs_id[0:5]])
+
+                    design_data_igs_id = design_data[design_data['id'] == igs_id]
+                    ref_data_igs_id = ref_data_temp[ref_data_temp['id'] == igs_id]
+                    test_data_igs_id = test_data_temp[test_data_temp['id'] == igs_id]
+
+                    # get consensus sequence for test dataset
                     try:
-                        design_data_igs_id = design_data[design_data['id'] == igs_id]
-                        ref_data_igs_id = ref_data_temp[ref_data_temp['id'] == igs_id]
-                        test_data_igs_id = test_data_temp[test_data_temp['id'] == igs_id]
-
-                        design_igs_counted = pd.concat([lm.alignment_to_matrix(design_data_igs_id['guide']),
-                                                        igs_probs], ignore_index=True).fillna(0)
-                        ref_igs_counted = pd.concat([lm.alignment_to_matrix(ref_data_igs_id['guide']),
-                                                     igs_probs], ignore_index=True).fillna(0)
-                        test_size = test_data_igs_id.shape[0]
-                        igs_probs = igs_probs.apply(lambda x: x * test_size)
-                        test_igs_counted = pd.concat([lm.alignment_to_matrix(test_data_igs_id['guide']),
-                                                      igs_probs], ignore_index=True).fillna(0)
-
-                        # get consensus sequence for test dataset
                         test_consensus = Bio.motifs.create(test_data_temp['guide'],
                                                            alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
-                        # And now get score for best U and ref U with the consensus
-                        # there should only be one design per igs, so take the first one
-                        design_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
+                    except ValueError:
+                        print(f'{key}: {igs_id} does not have the same length in all guides in test sequences.')
+                        continue
+
+                    design_igs_counted = pd.concat([lm.alignment_to_matrix(design_data_igs_id['guide']),
+                                                        igs_probs], ignore_index=True).fillna(0)
+                    ref_igs_counted = pd.concat([lm.alignment_to_matrix(ref_data_igs_id['guide']),
+                                                     igs_probs], ignore_index=True).fillna(0)
+                    test_size = test_data_igs_id.shape[0]
+                    igs_probs = igs_probs.apply(lambda x: x * test_size)
+                    test_igs_counted = pd.concat([lm.alignment_to_matrix(test_data_igs_id['guide']),
+                                                      igs_probs], ignore_index=True).fillna(0)
+
+                    # And now get score for best U and ref U with the consensus
+                    # there should only be one design per igs, so take the first one
+                    design_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
                                                                     seq_b=design_data_igs_id['guide'].values[0],
                                                                     score_type='weighted', only_consensus=True)
-                        ref_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
+                    ref_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
                                                                  seq_b=ref_data_igs_id['guide'].values[0],
                                                                  score_type='weighted', only_consensus=True)
 
-                        # best_igs_counted = lm.alignment_to_matrix(for_best_finding.nlargest(1, 'composite_test_score')
-                        #                                           ['guide'])
+                    # best_igs_counted = lm.alignment_to_matrix(for_best_finding.nlargest(1, 'composite_test_score')
+                    #                                           ['guide'])
 
-                        # Save in a tuple with:
-                        # (idx, [extracted_data_test, extracted_data_design, extracted_data_ref], igs_true_%_cov)
-                        data_to_graph_igs[key].append((igs_id, [test_igs_counted, design_igs_counted, ref_igs_counted],
+                    # Save in a tuple with:
+                    # (idx, [extracted_data_test, extracted_data_design, extracted_data_ref], igs_true_%_cov)
+                    data_to_graph_igs[key].append((igs_id, [test_igs_counted, design_igs_counted, ref_igs_counted],
                                                        igs_true_perc_cov.iloc[0], design_vs_test_igs, ref_vs_test_igs))
-                    except lm.src.error_handling.LogomakerError:
-                        print(f'{key}: {igs_id} does not have the same length in all guides in test sequences.')
-                        # basically if not all guides are the same length. This will happen if minlen was given
-                        # or if the guide is at the end of the test sequence
-                        continue
+                    # except lm.src.error_handling.LogomakerError:
+                    #     print(f'{key}: {igs_id} does not have the same length in all guides in test sequences.')
+                    #     # basically if not all guides are the same length. This will happen if minlen was given
+                    #     # or if the guide is at the end of the test sequence
+                    #     continue
                 bar()
 
     # Now plot!
@@ -857,7 +886,6 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: str, ref_dat
             plt.savefig(fname=f'{save_file_loc}/guide_alignments_at_igs_{key}.{file_type}', format=file_type)
 
         plt.show()
-
 
     # Graph them in a sequence logo with probability on the y axis
     # And add the consensus motif underneath, and the design at that location, and the ref_sequence at that location

@@ -1,6 +1,8 @@
 import sys
-
-from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs)
+import os
+from alive_progress import alive_bar
+import multiprocessing as mp
+from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data)
 from graph_making import make_graphs, make_sequence_logo_graph
 
 if __name__ == '__main__':
@@ -15,7 +17,7 @@ if __name__ == '__main__':
         number_of_workers = sys.argv[2]
     except:
         worker_number = 0
-        number_of_workers = 50
+        number_of_workers = mp.cpu_count()
         pass
 
     # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
@@ -94,66 +96,68 @@ if __name__ == '__main__':
     random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
 
     # Here we make the designs
-    for test_data in test_data_folders:
-        test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
-                                                       guide_length=n, igs_length=m, min_length=minlen,
-                                                       folder_to_save=test_output_folder, graph_results=True,
-                                                       var_regs=e_coli_var_regs, graph_file_type='png')
-        test_data_pickles.append(test_seqs_pickle_file_name)
+    # for test_data in test_data_folders:
+    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+    #                                                    guide_length=n, igs_length=m, min_length=minlen,
+    #                                                    folder_to_save=test_output_folder, graph_results=True,
+    #                                                    var_regs=e_coli_var_regs, graph_file_type='png')
+    #     test_data_pickles.append(test_seqs_pickle_file_name)
+    #
+    # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
+    # # U site as guides in E. coli MG1655
+    # ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=ref_path,
+    #                                         ref_sequence_file=ref_path, igs_length=m,
+    #                                         guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+    #                                         msa_fast=True,
+    #                                         score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+    #                                         gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+    #                                         test_folders=test_data_folders, folder_to_save=test_output_folder)
+    # # Similarly, what if we chose another sequence
+    # random_seq_pickle_file_name = ribodesigner(target_sequences_folder=random_seq_path,
+    #                                            ref_sequence_file=ref_path, igs_length=m,
+    #                                            guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+    #                                            msa_fast=True,
+    #                                            score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+    #                                            gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+    #                                            test_folders=test_data_folders, folder_to_save=test_output_folder)
+    # # finally, here are our universal designs
+    # for universal_data in universal_data_files:
+    #     universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data,
+    #                                               ref_sequence_file=ref_path, igs_length=m,
+    #                                               guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
+    #                                               msa_fast=True,
+    #                                               score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
+    #                                               gaps_allowed=False, fileout=False, random_guide_sample_size=10,
+    #                                               test_folders=test_data_folders, folder_to_save=test_output_folder)
+    #     universal_data_pickles.append(universal_pickle_file_name)
 
-    # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
-    # U site as guides in E. coli MG1655
-    ref_seq_pickle_file_name = ribodesigner(target_sequences_folder=ref_path,
-                                            ref_sequence_file=ref_path, igs_length=m,
-                                            guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
-                                            msa_fast=True,
-                                            score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-                                            gaps_allowed=False, fileout=False, random_guide_sample_size=10,
-                                            test_folders=test_data_folders, folder_to_save=test_output_folder)
-    # Similarly, what if we chose another sequence
-    random_seq_pickle_file_name = ribodesigner(target_sequences_folder=random_seq_path,
-                                               ref_sequence_file=ref_path, igs_length=m,
-                                               guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
-                                               msa_fast=True,
-                                               score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-                                               gaps_allowed=False, fileout=False, random_guide_sample_size=10,
-                                               test_folders=test_data_folders, folder_to_save=test_output_folder)
-    # finally, here is our universal designs
-    for universal_data in universal_data_files:
-        universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data,
-                                                  ref_sequence_file=ref_path, igs_length=m,
-                                                  guide_length=n, min_length=minlen, selective=False, min_true_cov=0,
-                                                  msa_fast=True,
-                                                  score_type='weighted', n_limit=1, percent_of_target_seqs_used=1,
-                                                  gaps_allowed=False, fileout=False, random_guide_sample_size=10,
-                                                  test_folders=test_data_folders, folder_to_save=test_output_folder)
-        universal_data_pickles.append(universal_pickle_file_name)
-
-    # Now we couple the designs with their test sequences to later test them
-    for test_pickle in test_data_pickles:
-        random_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=random_seq_pickle,
-                                                                   test_seqs_input=test_pickle,
-                                                                   flexible_igs=True, igs_len=m,
-                                                                   score_type='weighted',
-                                                                   file_to_save=test_output_folder)
-
-        ref_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
-                                                                test_seqs_input=test_pickle,
-                                                                flexible_igs=True, igs_len=m,
-                                                                score_type='weighted',
-                                                                file_to_save=test_output_folder)
-
-        control_design_coupled_file_name = couple_designs_to_test_seqs(designs_input=u1376,
-                                                                       test_seqs_input=test_pickle,
-                                                                       flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-                                                                       score_type='weighted',
-                                                                       file_to_save=test_output_folder)
-
-        for universal_design_pickle in universal_data_pickles:
-            universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
-                                                                              test_seqs_input=test_pickle,
-                                                                              flexible_igs=True,
-                                                                              file_to_save=test_output_folder)
+    # # Now we couple the designs with their test sequences to later test them
+    # if os.path.exists(test_output_folder + '/coupled/big_checkpoint.txt'):
+    #     os.remove(test_output_folder + '/coupled/big_checkpoint.txt')
+    # for test_pickle in test_data_pickles:
+    #     random_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=random_seq_pickle,
+    #                                                                test_seqs_input=test_pickle,
+    #                                                                flexible_igs=True, igs_len=m,
+    #                                                                score_type='weighted',
+    #                                                                file_to_save=test_output_folder)
+    #
+    #     ref_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
+    #                                                             test_seqs_input=test_pickle,
+    #                                                             flexible_igs=True, igs_len=m,
+    #                                                             score_type='weighted',
+    #                                                             file_to_save=test_output_folder)
+    #
+    #     control_design_coupled_file_name = couple_designs_to_test_seqs(designs_input=u1376,
+    #                                                                    test_seqs_input=test_pickle,
+    #                                                                    flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
+    #                                                                    score_type='weighted',
+    #                                                                    file_to_save=test_output_folder)
+    #
+    #     for universal_design_pickle in universal_data_pickles:
+    #         universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
+    #                                                                           test_seqs_input=test_pickle,
+    #                                                                           flexible_igs=True,
+    #                                                                           file_to_save=test_output_folder)
 
     # # Below we're making coupled files for testing purposes =
     # test_pickle = test_output_folder + '/test_sequences_Bacteria_Only_by_Genus_1.pickle'
@@ -171,24 +175,75 @@ if __name__ == '__main__':
     #                                                                   test_seqs_input=test_pickle, flexible_igs=True,
     #                                                                   file_to_save=test_output_folder)
 
-    # finally, we test! Below is for local
-    files_to_test = test_output_folder + '/coupled'
-    for i in range(number_of_workers):
-        ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=0,
-                     n_limit=1)
+    # # finally, we test! Below is for local
+    # files_to_test = test_output_folder + '/coupled'
+    # in_data = [(files_to_test, number_of_workers, i, 1, False) for i in range(number_of_workers)]
+    # with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #     with mp.Pool(processes=len(in_data)) as pool:
+    #         out_data = pool.starmap(ribo_checker, in_data)
+    #     bar()
+    # for i in range(number_of_workers):
+    #     print(f'Worker number {i}')
+    #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=i,
+    #                  n_limit=1)
     # # This is for NOTS
     # files_to_test = test_output_folder + '/coupled'
     # ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + files_to_test, number_of_workers=number_of_workers,
     #              worker_number=worker_number, n_limit=1)
 
     # print(f'Test data done!\n########################################################\n')
+    results_folder = test_output_folder + '/coupled/results'
+    # combine_data(results_folder)
 
-    control_design_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/1_designs_TTCAC1376_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    universal_designs_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/77193_designs_designs_Bacteria_Only_by_Genus_2_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    ref_seq_results_file_name = test_output_folder + '/Coupled for testing/for_testing/results/304_designs_designs_e-coli-16s-mg1655_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    random_seq_results_file_name_1 = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
-    random_seq_results_file_name_2 = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt'
-    random_seq_results_file_name_3 = test_output_folder + '/Coupled for testing/for_testing/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Archaea_Only_by_Genus_1_worker_0_results.txt'
+    control_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                         if f.startswith('1_designs')]
+    control_design_results_file_names.sort()
+    ref_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                     if f.startswith('304_designs')]
+    ref_design_results_file_names.sort()
+    random_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                        if f.startswith('326_designs')]
+    random_design_results_file_names.sort()
+    universal_design_archaea_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                                   if f.startswith('14652_designs')]
+    universal_design_archaea_results_file_names.sort()
+    universal_design_eukarya_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                                   if f.startswith('72490_designs')]
+    universal_design_eukarya_results_file_names.sort()
+    universal_design_bacteria_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                                    if f.startswith('77193_designs')]
+    universal_design_bacteria_results_file_names.sort()
+    universal_design_all_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+                                               if f.startswith('137620_designs')]
+    universal_design_all_results_file_names.sort()
+    all_targets_universal_design_file_names = [*universal_design_archaea_results_file_names,
+                                               *universal_design_eukarya_results_file_names,
+                                               *universal_design_bacteria_results_file_names,
+                                               *universal_design_all_results_file_names]
+
+    # All data
+    make_graphs(control_designs_path=control_design_results_file_names,
+                universal_designs_path=universal_design_bacteria_results_file_names,
+                ref_seq_designs_path=ref_design_results_file_names,
+                random_seq_designs_path=random_design_results_file_names, var_regs=e_coli_var_regs,
+                save_fig=True, save_file_loc=results_folder)
+
+    # control_design_results_file_name = test_output_folder + '/coupled/results/1_designs_TTCAC1376_vs_test_sequences_Eukaryota_Only_by_Genus_1_worker_0_results.txt'
+    # universal_designs_results_file_name = test_output_folder + '/coupled/results/72490_designs_designs_Eukaryota_Only_by_Genus_2_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt'
+    # ref_seq_results_file_name = test_output_folder + '/coupled/results/304_designs_designs_e-coli-16s-mg1655_universal_vs_test_sequences_Eukaryota_Only_by_Genus_1_worker_0_results.txt'
+    # random_seq_results_file_name_1 = test_output_folder + '/coupled/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Bacteria_Only_by_Genus_1_worker_0_results.txt'
+    # random_seq_results_file_name_2 = test_output_folder + '/coupled/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_Eukaryota_Only_by_Genus_1_worker_0_results.txt'
+    # random_seq_results_file_name_3 = test_output_folder + '/coupled/results/326_designs_designs_Lactobacillus_casei_example_universal_vs_test_sequences_All_Only_by_Genus_1_worker_0_results.txt'
+
+    # combined_results_folder = test_output_folder + '/coupled/results/combined'
+    # control_design_results_file_names = [f'{combined_results_folder}/{f}' for f in os.listdir(combined_results_folder)
+    #                                      if f.startswith('1_designs')]
+    # ref_design_results_file_names = [f'{combined_results_folder}/{f}' for f in os.listdir(combined_results_folder)
+    #                                  if f.startswith('304_designs')]
+    # random_design_results_file_names = [f'{combined_results_folder}/{f}' for f in os.listdir(combined_results_folder)
+    #                                     if f.startswith('326_designs')]
+    # universal_design_results_file_names = [f'{combined_results_folder}/{f}' for f in os.listdir(combined_results_folder)
+    #                                        if f.startswith('77193_designs')]
 
     folder_for_ref_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is MG1655'
     folder_for_random_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is L casei'
@@ -198,23 +253,35 @@ if __name__ == '__main__':
     #             save_file_loc='test_output_files/test_outputs_parallelizing/coupled/figures')
     #
     # ########################################################
-    # make_graphs(control_designs_path=[control_design_results_file_name],
-    #             universal_designs_path=[universal_designs_results_file_name],
-    #             ref_seq_designs_path=[ref_seq_results_file_name], var_regs=e_coli_var_regs,
+    # # All data
+    # make_graphs(control_designs_path=control_design_results_file_names,
+    #             universal_designs_path=universal_design_bacteria_results_file_names,
+    #             ref_seq_designs_path=ref_design_results_file_names, var_regs=e_coli_var_regs,
     #             save_fig=True, save_file_loc=folder_for_ref_seq_results)
-
-    # make_graphs(control_designs_path=[control_design_results_file_name],
-    #             universal_designs_path=[universal_designs_results_file_name],
-    #             ref_seq_designs_path=[random_seq_results_file_name_1, random_seq_results_file_name_2,
-    #                                   random_seq_results_file_name_3], var_regs=e_coli_var_regs, save_fig=True,
-    #             save_file_loc=folder_for_random_seq_results)
-
-    # make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
-    #                          ref_data_path=ref_seq_results_file_name, save_fig=True,
-    #                          save_file_loc=folder_for_ref_seq_results)
-
-    # make_sequence_logo_graph(test_data_path=test_data_pickles[3], design_data_path=universal_designs_results_file_name,
-    #                          ref_data_path=random_seq_results_file_name_1, save_fig=True,
-    #                          save_file_loc=folder_for_random_seq_results)
     #
-    # print(f'Graphs done!\n########################################################\n')
+    # make_graphs(control_designs_path=control_design_results_file_names,
+    #             universal_designs_path=universal_design_bacteria_results_file_names,
+    #             ref_seq_designs_path=random_design_results_file_names, var_regs=e_coli_var_regs, save_fig=True,
+    #             save_file_loc=folder_for_random_seq_results)
+    # # Bacteria only
+    # make_graphs(control_designs_path=[control_design_results_file_names[2]],
+    #             universal_designs_path=[universal_design_results_file_names[5]],
+    #             ref_seq_designs_path=[ref_design_results_file_names[2]], var_regs=e_coli_var_regs,
+    #             save_fig=True, save_file_loc=folder_for_ref_seq_results)
+    #
+    # make_graphs(control_designs_path=[control_design_results_file_names[2]],
+    #             universal_designs_path=[universal_design_results_file_names[5]],
+    #             ref_seq_designs_path=[random_design_results_file_names[4]], var_regs=e_coli_var_regs, save_fig=True,
+    #             save_file_loc=folder_for_random_seq_results)
+    #
+    # make_sequence_logo_graph(test_data_path=test_data_pickles[2],
+    #                          design_data_path=[universal_design_results_file_names[5]],
+    #                          ref_data_path=[ref_design_results_file_names[0]], save_fig=True,
+    #                          save_file_loc=folder_for_ref_seq_results)
+    #
+    # make_sequence_logo_graph(test_data_path=test_data_pickles[2],
+    #                          design_data_path=[universal_design_results_file_names[5]],
+    #                          ref_data_path=[random_design_results_file_names[4]], save_fig=True,
+    #                          save_file_loc=folder_for_random_seq_results)
+
+    print(f'Graphs done!\n########################################################\n')
