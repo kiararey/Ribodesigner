@@ -63,7 +63,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
         if random_seq_designs_path:
             print('Now loading random sequence data...')
-            random_seq_designs_df = import_data_to_df(random_seq_designs_path, 'ref_seq')
+            random_seq_designs_df = import_data_to_df(random_seq_designs_path, 'random_seq')
             bar(percentages[4])
             print('Reference sequence data loaded!')
             all_data_df = pd.concat([all_data_df, random_seq_designs_df])
@@ -71,16 +71,16 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     control_designs_df_1376 = control_designs_df[control_designs_df['reference_idx'] == 1376]
 
     # get top scores in each: 1 control, one of each group of selective and universal
-    top_score_control = control_designs_df_1376[control_designs_df_1376[
-        'name_of_test_dataset'].str.contains('Bac')].nlargest(1, 'composite_test_score')
-    file_name_checks = ['Bac', 'Euk', 'Arc', 'All']
-    for name in file_name_checks[1:]:
-        top_score_temp = control_designs_df_1376[control_designs_df_1376[
-            'name_of_test_dataset'].str.contains(name)].nlargest(1, 'composite_test_score')
-        top_score_control = pd.concat([top_score_control, top_score_temp])
-
-    top_scores_universal = universal_designs_df.loc[universal_designs_df.index ==
-                                                    'universal'].nlargest(1, 'composite_test_score')
+    # top_score_control = control_designs_df_1376[control_designs_df_1376[
+    #     'name_of_test_dataset'].str.contains('Bac')].nlargest(1, 'composite_test_score')
+    # file_name_checks = ['Bac', 'Euk', 'Arc', 'All']
+    # for name in file_name_checks[1:]:
+    #     top_score_temp = control_designs_df_1376[control_designs_df_1376[
+    #         'name_of_test_dataset'].str.contains(name)].nlargest(1, 'composite_test_score')
+    #     top_score_control = pd.concat([top_score_control, top_score_temp])
+    #
+    # top_scores_universal = universal_designs_df.loc[universal_designs_df.index ==
+    #                                                 'universal'].nlargest(1, 'composite_test_score')
     print('Generating graphs...')
     # for label in universal_labels[1:]:
     #     score_temp = universal_designs_df[universal_designs_df['tested_targets'] ==
@@ -95,7 +95,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #     top_scores_selective = pd.concat([top_scores_selective, score_temp])
 
     # top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
-    top_test_scores = pd.concat([top_score_control, top_scores_universal])
+    # top_test_scores = pd.concat([top_score_control, top_scores_universal])
 
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 16 * 0.8)}
@@ -103,46 +103,48 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
 
-    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all']
+    target_names = ['reference', 'random', 'bacterial', 'archaeal', 'eukaryotic', 'all']
     # target_names = ['reference', 'bacterial']
     to_analyze = ['ref_seq', 'universal', 'control']
 
     max_vals = all_data_df.max(numeric_only=True)
 
     # Fig 1: MG1655
-    test_file_names = ['vs_test_sequences_Bac', 'vs_test_sequences_Arc', 'vs_test_sequences_Euk', 'vs_test_sequences_All']
+    test_file_names = ['vs_test_sequences_Bac', 'vs_test_sequences_Arc', 'vs_test_sequences_Euk',
+                       'vs_test_sequences_All']
     target_file_names = ['_designs_Bac', 'designs_Arc', 'designs_Euk', 'designs_All']
     reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
-    random_seq_subset = random_seq_designs_df[random_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
+    random_seq_subset = random_seq_designs_df[
+        random_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
 
-    subsets = []
-    for test_name, target_name in zip(test_file_names, target_file_names):
-        target_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(test_name)]
-        target_subset = target_subset.loc[target_subset.index == 'universal']
-        top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(test_name)]
-        # We also want to graph the reference and random seq against their appropriate dataset
-        if target_name == '_designs_Bac':
-            subsets.append((reference_subset, top_score_control_subset))
-            subsets.append((random_seq_subset, top_score_control_subset))
-        subsets.append((target_subset, top_score_control_subset))
+    all_subsets = defaultdict(lambda: {})
+    keys_for_subsets = {'control': ('control', None), 'reference': ('ref_seq', None), 'random': ('random_seq', None),
+                        'universal bacterial': ('universal', '_designs_Bac'),
+                        'universal archaeal': ('universal', 'designs_Arc'),
+                        'universal eukaryotic': ('universal', 'designs_Euk'),
+                        'universal all': ('universal', 'designs_All')}
+    test_file_names = {'vs Bacteria': 'vs_test_sequences_Bac', 'vs Archaea': 'vs_test_sequences_Arc',
+                       'vs Eukaryota': 'vs_test_sequences_Euk', 'vs all': 'vs_test_sequences_All'}
+    paired_names = [('reference', 'vs Bacteria'), ('random', 'vs Bacteria'),
+                    ('universal bacterial', 'vs Bacteria'), ('universal archaeal', 'vs Archaea'),
+                    ('universal archaeal', 'vs Eukaryota'), ('universal all', 'vs all')]
 
-    # test_name = 'vs_test_sequences_Bac'
-    # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(test_name)]
-    # bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(test_name)]
-    # bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
-    # top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(test_name)]
+    for subset_key, (design_type, target_name) in keys_for_subsets.items():
+        for test_key, test_name in test_file_names.items():
+            # First select out the design type
+            target_subset = all_data_df.loc[all_data_df.index == design_type]
+            # Next, get everyone in that design type that has the correct subset, if needed
+            if target_name:
+                target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(target_name)]
+            # Finally, get everyone in correct design type and  subset that has been tested against the correct dataset
+            target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(test_name)]
+            all_subsets[subset_key][test_key] = target_subset
 
-    # testing_subset = 'All'
-    # reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
-    # bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains(testing_subset)]
-    # bacterial_subset = bacterial_subset.loc[bacterial_subset.index == 'universal']
-    # top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains(testing_subset)]
-    # Only going to plot bacteria test dataset
-    # First, plot x = u conservation, y = igs conservation, hue = guide score
+    # Now get the subsets where the testing data was in the same kingdom as the target data
+    for test_name, target_name in paired_names:
+        graph = all_subsets[test_name][target_name]
+        top_control = all_subsets['control'][target_name]
 
-    # Prepare axes
-    for graph, name in zip([reference_subset, bacterial_subset], ['reference seq', 'bacterial']):
-        # Prepare axes
         jointplot_fig = plt.figure()
         gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
         joint_ax = {
@@ -159,8 +161,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         # sns.scatterplot(x=xvar, y=yvar, hue=hue_var, data=graph, ax=joint_ax[0], alpha=0.5, legend=False)
         jointplot_fig.axes[0].scatter(x=graph[xvar], y=graph[yvar], alpha=0.5, c=graph[hue_var], vmin=0, vmax=1,
                                       cmap='viridis')
-        jointplot_fig.axes[0].scatter(x=top_score_control_subset[xvar], vmin=0, vmax=1, marker='^',
-                                      y=top_score_control_subset[yvar], alpha=1, c=top_score_control_subset[hue_var],
+        jointplot_fig.axes[0].scatter(x=top_control[xvar], vmin=0, vmax=1, marker='^',
+                                      y=top_control[yvar], alpha=1, c=top_control[hue_var],
                                       edgecolors='#9B892D', label='Control')
         sns.kdeplot(x=xvar, data=graph, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False)
         sns.kdeplot(y=yvar, data=graph, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False)
@@ -171,16 +173,16 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         plot_variable_regions(joint_ax[3], var_regs)
         plot_variable_regions(joint_ax[4], var_regs)
         # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y='u_conservation_test', data=graph, ax=joint_ax[3], alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y='true_%_cov_test', data=graph, ax=joint_ax[4], alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y=xvar, data=graph, ax=joint_ax[3], alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y=yvar, data=graph, ax=joint_ax[4], alpha=0.5, legend=False)
         jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
         # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_score_control_subset['reference_idx'],
-                                      y=top_score_control_subset['u_conservation_test'],
+        jointplot_fig.axes[3].scatter(x=top_control['reference_idx'],
+                                      y=top_control[xvar],
                                       alpha=1, c='#fde725', label='control')
         jointplot_fig.axes[3].set_ylabel('U site conservation')
-        jointplot_fig.axes[4].scatter(x=top_score_control_subset['reference_idx'],
-                                      y=top_score_control_subset['u_conservation_test'],
+        jointplot_fig.axes[4].scatter(x=top_control['reference_idx'],
+                                      y=top_control[yvar],
                                       alpha=1, c='#fde725', label='control')
         jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
         # Set graph settings for pretti graphing
@@ -201,20 +203,22 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
         jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
         jointplot_fig.axes[3].tick_params(labelbottom=False)
-        jointplot_fig.suptitle(f'Designs from {name} target sequences against bacterial test dataset')
+        jointplot_fig.suptitle(f'Designs from {test_name} target sequences against {target_name} test dataset')
         plt.tight_layout()
 
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_1_{name}.{file_type}', format=file_type)
+            plt.savefig(fname=f'{save_file_loc}/figure_1_{test_name}.{file_type}', format=file_type)
         plt.show()
 
     # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
     # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
     # E. coli MG1655 16s rRNA sequence.
-    for i, target_name in enumerate(target_names):
-        universal_subset = all_data_df[all_data_df.index == to_analyze[i]]
-        # if universal_subset[universal_subset.index != 'control'].empty:
-        #     continue
+    for target_name, inner_dict in all_subsets.items():
+        if target_name == 'control':
+            continue
+        subset_to_graph = pd.DataFrame()
+        for df in inner_dict.values():
+            subset_to_graph = pd.concat([subset_to_graph, df])
 
         # Prepare axes
         jointplot_fig = plt.figure()
@@ -229,15 +233,22 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         }
         xvar = 'true_%_cov_test'
         yvar = 'test_score'
-        legend_names = ['Eukaryota only', 'Archaea only', 'Bacteria only', 'All', 'Control']
         # Plot scatter and kde plots
-        sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[0], alpha=0.5,
+        sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[0], alpha=0.5,
                         legend=False)
-        jointplot_fig.axes[0].scatter(x=top_score_control[xvar], y=top_score_control[yvar],
-                                      alpha=1, c='#fde725', label='Control')
-        sns.kdeplot(x=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[1], fill=True,
+        markers = ['v', '^', '<', '>']
+        for i, marker in enumerate(markers):
+            jointplot_fig.axes[0].scatter(x=control_designs_df_1376[xvar].iloc[i],
+                                          y=control_designs_df_1376[yvar].iloc[i],
+                                          alpha=1, c='#fde725', marker=marker, label='Control')
+
+        # sns.scatterplot(x=xvar, y=yvar, style='name_of_test_dataset', data=control_designs_df_1376,
+        #                 ax=jointplot_fig.axes[0], alpha=1, legend=False, palette=['#fde725'])
+        # jointplot_fig.axes[0].scatter(x=control_designs_df_1376[xvar], y=control_designs_df_1376[yvar],
+        #                               alpha=1, c='#fde725', marker=markers.pop(), label='Control')
+        sns.kdeplot(x=xvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[1], fill=True,
                     common_norm=True, alpha=.3, legend=False)
-        sns.kdeplot(y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[2], fill=True,
+        sns.kdeplot(y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[2], fill=True,
                     common_norm=True, alpha=.3, legend=False)
         jointplot_fig.axes[0].set_xlabel('IGS true percent coverage')
         jointplot_fig.axes[0].set_ylabel('Guide score')
@@ -246,23 +257,40 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         plot_variable_regions(joint_ax[4], var_regs)
         plot_variable_regions(joint_ax[5], var_regs)
         # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset', data=universal_subset,
-                        ax=joint_ax[3],
+        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset', data=subset_to_graph,
+                        ax=joint_ax[3], alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[4],
                         alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[4],
-                        alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[5],
+        sns.scatterplot(x='reference_idx', y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[5],
                         alpha=0.5)
         jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
         # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'], y=top_score_control['u_conservation_test'],
-                                      alpha=1, c='#fde725', label='control')
+        for i, marker in enumerate(markers):
+            jointplot_fig.axes[3].scatter(x=control_designs_df_1376['reference_idx'].iloc[i],
+                                          y=control_designs_df_1376['u_conservation_test'].iloc[i],
+                                          alpha=1, c='#fde725', marker=marker, label='Control')
+
+            jointplot_fig.axes[4].scatter(x=control_designs_df_1376['reference_idx'].iloc[i],
+                                          y=control_designs_df_1376[xvar].iloc[i],
+                                          alpha=1, c='#fde725', marker=marker, label='control')
+            jointplot_fig.axes[5].scatter(x=control_designs_df_1376['reference_idx'].iloc[i],
+                                          y=control_designs_df_1376[yvar].iloc[i], alpha=1,
+                                          c='#fde725', marker=marker, label='control')
+        # sns.scatterplot(x='reference_idx', y='u_conservation_test', style='name_of_test_dataset',
+        #                 data=control_designs_df_1376, ax=joint_ax[3], palette=['#fde725'], alpha=1, legend=False)
+        # sns.scatterplot(x='reference_idx', y=xvar, style='name_of_test_dataset',
+        #                 data=control_designs_df_1376, ax=joint_ax[4], palette=['#fde725'], alpha=1, legend=False)
+        # sns.scatterplot(x='reference_idx', y=yvar, style='name_of_test_dataset',
+        #                 data=control_designs_df_1376, ax=joint_ax[5], palette=['#fde725'], alpha=1, legend=False)
+
+        # jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'], y=top_score_control['u_conservation_test'],
+        #                               alpha=1, c='#fde725', label='control')
         jointplot_fig.axes[3].set_ylabel('U site conservation')
-        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'], y=top_score_control[xvar],
-                                      alpha=1, c='#fde725', label='control')
+        # jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'], y=top_score_control[xvar],
+        #                               alpha=1, c='#fde725', label='control')
         jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
-        jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'], y=top_score_control[yvar], alpha=1,
-                                      c='#fde725', label='control')
+        # jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'], y=top_score_control[yvar], alpha=1,
+        #                               c='#fde725', label='control')
         jointplot_fig.axes[5].set_ylabel('Guide score')
         # Set graph settings for pretti graphing
         jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
@@ -286,11 +314,15 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
         jointplot_fig.axes[3].tick_params(labelbottom=False)
         jointplot_fig.axes[4].tick_params(labelbottom=False)
+
         legend = plt.legend(bbox_to_anchor=(1.4, -0.15), ncols=5, title='Test dataset')
         for label in legend.get_texts():
             txt = label.get_text().split('/')[-1].split('vs_test_sequences')[-1].replace('_', ' ')
-            new_label = [name for name in legend_names if name.casefold() in txt.casefold()]
-            label.set_text(new_label[0])
+            for name in inner_dict.keys():
+                if name[3:].casefold() in txt.casefold():
+                    label.set_text(name)
+                    break
+
         jointplot_fig.suptitle(f'Designs from {target_name} target sequences against test datasets')
         plt.tight_layout()
 
@@ -797,22 +829,22 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
                         continue
 
                     design_igs_counted = pd.concat([lm.alignment_to_matrix(design_data_igs_id['guide']),
-                                                        igs_probs], ignore_index=True).fillna(0)
+                                                    igs_probs], ignore_index=True).fillna(0)
                     ref_igs_counted = pd.concat([lm.alignment_to_matrix(ref_data_igs_id['guide']),
-                                                     igs_probs], ignore_index=True).fillna(0)
+                                                 igs_probs], ignore_index=True).fillna(0)
                     test_size = test_data_igs_id.shape[0]
                     igs_probs = igs_probs.apply(lambda x: x * test_size)
                     test_igs_counted = pd.concat([lm.alignment_to_matrix(test_data_igs_id['guide']),
-                                                      igs_probs], ignore_index=True).fillna(0)
+                                                  igs_probs], ignore_index=True).fillna(0)
 
                     # And now get score for best U and ref U with the consensus
                     # there should only be one design per igs, so take the first one
                     design_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
-                                                                    seq_b=design_data_igs_id['guide'].values[0],
-                                                                    score_type='weighted', only_consensus=True)
+                                                                seq_b=design_data_igs_id['guide'].values[0],
+                                                                score_type='weighted', only_consensus=True)
                     ref_vs_test_igs = rd.pairwise_comparison(seq_a=test_consensus, opti_len=guide_len,
-                                                                 seq_b=ref_data_igs_id['guide'].values[0],
-                                                                 score_type='weighted', only_consensus=True)
+                                                             seq_b=ref_data_igs_id['guide'].values[0],
+                                                             score_type='weighted', only_consensus=True)
 
                     # best_igs_counted = lm.alignment_to_matrix(for_best_finding.nlargest(1, 'composite_test_score')
                     #                                           ['guide'])
@@ -820,7 +852,7 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
                     # Save in a tuple with:
                     # (idx, [extracted_data_test, extracted_data_design, extracted_data_ref], igs_true_%_cov)
                     data_to_graph_igs[key].append((igs_id, [test_igs_counted, design_igs_counted, ref_igs_counted],
-                                                       igs_true_perc_cov.iloc[0], design_vs_test_igs, ref_vs_test_igs))
+                                                   igs_true_perc_cov.iloc[0], design_vs_test_igs, ref_vs_test_igs))
                     # except lm.src.error_handling.LogomakerError:
                     #     print(f'{key}: {igs_id} does not have the same length in all guides in test sequences.')
                     #     # basically if not all guides are the same length. This will happen if minlen was given
@@ -892,3 +924,6 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
     # Also add the consensus score between the test sequences, between the design and consensus, and between the refseq
     # and the consensus.
     return
+
+
+# Delta difference plot between phyla?? for selective??
