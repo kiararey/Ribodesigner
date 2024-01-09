@@ -659,7 +659,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
 
 def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
-                      graph_results, var_regs, graph_file_type):
+                      graph_results, var_regs, graph_file_type, get_consensus_batches, batch_num, score_type, msa_fast):
     start = time.perf_counter()
     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
     print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
@@ -689,6 +689,43 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
                                                                               return_test_seqs=True)
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
+
+    time1 = time.perf_counter()
+
+    if get_consensus_batches:
+        print('Getting consensus sequences for test locations...')
+        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[np.ndarray, str], excluded=['muscle_exe_name', 'msa_fast',
+                                                                                         'score_type', 'guide_len'])
+        with alive_bar(len(test_seqs_dict), spinner='fishes') as bar:
+            for idx, loc_data in test_seqs_dict.items():
+                for idx_id, idx_id_data in loc_data[0].items():
+                    # divide number of guide sequences into batches of around batch_num guides
+                    guides_to_use = idx_id_data[0]
+                    # If there is only one guide, just keep it and continue
+                    if len(guides_to_use) == 1:
+                        continue
+                    elif (len(guides_to_use) / batch_num) >= 2:
+                        random_indices = np.random.permutation(np.arange(len(guides_to_use)))
+
+                        batch_indices = np.array_split(random_indices, len(guides_to_use) / batch_num)
+                        batches = np.array([(guides_to_use[index] for index in indices) for indices in batch_indices])
+
+                        # Prepare to run msa
+                        names = np.array([f'{idx_id}_{i}' for i in range(len(batches))])
+                        # Should return an array of tuples - (truncated_seq, score)
+                        seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast,
+                                                    score_type=score_type, guide_len=guide_length)
+                        guides = [*seqs_and_scores[0]]
+
+                    else:
+                        best_guide, _ = muscle_msa_routine(sequences_to_align=guides_to_use, name_of_file=idx_id,
+                                                           muscle_exe_name='muscle5', msa_fast=msa_fast,
+                                                           score_type=score_type, guide_len=guide_length)
+                        guides = [best_guide]
+                    test_seqs_dict[idx][0][idx_id][0] = guides
+                bar()
+        time2 = time.perf_counter()
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='getting consensus sequences')
 
     # prepare data for graphing
     if graph_results:
@@ -821,11 +858,11 @@ def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: 
     return
 
 
-def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length: int = 50,
-                   min_length: int = 35):
+def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length: int = 50, min_length: int = 35):
     """
     Finds all instances of a U or T in a set of sequences and creates ribozyme designs for these sites.
 
+    :param target_sequence:
     :param igs_length: desired IGS sequence length.
     :param guide_length: desired guide binding sequence length.
     :param min_length: minimum guide sequence length from 3' end. Must be smaller than guide_length.
