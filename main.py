@@ -95,15 +95,15 @@ if __name__ == '__main__':
     ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
     random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
 
-    # Here we make the designs
-    for test_data in test_data_folders:
-        test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
-                                                       guide_length=n, igs_length=m, min_length=minlen,
-                                                       folder_to_save=test_output_folder, graph_results=True,
-                                                       var_regs=e_coli_var_regs, graph_file_type='png',
-                                                       get_consensus_batches=True, batch_num=10, score_type='weighted',
-                                                       msa_fast=True)
-        test_data_pickles.append(test_seqs_pickle_file_name)
+    # # Here we make the designs
+    # for test_data in test_data_folders:
+    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+    #                                                    guide_length=n, igs_length=m, min_length=minlen,
+    #                                                    folder_to_save=test_output_folder, graph_results=True,
+    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
+    #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
+    #                                                    msa_fast=True)
+    #     test_data_pickles.append(test_seqs_pickle_file_name)
 
     # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
     # # U site as guides in E. coli MG1655
@@ -134,32 +134,32 @@ if __name__ == '__main__':
     #     universal_data_pickles.append(universal_pickle_file_name)
 
     # # Now we couple the designs with their test sequences to later test them
-    if os.path.exists(test_output_folder + '/coupled/big_checkpoint.txt'):
-        os.remove(test_output_folder + '/coupled/big_checkpoint.txt')
-    for test_pickle in test_data_pickles:
-        random_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=random_seq_pickle,
-                                                                   test_seqs_input=test_pickle,
-                                                                   flexible_igs=True, igs_len=m,
-                                                                   score_type='weighted',
-                                                                   file_to_save=test_output_folder)
-
-        ref_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
-                                                                test_seqs_input=test_pickle,
-                                                                flexible_igs=True, igs_len=m,
-                                                                score_type='weighted',
-                                                                file_to_save=test_output_folder)
-
-        control_design_coupled_file_name = couple_designs_to_test_seqs(designs_input=u1376,
-                                                                       test_seqs_input=test_pickle,
-                                                                       flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
-                                                                       score_type='weighted',
-                                                                       file_to_save=test_output_folder)
-
-        for universal_design_pickle in universal_data_pickles:
-            universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
-                                                                              test_seqs_input=test_pickle,
-                                                                              flexible_igs=True,
-                                                                              file_to_save=test_output_folder)
+    # if os.path.exists(test_output_folder + '/coupled/big_checkpoint.txt'):
+    #     os.remove(test_output_folder + '/coupled/big_checkpoint.txt')
+    # for test_pickle in test_data_pickles:
+    #     random_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=random_seq_pickle,
+    #                                                                test_seqs_input=test_pickle,
+    #                                                                flexible_igs=True, igs_len=m,
+    #                                                                score_type='weighted',
+    #                                                                file_to_save=test_output_folder)
+    #
+    #     ref_seq_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_seq_pickle,
+    #                                                             test_seqs_input=test_pickle,
+    #                                                             flexible_igs=True, igs_len=m,
+    #                                                             score_type='weighted',
+    #                                                             file_to_save=test_output_folder)
+    #
+    #     control_design_coupled_file_name = couple_designs_to_test_seqs(designs_input=u1376,
+    #                                                                    test_seqs_input=test_pickle,
+    #                                                                    flexible_igs=True, igs_len=m, ref_idx_u_loc=1376,
+    #                                                                    score_type='weighted',
+    #                                                                    file_to_save=test_output_folder)
+    #
+    #     for universal_design_pickle in universal_data_pickles:
+    #         universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_design_pickle,
+    #                                                                           test_seqs_input=test_pickle,
+    #                                                                           flexible_igs=True,
+    #                                                                           file_to_save=test_output_folder)
 
     # # Below we're making coupled files for testing purposes =
     # test_pickle = test_output_folder + '/test_sequences_Bacteria_Only_by_Genus_1.pickle'
@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
     # finally, we test! Below is for local
     files_to_test = test_output_folder + '/coupled'
-    in_data = [(files_to_test, number_of_workers, i, 1, False) for i in range(number_of_workers)]
+    in_data = [(files_to_test, number_of_workers, i, 1, False, n) for i in range(number_of_workers)]
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with mp.Pool(processes=len(in_data)) as pool:
             out_data = pool.starmap(ribo_checker, in_data)
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     for i in range(number_of_workers):
         print(f'Worker number {i}')
         ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=i,
-                     n_limit=1)
+                     n_limit=1, opti_len=n)
     # # This is for NOTS
     # files_to_test = test_output_folder + '/coupled'
     # ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + files_to_test, number_of_workers=number_of_workers,

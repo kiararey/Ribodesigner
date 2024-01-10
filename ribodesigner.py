@@ -1211,6 +1211,7 @@ def get_weighted_score(opti_seq, opti_len):
         prelim_score += a[x]
     score = prelim_score / opti_len
 
+
     return score
 
 
@@ -1337,7 +1338,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
 
 def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0,
-                 display_bar: bool = True):
+                 display_bar: bool = True, opti_len: int = 50):
     """
     This is the parallelization script I need to work on.
     """
@@ -1398,7 +1399,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
     # Print how much work is left to do
     print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed: {work_completed} '
-          f'({round(work_to_do/total_work*100, 2)}% done)\n'
+          f'({round(work_completed/total_work*100, 2)}% done)\n'
           f'Work for worker {worker_number}: {this_worker_worklist.shape[0]}\n')
 
     print('Opening files and extracting designs...')
@@ -1426,7 +1427,8 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     if display_bar:
         with alive_bar(len(designs_to_test), spinner='fishes') as bar:
             for (design_to_test, big_idx, file_name) in designs_to_test:
-                result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
+                result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name,
+                                         guide_len=opti_len)
                 naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
                 # If our result does not meet n_limit requirements, skip it
@@ -1445,7 +1447,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
                 bar()
     else:
         for (design_to_test, big_idx, file_name) in designs_to_test:
-            result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name)
+            result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name, guide_len=opti_len)
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
             # If our result does not meet n_limit requirements, skip it
@@ -1464,7 +1466,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     return
 
 
-def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
+def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name, guide_len):
     def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr: int, test_dataset_name_attr: str,
                        guide_len_attr: int):
         # No hits in the background! filter out those that have too many Ns
@@ -1479,7 +1481,6 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name):
             return None
 
     # See if we can skip computation all together because if no conserved u, no conserved IGS
-    guide_len = len(coupled_design.guide)
     if coupled_design.u_conservation_test == 0 or len(coupled_design.guides_to_use) == 0:
         out = set_no_targets(coupled_design, n_limit, test_dataset_name, guide_len)
         return out
@@ -1579,8 +1580,7 @@ def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'n
             seq_b += pad
         else:
             seq_a += pad
-    if opti_len == 50 | len(seq_a) != opti_len:
-        print('uh oh')
+
     mat = words2countmatrix([seq_a, seq_b], priori=priori)
     pairwise_comparison_consensus = consensus(mat, priori=priori)
 
