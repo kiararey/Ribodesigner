@@ -83,7 +83,11 @@ if __name__ == '__main__':
 
     test_data_pickles = ['test_sequences_All_by_Genus_1.pickle', 'test_sequences_Archaea_Only_by_Genus_1.pickle',
                          'test_sequences_Bacteria_Only_by_Genus_1.pickle',
-                         'test_sequences_Eukaryota_Only_by_Genus_1.pickle']
+                         'test_sequences_Eukaryota_Only_by_Genus_1.pickle',
+                         'test_sequences_All_by_Genus_1_batched.pickle',
+                         'test_sequences_Archaea_Only_by_Genus_1_batched.pickle',
+                         'test_sequences_Bacteria_Only_by_Genus_1_batched.pickle',
+                         'test_sequences_Eukaryota_Only_by_Genus_1_batched.pickle']
     test_data_pickles = [test_output_folder + '/' + item for item in test_data_pickles]
 
     universal_data_pickles = ['designs_Eukaryota_Only_by_Genus_2_universal.pickle',
@@ -103,6 +107,15 @@ if __name__ == '__main__':
     #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
     #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
     #                                                    msa_fast=True)
+    #     test_data_pickles.append(test_seqs_pickle_file_name)
+    #
+    # for test_data in test_data_folders:
+    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+    #                                                    guide_length=n, igs_length=m, min_length=minlen,
+    #                                                    folder_to_save=test_output_folder, graph_results=True,
+    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
+    #                                                    get_consensus_batches=False,  batch_num=10,
+    #                                                    score_type='weighted', msa_fast=True)
     #     test_data_pickles.append(test_seqs_pickle_file_name)
 
     # # Here, we're using ribodesigner functions to see what would happen if we used the native sequences after each
@@ -177,21 +190,24 @@ if __name__ == '__main__':
     #                                                                   test_seqs_input=test_pickle, flexible_igs=True,
     #                                                                   file_to_save=test_output_folder)
 
-    # finally, we test! Below is for local
-    files_to_test = test_output_folder + '/coupled'
-    in_data = [(files_to_test, number_of_workers, i, 1, False, n) for i in range(number_of_workers)]
-    with alive_bar(unknown='fish', spinner='fishes') as bar:
-        with mp.Pool(processes=len(in_data)) as pool:
-            out_data = pool.starmap(ribo_checker, in_data)
-        bar()
-    for i in range(number_of_workers):
-        print(f'Worker number {i}')
-        ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=i,
-                     n_limit=1, opti_len=n)
+    # # finally, we test! Below is for local
+    # get_tm_nn = True
+    # files_to_test = test_output_folder + '/coupled'
+    # in_data = [(files_to_test, number_of_workers, i, 1, False, n, get_tm_nn) for i in range(number_of_workers)]
+    # with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #     with mp.Pool(processes=len(in_data)) as pool:
+    #         out_data = pool.starmap(ribo_checker, in_data)
+    #     bar()
+
+    # this is not parallelized but still for local
+    # for i in range(number_of_workers):
+    #     print(f'Worker number {i}')
+    #     ribo_checker(coupled_folder=files_to_test, number_of_workers=number_of_workers, worker_number=i,
+    #                  n_limit=1, opti_len=n, get_tm_nn=get_tm_nn)
     # # This is for NOTS
     # files_to_test = test_output_folder + '/coupled'
     # ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + files_to_test, number_of_workers=number_of_workers,
-    #              worker_number=worker_number, n_limit=1)
+    #              worker_number=worker_number, n_limit=1, get_tm_nn=get_tm_nn)
 
     # print(f'Test data done!\n########################################################\n')
     results_folder = test_output_folder + '/coupled/results'
@@ -200,35 +216,74 @@ if __name__ == '__main__':
     control_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                          if f.startswith('1_designs')]
     control_design_results_file_names.sort()
+    batched_control_design_results_file_names = [name for name in control_design_results_file_names if 'batched' in name]
+    unbatched_control_design_results_file_names = [name for name in control_design_results_file_names if not 'batched' in name]
+
     ref_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                      if f.startswith('304_designs')]
     ref_design_results_file_names.sort()
+    batched_ref_design_results_file_names = [name for name in ref_design_results_file_names if 'batched' in name]
+    unbatched_ref_design_results_file_names = [name for name in ref_design_results_file_names if not 'batched' in name]
+
     random_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                         if f.startswith('326_designs')]
     random_design_results_file_names.sort()
+    batched_random_design_results_file_names = [name for name in random_design_results_file_names if 'batched' in name]
+    unbatched_random_design_results_file_names = [name for name in random_design_results_file_names if not 'batched' in name]
+
     universal_design_archaea_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                    if f.startswith('14652_designs')]
     universal_design_archaea_results_file_names.sort()
+    batched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names if 'batched' in name]
+    unbatched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names if not 'batched' in name]
+
     universal_design_eukarya_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                    if f.startswith('72490_designs')]
     universal_design_eukarya_results_file_names.sort()
+    batched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names if 'batched' in name]
+    unbatched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names if not 'batched' in name]
+
     universal_design_bacteria_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                     if f.startswith('77193_designs')]
     universal_design_bacteria_results_file_names.sort()
+    batched_universal_design_bacteria_results_file_names = [name for name in universal_design_bacteria_results_file_names if 'batched' in name]
+    unbatched_universal_design_bacteria_results_file_names = [name for name in universal_design_bacteria_results_file_names if not 'batched' in name]
+
     universal_design_all_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                if f.startswith('137620_designs')]
     universal_design_all_results_file_names.sort()
-    all_targets_universal_design_file_names = [*universal_design_archaea_results_file_names,
-                                               *universal_design_eukarya_results_file_names,
-                                               *universal_design_bacteria_results_file_names,
-                                               *universal_design_all_results_file_names]
+    batched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if 'batched' in name]
+    unbatched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if not 'batched' in name]
 
-    # All data
-    make_graphs(control_designs_path=control_design_results_file_names,
-                universal_designs_path=universal_design_bacteria_results_file_names,
-                ref_seq_designs_path=ref_design_results_file_names,
-                random_seq_designs_path=random_design_results_file_names, var_regs=e_coli_var_regs,
-                save_fig=True, save_file_loc=results_folder)
+    batched_all_targets_universal_design_file_names = [*batched_universal_design_archaea_results_file_names,
+                                                       *batched_universal_design_eukarya_results_file_names,
+                                                       *batched_universal_design_bacteria_results_file_names,
+                                                       *batched_universal_design_all_results_file_names]
+    unbatched_all_targets_universal_design_file_names = [*unbatched_universal_design_archaea_results_file_names,
+                                                         *unbatched_universal_design_eukarya_results_file_names,
+                                                         *unbatched_universal_design_bacteria_results_file_names,
+                                                         *unbatched_universal_design_all_results_file_names]
+
+
+    # # All data
+    # make_graphs(control_designs_path=control_design_results_file_names,
+    #             universal_designs_path=universal_design_bacteria_results_file_names,
+    #             ref_seq_designs_path=ref_design_results_file_names,
+    #             random_seq_designs_path=random_design_results_file_names, var_regs=e_coli_var_regs,
+    #             save_fig=True, save_file_loc=results_folder)
+
+    # Batched
+    make_graphs(control_designs_path=batched_control_design_results_file_names,
+                universal_designs_path=batched_universal_design_bacteria_results_file_names,
+                ref_seq_designs_path=batched_ref_design_results_file_names,
+                random_seq_designs_path=batched_random_design_results_file_names, var_regs=e_coli_var_regs,
+                save_fig=True, save_file_loc=results_folder + '/batched')
+    # Unbatched
+    make_graphs(control_designs_path=unbatched_control_design_results_file_names,
+                universal_designs_path=unbatched_universal_design_bacteria_results_file_names,
+                ref_seq_designs_path=unbatched_ref_design_results_file_names,
+                random_seq_designs_path=unbatched_random_design_results_file_names, var_regs=e_coli_var_regs,
+                save_fig=True, save_file_loc=results_folder + '/unbatched')
 
     # control_design_results_file_name = test_output_folder + '/coupled/results/1_designs_TTCAC1376_vs_test_sequences_Eukaryota_Only_by_Genus_1_worker_0_results.txt'
     # universal_designs_results_file_name = test_output_folder + '/coupled/results/72490_designs_designs_Eukaryota_Only_by_Genus_2_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt'

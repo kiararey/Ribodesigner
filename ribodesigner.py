@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from Bio import AlignIO
+from Bio import AlignIO, SeqUtils
 from Bio.Align import AlignInfo, PairwiseAligner
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
@@ -70,6 +70,7 @@ class RibozymeDesign:
     def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
+                 background_tm_nn_attr: float = None,
                  background_score_attr: float = None, perc_cov_background_attr: float = None,
                  perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
                  background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
@@ -98,6 +99,7 @@ class RibozymeDesign:
             self.number_of_targets_background = dict_initialize['num_of_targets_background']
             self.u_conservation_background = dict_initialize['u_conservation_background']
             self.background_score = dict_initialize['background_score']
+            self.background_tm_nn = dict_initialize['tm_nn_vs_background']
             self.perc_cov_background = dict_initialize['%_coverage_background']
             self.perc_on_target_background = dict_initialize['%_on target_background']
             self.true_perc_cov_background = dict_initialize['true_%_cov_background']
@@ -109,6 +111,7 @@ class RibozymeDesign:
             self.number_of_targets_test = dict_initialize['num_of_targets_test']
             self.u_conservation_test = dict_initialize['u_conservation_test']
             self.test_score = dict_initialize['test_score']
+            self.test_tm_nn = dict_initialize['tm_nn_vs_test']
             self.perc_cov_test = dict_initialize['%_coverage_test']
             self.perc_on_target_test = dict_initialize['%_on target_test']
             self.true_perc_cov_test = dict_initialize['true_%_cov_test']
@@ -170,6 +173,7 @@ class RibozymeDesign:
 
             # For initialized targeted ribozyme designs only:
             self.background_score = background_score_attr
+            self.background_tm_nn = background_tm_nn_attr
             self.background_targets = background_targets_attr
             if background_targets_attr:
                 self.number_of_targets_background = len(background_targets_attr)
@@ -212,6 +216,7 @@ class RibozymeDesign:
             self.perc_on_target_test = perc_on_target_test_attr
             self.true_perc_cov_test = true_perc_cov_test_attr
             self.test_score = None
+            self.test_tm_nn = None
             self.composite_test_score = None
 
             if self.composite_score and self.composite_test_score:
@@ -304,6 +309,7 @@ class RibozymeDesign:
             'num_of_targets_background': self.number_of_targets_background,
             'u_conservation_background': self.u_conservation_background,
             'background_score': self.background_score,
+            # 'tm_nn_vs_background': self.background_tm_nn,
             '%_coverage_background': self.perc_cov_background,
             '%_on target_background': self.perc_on_target_background,
             'true_%_cov_background': self.true_perc_cov_background,
@@ -315,6 +321,7 @@ class RibozymeDesign:
             'num_of_targets_test': self.number_of_targets_test,
             'u_conservation_test': self.u_conservation_test,
             'test_score': self.test_score,
+            'tm_nn_vs_test': self.test_tm_nn,
             '%_coverage_test': self.perc_cov_test,
             '%_on target_test': self.perc_on_target_test,
             'true_%_cov_test': self.true_perc_cov_test,
@@ -416,10 +423,11 @@ class RibozymeDesign:
         self.composite_score = self.true_perc_cov * score_attr
 
     def update_to_background(self, background_score_attr: float, new_guide: Seq, new_score: float,
-                             reset_guides: bool = False):
+                             reset_guides: bool = False, tm_nn_attr: float = None):
         self.optimized_to_background = True
         self.background_score = background_score_attr
         self.score = new_score
+        self.background_tm_nn = tm_nn_attr
         if self.background_targets:
             self.number_of_targets_background = len(self.background_targets)
         elif self.background_guides:
@@ -434,10 +442,11 @@ class RibozymeDesign:
         self.delta_guide_vs_background = self.score - self.background_score
         self.delta_vs_background = self.composite_score - self.composite_background_score
 
-    def update_to_test(self, test_score_attr: float, name_of_test_dataset_attr: str):
+    def update_to_test(self, test_score_attr: float, name_of_test_dataset_attr: str, test_tm_nn_attr: float = None):
         self.tested = True
         self.name_of_test_dataset = name_of_test_dataset_attr
         self.test_score = test_score_attr
+        self.test_tm_nn = test_tm_nn_attr
         if self.test_targets:
             self.number_of_targets_test = len(self.test_targets)
         else:
@@ -1211,7 +1220,6 @@ def get_weighted_score(opti_seq, opti_len):
         prelim_score += a[x]
     score = prelim_score / opti_len
 
-
     return score
 
 
@@ -1338,7 +1346,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
 
 def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0,
-                 display_bar: bool = True, opti_len: int = 50):
+                 display_bar: bool = True, opti_len: int = 50, get_tm_nn: bool = False):
     """
     This is the parallelization script I need to work on.
     """
@@ -1399,7 +1407,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
     # Print how much work is left to do
     print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed: {work_completed} '
-          f'({round(work_completed/total_work*100, 2)}% done)\n'
+          f'({round(work_completed / total_work * 100, 2)}% done)\n'
           f'Work for worker {worker_number}: {this_worker_worklist.shape[0]}\n')
 
     print('Opening files and extracting designs...')
@@ -1428,7 +1436,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
         with alive_bar(len(designs_to_test), spinner='fishes') as bar:
             for (design_to_test, big_idx, file_name) in designs_to_test:
                 result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name,
-                                         guide_len=opti_len)
+                                         guide_len=opti_len, get_tm_nn=get_tm_nn)
                 naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
                 # If our result does not meet n_limit requirements, skip it
@@ -1447,7 +1455,8 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
                 bar()
     else:
         for (design_to_test, big_idx, file_name) in designs_to_test:
-            result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name, guide_len=opti_len)
+            result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name, guide_len=opti_len,
+                                     get_tm_nn=get_tm_nn)
             naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
 
             # If our result does not meet n_limit requirements, skip it
@@ -1462,11 +1471,10 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
             with open(work_done_file, 'a') as d:
                 d.write(str(big_idx) + '\n')
-
     return
 
 
-def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name, guide_len):
+def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name, guide_len, get_tm_nn):
     def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr: int, test_dataset_name_attr: str,
                        guide_len_attr: int):
         # No hits in the background! filter out those that have too many Ns
@@ -1488,17 +1496,23 @@ def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name, 
     # Find average guide score
     guides_to_optimize = np.array([str(guide) for guide in coupled_design.guides_to_use])
     fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
-                               excluded=['seq_b', 'score_type', 'only_consensus', 'opti_len'])
+                               excluded=['seq_b', 'score_type', 'only_consensus', 'opti_len', 'get_tm_nn'])
 
     scores = fn_pairwise(guides_to_optimize, seq_b=coupled_design.guide, score_type=coupled_design.score_type,
-                         only_consensus=True, opti_len=guide_len)
-    coupled_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
+                         only_consensus=True, opti_len=guide_len, get_tm_nn=get_tm_nn)
+    if get_tm_nn:
+        score = np.array([val[0] for val in scores]).mean()
+        tm = np.array([val[1] for val in scores]).mean()
+        coupled_design.update_to_test(test_score_attr=score, name_of_test_dataset_attr=test_dataset_name,
+                                      test_tm_nn_attr=tm)
+    else:
+        coupled_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
 
     return coupled_design
 
 
 def replace_ambiguity(sequence_to_fix: RibozymeDesign, opti_len: int, target_background: bool = False,
-                      n_limit: float = 1, update_score: bool = True):
+                      n_limit: float = 1, update_score: bool = True, get_tm_nn: bool = False):
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
                               'K': 'M', 'V': 'T', 'H': 'G', 'D': 'C', 'B': 'A', 'N': 'N', '-': 'N'}
@@ -1557,10 +1571,18 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, opti_len: int, target_bac
 
     if update_score:
         # Now do a pairwise sequence with the target sequence to see the delta score:
-        new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
-                                                            score_type=sequence_to_fix.score_type, opti_len=opti_len)
-        sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
-                                             new_score=new_seq_score, reset_guides=True)
+        if get_tm_nn:
+            new_seq_score, pairwise_score, tm = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
+                                                                    score_type=sequence_to_fix.score_type,
+                                                                    opti_len=opti_len, get_tm_nn=get_tm_nn)
+            sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
+                                                 new_score=new_seq_score, reset_guides=True, tm_nn_attr=tm)
+        else:
+            new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
+                                                                score_type=sequence_to_fix.score_type,
+                                                                opti_len=opti_len)
+            sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
+                                                 new_score=new_seq_score, reset_guides=True)
         return
     else:
         new_seq_score = return_score_from_type(sequence_to_test=new_seq, score_type=sequence_to_fix.score_type,
@@ -1569,7 +1591,7 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, opti_len: int, target_bac
 
 
 def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False,
-                        opti_len: int = None, priori=None):
+                        opti_len: int = None, priori: list = None, get_tm_nn: bool = False):
     # If optilen is not given, then will assume the optimum length is the length of the longest sequence
 
     if priori is None:
@@ -1584,6 +1606,10 @@ def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'n
     mat = words2countmatrix([seq_a, seq_b], priori=priori)
     pairwise_comparison_consensus = consensus(mat, priori=priori)
 
+    if get_tm_nn:
+        # Getting an estimated Tm for the consensus sequence
+        tm = get_tm_gc(pairwise_comparison_consensus, strict=False, mismatch=True, mismatch_base='-')
+
     if not opti_len:
         opti_len = len(pairwise_comparison_consensus)
 
@@ -1591,10 +1617,16 @@ def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'n
                                             opti_len=opti_len)
 
     if only_consensus:
-        return pairwise_score
+        if get_tm_nn:
+            return pairwise_score, tm
+        else:
+            return pairwise_score
     else:
         seq_a_score = return_score_from_type(sequence_to_test=seq_a, score_type=score_type, opti_len=opti_len)
-        return seq_a_score, pairwise_score
+        if get_tm_nn:
+            return seq_a_score, pairwise_score, tm
+        else:
+            return seq_a_score, pairwise_score
 
 
 def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign], folder_path: str, taxonomy='',
@@ -1744,7 +1776,8 @@ def combine_data(folder_path):
     # Divide into batches of files with the same name but different worker
     worker_batched_file_names = {}
     for file_name, folder_name in only_names:
-        worker_batched_file_names[f'{folder_path}/combined/{file_name}.txt'] = (file for file in files if file.startswith(folder_name))
+        worker_batched_file_names[f'{folder_path}/combined/{file_name}.txt'] = (file for file in files if
+                                                                                file.startswith(folder_name))
 
     # Append the data from each file in a batch to combined name file
     # (will be the same appending as we used to generate the data basically)
@@ -1861,3 +1894,94 @@ def consensus(matrix, priori, mask=False):
 
         str_list.append(letter)
     return ''.join(str_list)
+
+
+"""
+The functions below is from biopython, modified to fit my needs!
+"""
+
+
+def get_tm_gc(seq, strict=True, valueset=7, userset=None, mismatch=True, mismatch_base='X'):
+    """Return the Tm using empirical formulas based on GC content.
+
+    General format: Tm = A + B(%GC) - C/N + salt correction - D(%mismatch)
+
+    A, B, C, D: empirical constants, N: primer length
+    D (amount of decrease in Tm per % mismatch) is often 1, but sometimes other
+    values have been used (0.6-1.5). Use 'X' to indicate the mismatch position
+    in the sequence. Note that this mismatch correction is a rough estimate.
+
+    Arguments:
+     - valueset: A few often cited variants are included:
+
+        1. Tm = 69.3 + 0.41(%GC) - 650/N
+           (Marmur & Doty 1962, J Mol Biol 5: 109-118; Chester & Marshak 1993),
+           Anal Biochem 209: 284-290)
+        2. Tm = 81.5 + 0.41(%GC) - 675/N - %mismatch
+           'QuikChange' formula. Recommended (by the manufacturer) for the
+           design of primers for QuikChange mutagenesis.
+        3. Tm = 81.5 + 0.41(%GC) - 675/N + 16.6 x log[Na+]
+           (Marmur & Doty 1962, J Mol Biol 5: 109-118; Schildkraut & Lifson
+           1965, Biopolymers 3: 195-208)
+        4. Tm = 81.5 + 0.41(%GC) - 500/N + 16.6 x log([Na+]/(1.0 + 0.7 x
+           [Na+])) - %mismatch
+           (Wetmur 1991, Crit Rev Biochem Mol Biol 126: 227-259). This is the
+           standard formula in approximative mode of MELTING 4.3.
+        5. Tm = 78 + 0.7(%GC) - 500/N + 16.6 x log([Na+]/(1.0 + 0.7 x [Na+]))
+           - %mismatch
+           (Wetmur 1991, Crit Rev Biochem Mol Biol 126: 227-259). For RNA.
+        6. Tm = 67 + 0.8(%GC) - 500/N + 16.6 x log([Na+]/(1.0 + 0.7 x [Na+]))
+           - %mismatch
+           (Wetmur 1991, Crit Rev Biochem Mol Biol 126: 227-259). For RNA/DNA
+           hybrids.
+        7. Tm = 81.5 + 0.41(%GC) - 600/N + 16.6 x log[Na+]
+           Used by Primer3Plus to calculate the product Tm. Default set.
+        8. Tm = 77.1 + 0.41(%GC) - 528/N + 11.7 x log[Na+]
+           (von Ahsen et al. 2001, Clin Chem 47: 1956-1961). Recommended 'as a
+           tradeoff between accuracy and ease of use'.
+
+     - userset: Tuple of four values for A, B, C, and D. Usersets override
+       valuesets.
+     - mismatch: If 'True' (default) every 'X' in the sequence is counted as
+       mismatch.
+
+    """
+    if strict and any(x in seq for x in "KMNRYBVDH"):
+        raise ValueError(
+            "ambiguous bases B, D, H, K, M, N, R, V, Y not allowed when 'strict=True'"
+        )
+
+    # Ambiguous bases: add 0.5, 0.67 or 0.33% depending on G+C probability:
+    percent_gc = SeqUtils.gc_fraction(seq, "weighted") * 100
+
+    # gc_fraction counts X as 0.5
+    if mismatch:
+        percent_gc -= seq.count(mismatch_base) * 50.0 / len(seq)
+
+    if userset:
+        a, b, c, d = userset
+    else:
+        if valueset == 1:
+            a, b, c, d = (69.3, 0.41, 650, 1)
+        if valueset == 2:
+            a, b, c, d = (81.5, 0.41, 675, 1)
+        if valueset == 3:
+            a, b, c, d = (81.5, 0.41, 675, 1)
+        if valueset == 4:
+            a, b, c, d = (81.5, 0.41, 500, 1)
+        if valueset == 5:
+            a, b, c, d = (78.0, 0.7, 500, 1)
+        if valueset == 6:
+            a, b, c, d = (67.0, 0.8, 500, 1)
+        if valueset == 7:
+            a, b, c, d = (81.5, 0.41, 600, 1)
+        if valueset == 8:
+            a, b, c, d = (77.1, 0.41, 528, 1)
+    if valueset > 8:
+        raise ValueError("allowed values for parameter 'valueset' are 0-8.")
+
+    melting_temp = a + b * percent_gc - c / len(seq)
+
+    if mismatch:
+        melting_temp -= d * (seq.count(mismatch_base) * 100.0 / len(seq))
+    return melting_temp

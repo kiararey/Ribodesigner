@@ -127,7 +127,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                        'vs Eukaryota': 'vs_test_sequences_Euk', 'vs all': 'vs_test_sequences_All'}
     paired_names = [('reference', 'vs Bacteria'), ('random', 'vs Bacteria'),
                     ('universal bacterial', 'vs Bacteria'), ('universal archaeal', 'vs Archaea'),
-                    ('universal archaeal', 'vs Eukaryota'), ('universal all', 'vs all')]
+                    ('universal eukaryotic', 'vs Eukaryota'), ('universal all', 'vs all')]
 
     for subset_key, (design_type, target_name) in keys_for_subsets.items():
         for test_key, test_name in test_file_names.items():
@@ -136,7 +136,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             # Next, get everyone in that design type that has the correct subset, if needed
             if target_name:
                 target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(target_name)]
-            # Finally, get everyone in correct design type and  subset that has been tested against the correct dataset
+            # Finally, get everyone in correct design type and subset that has been tested against the correct dataset
             target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(test_name)]
             all_subsets[subset_key][test_key] = target_subset
 
@@ -207,7 +207,75 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         plt.tight_layout()
 
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_1_{test_name}.{file_type}', format=file_type)
+            plt.savefig(fname=f'{save_file_loc}/figure_1a_{test_name}.{file_type}', format=file_type)
+        plt.show()
+
+    # plotting Tm vs guide score
+    # Now get the subsets where the testing data was in the same kingdom as the target data
+    for test_name, target_name in paired_names:
+        graph = all_subsets[test_name][target_name]
+        top_control = all_subsets['control'][target_name]
+
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
+            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
+            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
+            3: jointplot_fig.add_subplot(gridspec[0:3, 0:6]),
+            4: jointplot_fig.add_subplot(gridspec[3:6, 0:6]),
+        }
+        xvar = 'test_score'
+        yvar = 'tm_nn_vs_test'
+        # Plot scatter and kde plots
+        # sns.scatterplot(x=xvar, y=yvar, hue=hue_var, data=graph, ax=joint_ax[0], alpha=0.5, legend=False)
+        jointplot_fig.axes[0].scatter(x=graph[xvar], y=graph[yvar], alpha=0.5, vmin=0, vmax=1,
+                                      cmap='viridis')
+        jointplot_fig.axes[0].scatter(x=top_control[xvar], vmin=0, vmax=1, marker='^',
+                                      y=top_control[yvar], alpha=1, edgecolors='#9B892D', label='Control')
+        sns.kdeplot(x=xvar, data=graph, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False)
+        sns.kdeplot(y=yvar, data=graph, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False)
+        jointplot_fig.axes[0].set_xlabel('Guide score vs test')
+        jointplot_fig.axes[0].set_ylabel('Tm GC of guide vs test')
+        # Set variable regions for location plots
+        plot_variable_regions(joint_ax[3], var_regs)
+        plot_variable_regions(joint_ax[4], var_regs)
+        # Plot test data for each testing condition
+        sns.scatterplot(x='reference_idx', y=xvar, data=graph, ax=joint_ax[3], alpha=0.5, legend=False)
+        sns.scatterplot(x='reference_idx', y=yvar, data=graph, ax=joint_ax[4], alpha=0.5, legend=False)
+        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
+        # Plot control data
+        jointplot_fig.axes[3].scatter(x=top_control['reference_idx'],
+                                      y=top_control[xvar],
+                                      alpha=1, c='#fde725', label='control')
+        jointplot_fig.axes[3].set_ylabel('Guide score vs test')
+        jointplot_fig.axes[4].scatter(x=top_control['reference_idx'],
+                                      y=top_control[yvar],
+                                      alpha=1, c='#fde725', label='control')
+        jointplot_fig.axes[4].set_ylabel('Tm GC of guide vs. test')
+        # Set graph settings for pretti graphing
+        jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
+        jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
+        jointplot_fig.axes[1].set(xlabel=None)
+        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
+        jointplot_fig.axes[2].set(ylabel=None)
+        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
+        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
+        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
+        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
+        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
+        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
+        jointplot_fig.axes[4].set(xlabel='Reference 16s rRNA index')
+        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
+        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
+        jointplot_fig.axes[3].tick_params(labelbottom=False)
+        jointplot_fig.suptitle(f'Designs from {test_name} target sequences against {target_name} test dataset')
+        plt.tight_layout()
+
+        if save_fig:
+            plt.savefig(fname=f'{save_file_loc}/figure_1b_{test_name}.{file_type}', format=file_type)
         plt.show()
 
     # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
@@ -327,7 +395,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         plt.tight_layout()
 
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_2_{target_name}.{file_type}', format=file_type)
+            plt.savefig(fname=f'{save_file_loc}/figure_2a_{target_name}.{file_type}', format=file_type)
         plt.show()
 
     # # Graph 1a:
@@ -644,17 +712,19 @@ def extract_info(results_file_path: str, dataset: str):
                     'composite_background_score': float,
                     'delta_igs_vs_background': float, 'delta_guide_vs_background': float, 'delta_vs_background': float,
                     'name_of_test_dataset': str, 'num_of_targets_test': int, 'u_conservation_test': float,
-                    'test_score': float, '%_coverage_test': float, '%_on target_test': float, 'true_%_cov_test': float,
-                    'composite_test_score': float, 'delta_igs_vs_test': float, 'delta_guide_vs_test': float,
-                    'delta_vs_test': float, 'target_Domain': str, 'target_Domain_background': str,
-                    'target_Domain_test': str, 'target_Phylum': str, 'target_Phylum_background': str,
-                    'target_Phylum_test': str, 'target_Class': str, 'target_Class_background': str,
-                    'target_Class_test': str, 'target_Order': str, 'target_Order_background': str,
-                    'target_Order_test': str, 'target_Family': str, 'target_Family_background': str,
-                    'target_Family_test': str, 'target_Genus': str, 'target_Genus_background': str,
-                    'target_Genus_test': str, 'target_Species': str, 'target_Species_background': str,
-                    'target_Species_test': str, 'target_Taxon': str, 'target_Taxon_background': str,
-                    'target_Taxon_test': str}
+                    'test_score': float, 'tm_nn_vs_test': float, '%_coverage_test': float, '%_on target_test': float,
+                    'true_%_cov_test': float, 'composite_test_score': float, 'delta_igs_vs_test': float,
+                    'delta_guide_vs_test': float, 'delta_vs_test': float, 'target_Domain': str,
+                    'target_Domain_background': str, 'target_Domain_test': str, 'target_Phylum': str,
+                    'target_Phylum_background': str, 'target_Phylum_test': str, 'target_Class': str,
+                    'target_Class_background': str, 'target_Class_test': str, 'target_Order': str,
+                    'target_Order_background': str, 'target_Order_test': str, 'target_Family': str,
+                    'target_Family_background': str, 'target_Family_test': str, 'target_Genus': str,
+                    'target_Genus_background': str, 'target_Genus_test': str, 'target_Species': str,
+                    'target_Species_background': str, 'target_Species_test': str, 'target_Taxon': str,
+                    'target_Taxon_background': str, 'target_Taxon_test': str}
+
+
     designs = []
     for design in list_of_designs:
         design_dict = {}
@@ -924,6 +994,8 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
     # Also add the consensus score between the test sequences, between the design and consensus, and between the refseq
     # and the consensus.
     return
+
+
 
 
 # Delta difference plot between phyla?? for selective??
