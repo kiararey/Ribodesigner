@@ -81,7 +81,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             if key in txt:
                 new_target_labels.append(name)
                 break
-    all_data_df.insert(0, 'target_data', new_target_labels)
+    all_data_df.insert(0, 'target_name', new_target_labels)
 
     # get top scores in each: 1 control, one of each group of selective and universal
     # top_score_control = control_designs_df_1376[control_designs_df_1376[
@@ -153,147 +153,71 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(test_name)]
             all_subsets[subset_key][test_key] = target_subset
 
-    # Now get the subsets where the testing data was in the same kingdom as the target data
-    for test_name, target_name in paired_names:
-        graph = all_subsets[test_name][target_name]
-        top_control = all_subsets['control'][target_name]
 
-        jointplot_fig = plt.figure()
-        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
-        joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
-            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
-            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
-            3: jointplot_fig.add_subplot(gridspec[0:3, 0:6]),
-            4: jointplot_fig.add_subplot(gridspec[3:6, 0:6]),
-        }
-        xvar = 'u_conservation_test'
-        yvar = 'true_%_cov_test'
-        hue_var = 'test_score'
-        # Plot scatter and kde plots
-        # sns.scatterplot(x=xvar, y=yvar, hue=hue_var, data=graph, ax=joint_ax[0], alpha=0.5, legend=False)
-        jointplot_fig.axes[0].scatter(x=graph[xvar], y=graph[yvar], alpha=0.5, c=graph[hue_var], vmin=0, vmax=1,
-                                      cmap='viridis')
-        jointplot_fig.axes[0].scatter(x=top_control[xvar], vmin=0, vmax=1, marker='^',
-                                      y=top_control[yvar], alpha=1, c=top_control[hue_var],
-                                      edgecolors='#9B892D', label='Control')
-        sns.kdeplot(x=xvar, data=graph, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False)
-        sns.kdeplot(y=yvar, data=graph, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False)
-        jointplot_fig.axes[0].legend(bbox_to_anchor=(1.6, -0.15), title='Guide score')
-        jointplot_fig.axes[0].set_xlabel('U conservation')
-        jointplot_fig.axes[0].set_ylabel('IGS true percent coverage')
-        # Set variable regions for location plots
-        plot_variable_regions(joint_ax[3], var_regs)
-        plot_variable_regions(joint_ax[4], var_regs)
-        # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y=xvar, data=graph, ax=joint_ax[3], alpha=0.2, legend=False)
-        sns.scatterplot(x='reference_idx', y=yvar, data=graph, ax=joint_ax[4], alpha=0.2, legend=False)
-        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
-        # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_control['reference_idx'],
-                                      y=top_control[xvar],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[3].set_ylabel('U site conservation')
-        jointplot_fig.axes[4].scatter(x=top_control['reference_idx'],
-                                      y=top_control[yvar],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
-        # Set graph settings for pretti graphing
-        jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
-        jointplot_fig.axes[1].set(xlabel=None)
-        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
-        jointplot_fig.axes[2].set(ylabel=None)
-        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
-        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
-        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
-        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
-        jointplot_fig.axes[4].set(xlabel='Reference 16s rRNA index')
-        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
-        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
-        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
-        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
-        jointplot_fig.axes[3].tick_params(labelbottom=False)
-        jointplot_fig.suptitle(f'Designs from {test_name} target sequences against {target_name} test dataset')
-        plt.tight_layout()
 
-        if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_1a_{test_name}.{file_type}', format=file_type)
-        plt.show()
+    # Figures 2a and 2b
+    tm_max = max(all_data_df['tm_nn_vs_test'])
+    tm_min = min(all_data_df['tm_nn_vs_test'])
 
-    # plotting Tm vs guide score
-    # Now get the subsets where the testing data was in the same kingdom as the target data
-    for test_name, target_name in paired_names:
-        graph = all_subsets[test_name][target_name]
-        top_control = all_subsets['control'][target_name]
+    vars_to_plot = [('u_conservation_test', 'true_%_cov_test', 'figure_2a',
+                     'U site conservation', 'IGS true percent coverage'),
+                    ('test_score', 'tm_nn_vs_test', 'figure_2b', 'Guide score vs test', 'Tm GC of guide vs test')]
 
-        jointplot_fig = plt.figure()
-        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
-        joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
-            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
-            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
-            3: jointplot_fig.add_subplot(gridspec[0:3, 0:6]),
-            4: jointplot_fig.add_subplot(gridspec[3:6, 0:6]),
-        }
-        xvar = 'test_score'
-        yvar = 'tm_nn_vs_test'
-        # Plot scatter and kde plots
-        jointplot_fig.axes[0].scatter(x=graph[xvar], y=graph[yvar], alpha=0.2, cmap='viridis')
-        # sns.kdeplot(x=xvar, y=yvar, data=graph, ax=jointplot_fig.axes[0], fill=True, cmap='viridis')
-        jointplot_fig.axes[0].scatter(x=top_control[xvar], marker='^', y=top_control[yvar], alpha=1,
-                                      c='#fde725', label='Control')
-        # slope, intercept, r, p, sterr = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
-        regstats = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
-        jointplot_fig.axes[0].annotate(f'$r^2$={round(regstats.rvalue**2, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
-
-        sns.kdeplot(x=xvar, data=graph, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False)
-        sns.kdeplot(y=yvar, data=graph, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False)
-        jointplot_fig.axes[0].set_xlabel('Guide score vs test')
-        jointplot_fig.axes[0].set_ylabel('Tm GC of guide vs test')
-        # Set variable regions for location plots
-        plot_variable_regions(joint_ax[3], var_regs)
-        plot_variable_regions(joint_ax[4], var_regs)
-        # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y=xvar, data=graph, ax=joint_ax[3], alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y=yvar, data=graph, ax=joint_ax[4], alpha=0.5, legend=False)
-        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
-        # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_control['reference_idx'],
-                                      y=top_control[xvar],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[3].set_ylabel('Guide score vs test')
-        jointplot_fig.axes[4].scatter(x=top_control['reference_idx'],
-                                      y=top_control[yvar],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[4].set_ylabel('Tm GC of guide vs. test')
-        # Set graph settings for pretti graphing
-        # jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
-        # jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
-        jointplot_fig.axes[1].set(xlabel=None)
-        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
-        jointplot_fig.axes[2].set(ylabel=None)
-        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
-        # jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20])
-        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-        # jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
-        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
-        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
-        jointplot_fig.axes[4].set(xlabel='Reference 16s rRNA index')
-        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
-        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
-        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
-        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
-        jointplot_fig.axes[3].tick_params(labelbottom=False)
-        jointplot_fig.suptitle(f'Designs from {test_name} target sequences against {target_name} test dataset')
-        plt.tight_layout()
-
-        if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_1b_{test_name}.{file_type}', format=file_type)
-        plt.show()
+    for target_name, test_name in paired_names:
+        graph = all_subsets[target_name][test_name]
+        top_control = all_subsets['control'][test_name]
+        for xvar, yvar, figname, xlabel, ylabel in vars_to_plot:
+            jointplot_fig = plt.figure()
+            gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
+            joint_ax = {
+                0: jointplot_fig.add_subplot(gridspec[0:6, 7:14]),
+                1: jointplot_fig.add_subplot(gridspec[0:3, 0:6]),
+                2: jointplot_fig.add_subplot(gridspec[3:6, 0:6]),
+            }
+            # Plot scatter and kde plots
+            hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=100, norm='log')
+            # jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes, orientation='horizontal')
+            jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
+            # sns.kdeplot(x=xvar, y=yvar, data=graph, ax=jointplot_fig.axes[0], fill=True, cmap='viridis', thresh=0)
+            jointplot_fig.axes[0].scatter(x=top_control[xvar], marker='^', y=top_control[yvar], alpha=1, c='#fde725',
+                                          label='Control')
+            # slope, intercept, r, p, sterr = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
+            regstats = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
+            jointplot_fig.axes[0].annotate(f'$r^2$={round(regstats.rvalue ** 2, 3)}', xy=(0.1, 0.9),
+                                           xycoords='axes fraction')
+            jointplot_fig.axes[0].set_xlabel(xlabel)
+            jointplot_fig.axes[0].set_ylabel(ylabel)
+            # Set variable regions for location plots
+            plot_variable_regions(joint_ax[1], var_regs)
+            plot_variable_regions(joint_ax[2], var_regs)
+            # Plot test data for each testing condition
+            sns.scatterplot(x='reference_idx', y=xvar, data=graph, ax=joint_ax[1], alpha=0.3, legend=False, linewidth=0,
+                            size=0.5)
+            sns.scatterplot(x='reference_idx', y=yvar, data=graph, ax=joint_ax[2], alpha=0.3, legend=False, linewidth=0,
+                            size=0.5)
+            jointplot_fig.axes[2].set_xlabel('16s rRNA sequence position on reference sequence')
+            # Plot control data
+            jointplot_fig.axes[1].scatter(x=top_control['reference_idx'], y=top_control[xvar], alpha=1, c='#fde725',
+                                          label='control', marker='^')
+            jointplot_fig.axes[1].set_ylabel(xlabel)
+            jointplot_fig.axes[2].scatter(x=top_control['reference_idx'], y=top_control[yvar], alpha=1, c='#fde725',
+                                          label='control', marker='^')
+            jointplot_fig.axes[2].set_ylabel(ylabel)
+            if yvar == 'tm_nn_vs_test':
+                jointplot_fig.axes[0].set(ylim=[tm_min, tm_max + 20], xlim=[0, 1])
+            else:
+                jointplot_fig.axes[0].set(ylim=[0, 1], xlim=[0, 1])
+            jointplot_fig.axes[1].set(xlabel=None, ylim=[0, 1], xlim=[-0.1, max_vals['reference_idx'] + 20])
+            jointplot_fig.axes[2].set(xlabel='Reference 16s rRNA index')
+            jointplot_fig.axes[2].sharex(jointplot_fig.axes[1])
+            jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+            jointplot_fig.axes[1].tick_params(labelbottom=False)
+            jointplot_fig.suptitle(f'Designs from {target_names} target sequences against {test_name} test dataset')
+            plt.tight_layout()
+            if save_fig:
+                plt.savefig(fname=f'{save_file_loc}/{figname}_{target_names}_{test_name}.{file_type}',
+                            format=file_type)
+            plt.show()
 
     # Fig 3a
     # Prepare axes
@@ -334,45 +258,35 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         plot_variable_regions(joint_ax[i], var_regs)
 
     # Each row is a group, each column is a metric to graph
+    vars_and_titles = [('U conservation', 'u_conservation_test', [0, 1]),
+                       ('IGS conservation', 'true_%_cov_test', [0, 1]),
+                       ('Guide score', 'test_score', [0, 1]),
+                       ('Tm GC', 'tm_nn_vs_test', [tm_min, tm_max])]
     current_graph = 0
-    for test_name, target_name in paired_names:
-        graph = all_subsets[test_name][target_name]
-        top_control = all_subsets['control'][target_name]
+    for target_name, test_name in paired_names:
+        graph = all_subsets[target_name][test_name]
+        top_control = all_subsets['control'][test_name]
 
         # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset',
-                        data=graph, ax=joint_ax[current_graph], alpha=0.3, legend=False)
-        jointplot_fig.axes[current_graph].scatter(x=top_control['reference_idx'], y=top_control['u_conservation_test'],
-                                                  alpha=1, c='#fde725')
-        jointplot_fig.axes[current_graph].set(xlabel=None, ylabel=None)
-        jointplot_fig.axes[current_graph].set_title(f'U conservation {test_name} {target_name}')
-        jointplot_fig.axes[current_graph].tick_params(labelbottom=False)
-
-        sns.scatterplot(x='reference_idx', y='true_%_cov_test', hue='name_of_test_dataset', data=graph,
-                        ax=joint_ax[current_graph+1], alpha=0.3, legend=False)
-        jointplot_fig.axes[current_graph+1].scatter(x=top_control['reference_idx'], y=top_control['true_%_cov_test'],
-                                                    alpha=1, c='#fde725')
-        jointplot_fig.axes[current_graph+1].set(xlabel=None, ylabel=None)
-        jointplot_fig.axes[current_graph+1].set_title(f'IGS conservation {test_name} {target_name}')
-        jointplot_fig.axes[current_graph+1].tick_params(labelbottom=False)
-
-        sns.scatterplot(x='reference_idx', y='test_score', hue='name_of_test_dataset', data=graph,
-                        ax=joint_ax[current_graph+2], alpha=0.3, legend=False)
-        jointplot_fig.axes[current_graph+2].scatter(x=top_control['reference_idx'], y=top_control['test_score'],
-                                                    alpha=1, c='#fde725')
-        jointplot_fig.axes[current_graph+2].set(xlabel=None, ylabel=None)
-        jointplot_fig.axes[current_graph+2].set_title(f'Guide score {test_name} {target_name}')
-        jointplot_fig.axes[current_graph+2].tick_params(labelbottom=False)
-
-        sns.scatterplot(x='reference_idx', y='tm_nn_vs_test', hue='name_of_test_dataset', data=graph,
-                        ax=joint_ax[current_graph+3], alpha=0.3, legend=False)
-        jointplot_fig.axes[current_graph+3].scatter(x=top_control['reference_idx'], y=top_control['tm_nn_vs_test'],
-                                                    alpha=1, c='#fde725')
-        jointplot_fig.axes[current_graph+3].set(xlabel=None, ylabel=None)
-        jointplot_fig.axes[current_graph+3].set_title(f'Tm GC {test_name} {target_name}')
-        jointplot_fig.axes[current_graph+3].tick_params(labelbottom=False)
-
+        for i, (title, yvar, lims) in enumerate(vars_and_titles):
+            sns.scatterplot(x='reference_idx', y=yvar, hue='target_name', linewidth=0, size=0.5,
+                            data=graph, ax=joint_ax[current_graph + i], alpha=0.3, legend=False, )
+            jointplot_fig.axes[current_graph + i].scatter(x=top_control['reference_idx'], y=top_control[yvar],
+                                                          alpha=1, c='#fde725')
+            jointplot_fig.axes[current_graph + i].set(xlabel=None, ylabel=None, ylim=lims,
+                                                      xlim=[-0.1, max_vals['reference_idx'] + 20])
+            jointplot_fig.axes[current_graph + i].set_title(f'{title} {target_name} {test_name}', loc='left')
+            jointplot_fig.axes[current_graph + i].tick_params(labelbottom=False)
         current_graph += 4
+
+    # Now make the axes conserved
+    multipliers = [4, 8, 12, 16, 20]
+    for i in range(4):
+        for j in multipliers:
+            jointplot_fig.axes[j].sharey(jointplot_fig.axes[i])
+            jointplot_fig.axes[j].sharex(jointplot_fig.axes[i])
+        jointplot_fig.axes[j].set(xlabel='Reference 16s rRNA index')
+        multipliers = [val + 1 for val in multipliers]
     plt.tight_layout()
     if save_fig:
         plt.savefig(fname=f'{save_file_loc}/figure_3a.{file_type}', format=file_type)
@@ -396,31 +310,33 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     yvar = 'test_score'
 
     # plot each test dataset in a different quadrant
-    for i, key in enumerate(test_file_names.keys()):
-        # Plot a testing set that's relevant
-        datasets = [(big_key, df) for big_key, sub_dict in all_subsets.items() for lil_key, df in sub_dict.items() if
-                    lil_key == key]
-        target_subset = pd.concat([df[1] for df in datasets if df[0] != 'control'])
-        sns.scatterplot(x=xvar, y=yvar, hue='target_data', data=target_subset, ax=joint_ax[i], alpha=0.3)
+    for target_name, _ in paired_names:
+        data = []
+        for i, test_name in enumerate(test_file_names.keys()):
+            # Plot a testing set that's relevant
+            target_subset = all_subsets[target_name][test_name]
+            top_control = all_subsets['control'][test_name]
+            data.append()
+            hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=100, norm='log')
+            sns.scatterplot(x=xvar, y=yvar, hue='target_name', data=target_subset, ax=joint_ax[i], alpha=0.3)
 
-        # Plot control datapoints
-        jointplot_fig.axes[i].scatter(x=all_subsets['control'][key][xvar], y=all_subsets['control'][key][yvar],
-                                      alpha=1, c='#fde725', label='Control')
-        jointplot_fig.axes[i].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1], xlabel=None, ylabel=None)
-        jointplot_fig.axes[i].set_title(key)
-        jointplot_fig.axes[i].get_legend().set_visible(False)
+            # Plot control datapoints
+            jointplot_fig.axes[i].scatter(x=top_control[xvar], y=top_control[yvar],
+                                          alpha=1, c='#fde725', label='Control')
+            jointplot_fig.axes[i].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1], xlabel=None, ylabel=None)
+            jointplot_fig.axes[i].set_title(test_name, loc='left')
+            jointplot_fig.axes[i].get_legend().set_visible(False)
 
-    jointplot_fig.suptitle(f'Designs from target sequences against test datasets')
-    jointplot_fig.axes[2].legend(loc='upper left', bbox_to_anchor=(-0.15, -0.25), ncol=7, borderaxespad=0,
-                                 title='Target dataset')
-    jointplot_fig.axes[2].set_xlabel('IGS true percent coverage')
-    jointplot_fig.axes[3].set_xlabel('IGS true percent coverage')
-    jointplot_fig.axes[0].set_ylabel('Guide score')
-    jointplot_fig.axes[2].set_ylabel('Guide score')
-    plt.tight_layout()
-    if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/figure_3b_{target_name}.{file_type}', format=file_type)
-    plt.show()
+        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes, orientation='horizontal')
+        jointplot_fig.suptitle(f'Designs from {target_name} evaluated against different kingdoms')
+        jointplot_fig.axes[2].set_xlabel('IGS true percent coverage')
+        jointplot_fig.axes[3].set_xlabel('IGS true percent coverage')
+        jointplot_fig.axes[0].set_ylabel('Guide score')
+        jointplot_fig.axes[2].set_ylabel('Guide score')
+        plt.tight_layout()
+        if save_fig:
+            plt.savefig(fname=f'{save_file_loc}/figure_3b_{target_name}.{file_type}', format=file_type)
+        plt.show()
 
     # # Fig 3b: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
     # # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
