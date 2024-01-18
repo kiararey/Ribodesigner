@@ -272,18 +272,47 @@ if __name__ == '__main__':
     #             random_seq_designs_path=random_design_results_file_names, var_regs=e_coli_var_regs,
     #             save_fig=True, save_file_loc=results_folder)
 
+    combined_results_folder = test_output_folder + '/coupled/results/combined'
+
     # Batched
     make_graphs(control_designs_path=batched_control_design_results_file_names,
-                universal_designs_path=batched_universal_design_bacteria_results_file_names,
+                universal_designs_path=batched_all_targets_universal_design_file_names,
                 ref_seq_designs_path=batched_ref_design_results_file_names,
                 random_seq_designs_path=batched_random_design_results_file_names, var_regs=e_coli_var_regs,
                 save_fig=True, save_file_loc=results_folder + '/batched')
+    folder_for_ref_seq_results = results_folder + '/batched' + '/ref_seq is MG1655'
+    folder_for_random_seq_results = results_folder + '/batched' + '/ref_seq is L casei'
+
+    batched_batceria = combined_results_folder + '/' + batched_universal_design_bacteria_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    batched_ref_seq = combined_results_folder + '/' + batched_ref_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    batched_random_seq = combined_results_folder + '/' + batched_random_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
+
+    make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[batched_batceria],
+                             ref_data_path=[batched_ref_seq], save_fig=True, save_file_loc=folder_for_ref_seq_results)
+
+    make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[batched_batceria],
+                             ref_data_path=[batched_random_seq], save_fig=True,
+                             save_file_loc=folder_for_random_seq_results)
     # Unbatched
     make_graphs(control_designs_path=unbatched_control_design_results_file_names,
-                universal_designs_path=unbatched_universal_design_bacteria_results_file_names,
+                universal_designs_path=unbatched_all_targets_universal_design_file_names,
                 ref_seq_designs_path=unbatched_ref_design_results_file_names,
                 random_seq_designs_path=unbatched_random_design_results_file_names, var_regs=e_coli_var_regs,
                 save_fig=True, save_file_loc=results_folder + '/unbatched')
+
+    folder_for_ref_seq_results = results_folder + '/unbatched' + '/ref_seq is MG1655'
+    folder_for_random_seq_results = results_folder + '/unbatched' + '/ref_seq is L casei'
+
+    unbatched_batceria = combined_results_folder + '/' + unbatched_universal_design_bacteria_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    unbatched_ref_seq = combined_results_folder + '/' + unbatched_ref_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    unbatched_random_seq = combined_results_folder + '/' + unbatched_random_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
+
+    make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[unbatched_batceria],
+                             ref_data_path=[unbatched_ref_seq], save_fig=True, save_file_loc=folder_for_ref_seq_results)
+
+    make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[unbatched_batceria],
+                             ref_data_path=[unbatched_random_seq], save_fig=True,
+                             save_file_loc=folder_for_random_seq_results)
 
     # control_design_results_file_name = test_output_folder + '/coupled/results/1_designs_TTCAC1376_vs_test_sequences_Eukaryota_Only_by_Genus_1_worker_0_results.txt'
     # universal_designs_results_file_name = test_output_folder + '/coupled/results/72490_designs_designs_Eukaryota_Only_by_Genus_2_universal_vs_test_sequences_All_by_Genus_1_worker_0_results.txt'
@@ -302,8 +331,8 @@ if __name__ == '__main__':
     # universal_design_results_file_names = [f'{combined_results_folder}/{f}' for f in os.listdir(combined_results_folder)
     #                                        if f.startswith('77193_designs')]
 
-    folder_for_ref_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is MG1655'
-    folder_for_random_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is L casei'
+    # folder_for_ref_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is MG1655'
+    # folder_for_random_seq_results = 'test_output_files/test_outputs_parallelizing/Coupled for testing/for_testing/figures/ref_seq is L casei'
     # make_graphs(control_designs_path=control_design_results_file_name,
     #             universal_designs_path=universal_designs_results_file_name,
     #             ref_seq_designs_path=ref_seq_results_file_name, var_regs=e_coli_var_regs, save_fig=False,
@@ -342,3 +371,5 @@ if __name__ == '__main__':
     #                          save_file_loc=folder_for_random_seq_results)
 
     print(f'Graphs done!\n########################################################\n')
+
+
