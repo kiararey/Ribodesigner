@@ -658,6 +658,8 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
             bar()
 
     if fileout:
+        if not os.path.exists(folder_to_save):
+            os.mkdir(folder_to_save)
         out_file = folder_to_save + '/designs_' + pickle_file_name
         write_output_file(designs=optimized_seqs, folder_path=out_file, all_data=store_batch_results)
 
@@ -1674,6 +1676,7 @@ def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: s
     with open(f'to_align_{name_of_file}.fasta', 'w') as f:
         for i, line in enumerate(sequences_to_align):
             f.write('>seq' + str(i) + '\n' + str(line) + '\n')
+
     if msa_fast:
         subprocess.check_output([muscle_exe_name, '-super5', f'to_align_{name_of_file}.fasta', '-output',
                                  f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
