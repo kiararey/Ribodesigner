@@ -494,7 +494,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                  fileout: bool = False, folder_to_save: str = '', n_limit: float = 0.0,
                  score_type: str = 'weighted', msa_fast: bool = False, gaps_allowed: bool = True,
                  percent_of_target_seqs_used: float = 1.0, percent_of_background_seqs_used: float = 1,
-                 random_guide_sample_size: int = 10, test_folders: list[str] = None, store_batch_results: bool = False):
+                 random_guide_sample_size: int = 10, store_batch_results: bool = False):
     """Generates ribozyme designs to target a set of sequences.
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
     sequences used without replacement
@@ -1807,7 +1807,7 @@ https://github.com/rsa-tools/rsat-code/blob/master/CITATION.cff
 
 
 # Changed some variable names
-def words2countmatrix(words, priori):
+def words2countmatrix(words, priori: list = [0.25, 0.25, 0.25, 0.25]):
     """
     Convert a list of words to a simple count matrix.
     """
@@ -1875,7 +1875,7 @@ CONSENSUS = {'A': 'A',
 
 
 # Changed some variable names
-def consensus(matrix, priori, mask=False):
+def consensus(matrix, priori: list = [0.25, 0.25, 0.25, 0.25], mask=False):
     w = len(matrix)
 
     str_list = []

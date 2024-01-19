@@ -11,6 +11,7 @@ import icecream as ic
 import ribodesigner as rd
 import Bio.motifs
 import scipy
+from matplotlib.colors import LogNorm
 
 
 def import_data_to_df(designs_path, name):
@@ -116,7 +117,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
 
-    target_names = ['reference', 'random', 'bacterial', 'archaeal', 'eukaryotic', 'all']
+    # target_names = ['reference', 'random', 'bacterial', 'archaeal', 'eukaryotic', 'all']
     # target_names = ['reference', 'bacterial']
     to_analyze = ['ref_seq', 'universal', 'control']
 
@@ -125,7 +126,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # Fig 1: MG1655
     test_file_names = ['vs_test_sequences_Bac', 'vs_test_sequences_Arc', 'vs_test_sequences_Euk',
                        'vs_test_sequences_All']
-    target_file_names = ['_designs_Bac', 'designs_Arc', 'designs_Euk', 'designs_All']
+    # target_file_names = ['_designs_Bac', 'designs_Arc', 'designs_Euk', 'designs_All']
     reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
     random_seq_subset = random_seq_designs_df[
         random_seq_designs_df['name_of_test_dataset'].str.contains(test_file_names[0])]
@@ -153,9 +154,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(test_name)]
             all_subsets[subset_key][test_key] = target_subset
 
-
-
     # Figures 2a and 2b
+    bins_wanted = 100
     tm_max = max(all_data_df['tm_nn_vs_test'])
     tm_min = min(all_data_df['tm_nn_vs_test'])
 
@@ -163,6 +163,18 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                      'U site conservation', 'IGS true percent coverage'),
                     ('test_score', 'tm_nn_vs_test', 'figure_2b', 'Guide score vs test', 'Tm GC of guide vs test')]
 
+    # Get common values to later normalize
+    min_max = {'u_conservation_test_vs_true_%_cov_test': [], 'test_score_vs_tm_nn_vs_test': []}
+    for target_name, test_name in paired_names:
+        for test_name in test_file_names.keys():
+            target_subset = all_subsets[target_name][test_name]
+            for xvar, yvar, _, _, _ in vars_to_plot:
+                hist_data = np.histogram2d(target_subset[xvar], target_subset[yvar], bins=bins_wanted)
+                min_max[f'{xvar}_vs_{yvar}'].append(hist_data[0])
+    for key, item in min_max.items():
+        vmin = min(subdata.min() for subdata in item)
+        vmax = max(subdata.max() for subdata in item)
+        min_max[key] = (vmin, vmax)
     for target_name, test_name in paired_names:
         graph = all_subsets[target_name][test_name]
         top_control = all_subsets['control'][test_name]
@@ -175,13 +187,15 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                 2: jointplot_fig.add_subplot(gridspec[3:6, 0:6]),
             }
             # Plot scatter and kde plots
-            hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=100, norm='log')
-            # jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes, orientation='horizontal')
+            # # below is for individual log norms
+            # hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=bins_wanted,
+            #                                          norm='log')
+            hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=bins_wanted,
+                                                     norm=LogNorm(vmin=1, vmax=min_max[f'{xvar}_vs_{yvar}'][-1]))
             jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
-            # sns.kdeplot(x=xvar, y=yvar, data=graph, ax=jointplot_fig.axes[0], fill=True, cmap='viridis', thresh=0)
-            jointplot_fig.axes[0].scatter(x=top_control[xvar], marker='^', y=top_control[yvar], alpha=1, c='#fde725',
-                                          label='Control')
-            # slope, intercept, r, p, sterr = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
+            jointplot_fig.axes[0].scatter(x=top_control[xvar], marker='^', y=top_control[yvar], alpha=1, c='#FCC2DC',
+                                          label='Control', edgecolors='black', linewidth=0.8,
+                                          sizes=[150]*len(top_control[yvar]))
             regstats = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
             jointplot_fig.axes[0].annotate(f'$r^2$={round(regstats.rvalue ** 2, 3)}', xy=(0.1, 0.9),
                                            xycoords='axes fraction')
@@ -197,11 +211,13 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                             size=0.5)
             jointplot_fig.axes[2].set_xlabel('16s rRNA sequence position on reference sequence')
             # Plot control data
-            jointplot_fig.axes[1].scatter(x=top_control['reference_idx'], y=top_control[xvar], alpha=1, c='#fde725',
-                                          label='control', marker='^')
+            jointplot_fig.axes[1].scatter(x=top_control['reference_idx'], y=top_control[xvar], alpha=1, c='#FCC2DC',
+                                          label='control', marker='^', edgecolors='black', linewidth=0.8,
+                                          sizes=[150]*len(top_control[yvar]))
             jointplot_fig.axes[1].set_ylabel(xlabel)
-            jointplot_fig.axes[2].scatter(x=top_control['reference_idx'], y=top_control[yvar], alpha=1, c='#fde725',
-                                          label='control', marker='^')
+            jointplot_fig.axes[2].scatter(x=top_control['reference_idx'], y=top_control[yvar], alpha=1, c='#FCC2DC',
+                                          label='control', marker='^', edgecolors='black', linewidth=0.8,
+                                          sizes=[150]*len(top_control[yvar]))
             jointplot_fig.axes[2].set_ylabel(ylabel)
             if yvar == 'tm_nn_vs_test':
                 jointplot_fig.axes[0].set(ylim=[tm_min, tm_max + 20], xlim=[0, 1])
@@ -212,10 +228,10 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             jointplot_fig.axes[2].sharex(jointplot_fig.axes[1])
             jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
             jointplot_fig.axes[1].tick_params(labelbottom=False)
-            jointplot_fig.suptitle(f'Designs from {target_names} target sequences against {test_name} test dataset')
+            jointplot_fig.suptitle(f'Designs from {target_name} target sequences against {test_name} test dataset')
             plt.tight_layout()
             if save_fig:
-                plt.savefig(fname=f'{save_file_loc}/{figname}_{target_names}_{test_name}.{file_type}',
+                plt.savefig(fname=f'{save_file_loc}/{figname}_{target_name}_{test_name}.{file_type}',
                             format=file_type)
             plt.show()
 
@@ -270,9 +286,10 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         # Plot test data for each testing condition
         for i, (title, yvar, lims) in enumerate(vars_and_titles):
             sns.scatterplot(x='reference_idx', y=yvar, hue='target_name', linewidth=0, size=0.5,
-                            data=graph, ax=joint_ax[current_graph + i], alpha=0.3, legend=False, )
+                            data=graph, ax=joint_ax[current_graph + i], alpha=0.3, legend=False)
             jointplot_fig.axes[current_graph + i].scatter(x=top_control['reference_idx'], y=top_control[yvar],
-                                                          alpha=1, c='#fde725')
+                                                          alpha=1, c='#FCC2DC', edgecolors='black', linewidth=0.8,
+                                                          marker='^', sizes=[100]*len(top_control[yvar]))
             jointplot_fig.axes[current_graph + i].set(xlabel=None, ylabel=None, ylim=lims,
                                                       xlim=[-0.1, max_vals['reference_idx'] + 20])
             jointplot_fig.axes[current_graph + i].set_title(f'{title} {target_name} {test_name}', loc='left')
@@ -285,7 +302,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         for j in multipliers:
             jointplot_fig.axes[j].sharey(jointplot_fig.axes[i])
             jointplot_fig.axes[j].sharex(jointplot_fig.axes[i])
-        jointplot_fig.axes[j].set(xlabel='Reference 16s rRNA index')
+        jointplot_fig.axes[multipliers[-1]].set(xlabel='Reference 16s rRNA index')
         multipliers = [val + 1 for val in multipliers]
     plt.tight_layout()
     if save_fig:
@@ -296,38 +313,48 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
     # E. coli MG1655 16s rRNA sequence.
     # Prepare axes
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20 * 0.8, 20 * 0.8)}
-    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    jointplot_fig = plt.figure()
-    gridspec = jointplot_fig.add_gridspec(nrows=16, ncols=15)
-    joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[0:7, 0:7]),
-        1: jointplot_fig.add_subplot(gridspec[0:7, 8:15]),
-        2: jointplot_fig.add_subplot(gridspec[8:15, 0:7]),
-        3: jointplot_fig.add_subplot(gridspec[8:15, 8:15])
-    }
     xvar = 'true_%_cov_test'
     yvar = 'test_score'
-
-    # plot each test dataset in a different quadrant
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20 * 0.8, 20 * 0.8)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    # Prepare histograms:
+    all_vals = []
     for target_name, _ in paired_names:
-        data = []
+        for test_name in test_file_names.keys():
+            target_subset = all_subsets[target_name][test_name]
+            data = np.histogram2d(target_subset[xvar], target_subset[yvar], bins=bins_wanted)
+            all_vals.append(data[0])
+    # vmin = min(subdata.min() for subdata in all_vals)
+    vmax = max(subdata.max() for subdata in all_vals)
+    # plot each test dataset in a different quadrant
+    for target_name, target_data in paired_names:
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=15, ncols=15)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[0:7, 0:7]),
+            1: jointplot_fig.add_subplot(gridspec[0:7, 8:15]),
+            2: jointplot_fig.add_subplot(gridspec[8:15, 0:7]),
+            3: jointplot_fig.add_subplot(gridspec[8:15, 8:15])
+        }
         for i, test_name in enumerate(test_file_names.keys()):
             # Plot a testing set that's relevant
-            target_subset = all_subsets[target_name][test_name]
-            top_control = all_subsets['control'][test_name]
-            data.append()
-            hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=100, norm='log')
-            sns.scatterplot(x=xvar, y=yvar, hue='target_name', data=target_subset, ax=joint_ax[i], alpha=0.3)
-
+            graph = all_subsets[target_name][test_name]
+            jointplot_fig.axes[i].axhline(y=0.7, color='orange', linestyle='-')
+            jointplot_fig.axes[i].axvline(x=0.7, color='orange', linestyle='-')
+            hist_data = jointplot_fig.axes[i].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=bins_wanted,
+                                                     norm=LogNorm(vmin=1, vmax=vmax))
             # Plot control datapoints
-            jointplot_fig.axes[i].scatter(x=top_control[xvar], y=top_control[yvar],
-                                          alpha=1, c='#fde725', label='Control')
-            jointplot_fig.axes[i].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1], xlabel=None, ylabel=None)
+            top_control = all_subsets['control'][test_name]
+            jointplot_fig.axes[i].scatter(x=top_control[xvar], y=top_control[yvar], alpha=1, c='#FCC2DC',
+                                          label='Control', marker='^', edgecolors='black', linewidth=0.8,
+                                          sizes=[150] * len(top_control[yvar]))
+            jointplot_fig.axes[i].set(xlabel=None, ylabel=None, xlim=[0, 1], ylim=[0, 1])
             jointplot_fig.axes[i].set_title(test_name, loc='left')
-            jointplot_fig.axes[i].get_legend().set_visible(False)
-
-        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes, orientation='horizontal')
+            num_df = graph[((graph[xvar] >= 0.7) & (graph[yvar] >= 0.7))]
+            jointplot_fig.axes[i].annotate(f'n = {len(num_df.index)}\ngood guides', xy=(0.75, 0.15),
+                                           xycoords='axes fraction')
+            jointplot_fig.axes[i].label_outer()
+        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes)
         jointplot_fig.suptitle(f'Designs from {target_name} evaluated against different kingdoms')
         jointplot_fig.axes[2].set_xlabel('IGS true percent coverage')
         jointplot_fig.axes[3].set_xlabel('IGS true percent coverage')
@@ -924,9 +951,11 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
                 best_score_design = design_data_temp.nlargest(1, 'composite_test_score')
                 best_u_counted = lm.alignment_to_matrix(best_score_design['igs'])
 
-                # get consensus sequence for test dataset
-                test_consensus = Bio.motifs.create(test_data_temp['igs'],
-                                                   alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                # # get consensus sequence for test dataset
+                # test_consensus = Bio.motifs.create(test_data_temp['igs'],
+                #                                    alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                mat = rd.words2countmatrix(test_data_temp['igs'])
+                test_consensus = pairwise_comparison_consensus = rd.consensus(mat)
                 # And now get score for best U and ref U with the consensus
                 design_vs_test_u = rd.pairwise_comparison(seq_a=test_consensus,
                                                           seq_b=best_score_design['igs'].values[0], opti_len=igs_len,
@@ -954,8 +983,10 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
 
                     # get consensus sequence for test dataset
                     try:
-                        test_consensus = Bio.motifs.create(test_data_temp['guide'],
-                                                           alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                        # test_consensus = Bio.motifs.create(test_data_temp['guide'],
+                        #                                    alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+                        mat = rd.words2countmatrix(test_data_temp['guide'])
+                        test_consensus = pairwise_comparison_consensus = rd.consensus(mat)
                     except ValueError:
                         print(f'{key}: {igs_id} does not have the same length in all guides in test sequences.')
                         continue
