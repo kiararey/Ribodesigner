@@ -377,8 +377,10 @@ if __name__ == '__main__':
     # The following code is to analyze the effects of changing the guide length on bacterial designs
     out_folder_guide_lengths = 'test_output_files/varying_guide_lengths'
     test_data_guide_len_pickles = []
-    for i in range(5, 200, 5):
+    for i in range(10, 200, 10):
         test_out_file = out_folder_guide_lengths + f'/{i}_bp'
+        if not os.path.exists(test_out_file):
+            os.mkdir(test_out_file)
         test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
                                                        guide_length=i, igs_length=m, min_length=i,
                                                        folder_to_save=test_out_file, graph_results=True,
@@ -400,7 +402,7 @@ if __name__ == '__main__':
                                                                           flexible_igs=True, file_to_save=test_out_file)
 
     # This is for NOTS (make sure to upload coupled data with globus before you do this!)
-    for i in range(0, 200, 5):
+    for i in range(10, 200, 10):
         test_out_file = out_folder_guide_lengths + f'/{i}_bp/coupled'
         ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + test_out_file, number_of_workers=number_of_workers,
                      worker_number=worker_number, n_limit=1, get_tm_nn=True)

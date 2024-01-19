@@ -658,6 +658,8 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
             bar()
 
     if fileout:
+        if not os.path.exists(folder_to_save):
+            os.mkdir(folder_to_save)
         out_file = folder_to_save + '/designs_' + pickle_file_name
         write_output_file(designs=optimized_seqs, folder_path=out_file, all_data=store_batch_results)
 
@@ -737,6 +739,11 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='getting consensus sequences')
 
     # prepare data for graphing
+    if not os.path.exists(folder_to_save):
+        os.mkdir(folder_to_save)
+
+    title = test_folder.split('.')[0].split('/')[-1]
+    save_file_name = f'{folder_to_save}/test_sequences_{title}'
     if graph_results:
         num_of_seqs = len(test_names_and_seqs)
         u_conservation_list = []
@@ -747,9 +754,6 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
             ref_idxes_list.append(ref_idx)
             u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
             igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
-
-        title = test_folder.split('.')[0].split('/')[-1]
-        save_file_name = f'{folder_to_save}/test_sequences_{title}'
         make_split_graph(title, x_data=u_conservation_list, xlabel='U percent coverage',
                          y_data=igs_true_perc_cov_list, ylabel='IGS true percent coverage', hue_data=None,
                          huelabel=None, loc_data=ref_idxes_list, var_regs=var_regs, save_file_name=save_file_name,
@@ -1674,6 +1678,7 @@ def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: s
     with open(f'to_align_{name_of_file}.fasta', 'w') as f:
         for i, line in enumerate(sequences_to_align):
             f.write('>seq' + str(i) + '\n' + str(line) + '\n')
+
     if msa_fast:
         subprocess.check_output([muscle_exe_name, '-super5', f'to_align_{name_of_file}.fasta', '-output',
                                  f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
