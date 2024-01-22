@@ -1089,6 +1089,35 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
     return
 
 
+def make_violin_plots(data_files: list[str], save_file_loc: str, names: list[str], vars_to_plot: list[str],
+                      file_type: str = 'png'):
+    print('Now loading data...')
+    with alive_bar(total=len(data_files), spinner='fishes') as bar:
+        all_data_df = import_data_to_df(data_files[0], names[0])
+        bar()
+        for condition_file, name in zip(data_files[1:], names[1:]):
+            next_design_df = import_data_to_df(condition_file, name)
+            all_data_df = pd.concat([all_data_df, next_design_df])
+            bar()
+    print('Data loaded!')
 
+    dfs = []
+    for var in vars_to_plot:
+        score_data = all_data_df.loc[:, ['id', var]]
+        score_data['score_type'] = var
+        score_data.rename(columns={var: 'Score'}, inplace=True)
+        dfs.append(score_data)
+
+    filtered_data_df = pd.concat(dfs)
+
+    sns.boxplot(x=all_data_df.index, y='Score', hue='score_type', data=filtered_data_df, notch=True, boxprops={'alpha': 0.7})
+    sns.stripplot(x=all_data_df.index, y='Score', hue='score_type', data=filtered_data_df, dodge=True)
+
+    plt.tight_layout()
+    text = '_'.join(vars_to_plot)
+    plt.savefig(fname=f'{save_file_loc}/{text}.{file_type}', format=file_type)
+    plt.show()
+
+    return
 
 # Delta difference plot between phyla?? for selective??
