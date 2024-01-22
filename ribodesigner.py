@@ -9,11 +9,8 @@ from collections import defaultdict
 from math import exp, log
 from graph_making import make_split_graph
 
-import Bio.motifs
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 from Bio import AlignIO, SeqUtils
 from Bio.Align import AlignInfo, PairwiseAligner
 from Bio.Seq import Seq

@@ -7,10 +7,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Added a small improvement where ribodesigner will create the folder used to save data to if it does not currently exist">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Trying to find non-ASCII characters">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/graph_making.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph_making.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -428,7 +426,7 @@
       <workItem from="1701721727910" duration="256000" />
       <workItem from="1701722019187" duration="166132000" />
       <workItem from="1704743965949" duration="29000" />
-      <workItem from="1704744017638" duration="100387000" />
+      <workItem from="1704744017638" duration="102449000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -773,7 +771,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="144" />
+    <option name="localTasksCounter" value="146" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -813,8 +811,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Working on distributing workload between workers more intelligently" />
-    <MESSAGE value="This should be ready to go test on NOTS now! Will work on cleaning up file structure first." />
     <MESSAGE value="This should be ready to go test on NOTS now!" />
     <MESSAGE value="This should be ready to go test on NOTS now! Will work on making file structure better first though." />
     <MESSAGE value="Cleaned up file structure a bit" />
@@ -838,7 +834,9 @@
     <MESSAGE value="finished the first draft of graphs that I'm actually somewhat happy with! Now working on getting data for varying guide lengths to run on NOTS" />
     <MESSAGE value="Added a small improvement where ribodesigner and prepare_test_seqs will create the folder used to save data to if it does not currently exist" />
     <MESSAGE value="Added a small improvement where ribodesigner will create the folder used to save data to if it does not currently exist" />
-    <option name="LAST_COMMIT_MESSAGE" value="Added a small improvement where ribodesigner will create the folder used to save data to if it does not currently exist" />
+    <MESSAGE value="Preparing to run this on NOTS" />
+    <MESSAGE value="Trying to find non-ASCII characters" />
+    <option name="LAST_COMMIT_MESSAGE" value="Trying to find non-ASCII characters" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -850,17 +848,17 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1765</line>
+          <line>1762</line>
           <option name="timeStamp" value="147" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1758</line>
+          <line>1755</line>
           <option name="timeStamp" value="148" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1802</line>
+          <line>1799</line>
           <option name="timeStamp" value="1097" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -900,7 +898,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/graph_making.py</url>
-          <line>940</line>
+          <line>939</line>
           <option name="timeStamp" value="1242" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">

@@ -9,7 +9,6 @@ import logomaker as lm
 import random
 import icecream as ic
 import ribodesigner as rd
-import Bio.motifs
 import scipy
 from matplotlib.colors import LogNorm
 
