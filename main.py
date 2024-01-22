@@ -378,7 +378,6 @@ if __name__ == '__main__':
     out_folder_guide_lengths = 'test_output_files/varying_guide_lengths'
     test_data_guide_len_pickles = []
 
-    # start = 200
     # for i in range(start, 210, 10):
     #     test_out_file = out_folder_guide_lengths + f'/{i}_bp'
     #     if not os.path.exists(test_out_file):
