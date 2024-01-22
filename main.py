@@ -41,12 +41,12 @@ if __name__ == '__main__':
     u1376 = 'CAACCCACTCCCATGGTGTGACGGGCGGTGTGTACAAGGCCCGGGAACGTgTTCAC'
 
     # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary
-    # approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57–75 (2017).
+    # approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57-75 (2017).
     s_cerevisiae_var_regs = [(69, 80), (126, 292), (478, 510), (643, 850), (1048, 1070), (1350, 1400), (1480, 1531),
                              (1674, 1730)]
 
     # Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
-    # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330–339 (2007).
+    # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
     e_coli_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
                        (1243, 1294), (1435, 1465)]
 
@@ -376,58 +376,58 @@ if __name__ == '__main__':
 
     # # The following code is to analyze the effects of changing the guide length on bacterial designs
     out_folder_guide_lengths = 'test_output_files/varying_guide_lengths'
-    # test_data_guide_len_pickles = []
-    # # Need to do 30
-    # i = 30
-    # test_out_file = out_folder_guide_lengths + f'/{i}_bp'
-    # if not os.path.exists(test_out_file):
-    #     os.mkdir(test_out_file)
-    # test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
-    #                                                guide_length=i, igs_length=m, min_length=i,
-    #                                                folder_to_save=test_out_file, graph_results=True,
-    #                                                var_regs=e_coli_var_regs, graph_file_type='png',
-    #                                                get_consensus_batches=True, batch_num=10, score_type='weighted',
-    #                                                msa_fast=True)
-    # test_data_guide_len_pickles.append(test_seqs_pickle_file_name)
-    #
-    # # Now, we design bacterial sequences to go with these designs
-    # universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path,
-    #                                           igs_length=m, guide_length=i, min_length=i, selective=False,
-    #                                           min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
-    #                                           percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
-    #                                           random_guide_sample_size=10, folder_to_save=test_out_file)
-    # universal_data_pickles.append(universal_pickle_file_name)
-    # # and we pair these designs
-    # universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_pickle_file_name,
-    #                                                                   test_seqs_input=test_seqs_pickle_file_name,
-    #                                                                   flexible_igs=True, file_to_save=test_out_file)
-    # print(f'{i} bp datasets generated.\n########################################################\n')
-    #
-    # start = 200
-    # for i in range(start, 210, 10):
-    #     test_out_file = out_folder_guide_lengths + f'/{i}_bp'
-    #     if not os.path.exists(test_out_file):
-    #         os.mkdir(test_out_file)
-    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
-    #                                                    guide_length=i, igs_length=m, min_length=i,
-    #                                                    folder_to_save=test_out_file, graph_results=True,
-    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
-    #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
-    #                                                    msa_fast=True)
-    #     test_data_guide_len_pickles.append(test_seqs_pickle_file_name)
-    #
-    #     # Now, we design bacterial sequences to go with these designs
-    #     universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path,
-    #                                               igs_length=m, guide_length=i, min_length=i, selective=False,
-    #                                               min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
-    #                                               percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
-    #                                               random_guide_sample_size=10, folder_to_save=test_out_file)
-    #     universal_data_pickles.append(universal_pickle_file_name)
-    #     # and we pair these designs
-    #     universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_pickle_file_name,
-    #                                                                       test_seqs_input=test_seqs_pickle_file_name,
-    #                                                                       flexible_igs=True, file_to_save=test_out_file)
-    #     print(f'{i} bp datasets generated.\n########################################################\n')
+    test_data_guide_len_pickles = []
+    # Need to do 30
+    i = 30
+    test_out_file = out_folder_guide_lengths + f'/{i}_bp'
+    if not os.path.exists(test_out_file):
+        os.mkdir(test_out_file)
+    test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
+                                                   guide_length=i, igs_length=m, min_length=i,
+                                                   folder_to_save=test_out_file, graph_results=True,
+                                                   var_regs=e_coli_var_regs, graph_file_type='png',
+                                                   get_consensus_batches=True, batch_num=10, score_type='weighted',
+                                                   msa_fast=True)
+    test_data_guide_len_pickles.append(test_seqs_pickle_file_name)
+
+    # Now, we design bacterial sequences to go with these designs
+    universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path,
+                                              igs_length=m, guide_length=i, min_length=i, selective=False,
+                                              min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
+                                              percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+                                              random_guide_sample_size=10, folder_to_save=test_out_file)
+    universal_data_pickles.append(universal_pickle_file_name)
+    # and we pair these designs
+    universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_pickle_file_name,
+                                                                      test_seqs_input=test_seqs_pickle_file_name,
+                                                                      flexible_igs=True, file_to_save=test_out_file)
+    print(f'{i} bp datasets generated.\n########################################################\n')
+
+    start = 200
+    for i in range(start, 210, 10):
+        test_out_file = out_folder_guide_lengths + f'/{i}_bp'
+        if not os.path.exists(test_out_file):
+            os.mkdir(test_out_file)
+        test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
+                                                       guide_length=i, igs_length=m, min_length=i,
+                                                       folder_to_save=test_out_file, graph_results=True,
+                                                       var_regs=e_coli_var_regs, graph_file_type='png',
+                                                       get_consensus_batches=True, batch_num=10, score_type='weighted',
+                                                       msa_fast=True)
+        test_data_guide_len_pickles.append(test_seqs_pickle_file_name)
+
+        # Now, we design bacterial sequences to go with these designs
+        universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path,
+                                                  igs_length=m, guide_length=i, min_length=i, selective=False,
+                                                  min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
+                                                  percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+                                                  random_guide_sample_size=10, folder_to_save=test_out_file)
+        universal_data_pickles.append(universal_pickle_file_name)
+        # and we pair these designs
+        universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=universal_pickle_file_name,
+                                                                          test_seqs_input=test_seqs_pickle_file_name,
+                                                                          flexible_igs=True, file_to_save=test_out_file)
+        print(f'{i} bp datasets generated.\n########################################################\n')
 
     # This is for NOTS (make sure to upload coupled data with globus before you do this!)
     for i in range(10, 210, 10):
