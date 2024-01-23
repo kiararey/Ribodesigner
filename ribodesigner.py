@@ -1355,6 +1355,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     number_of_workers = int(number_of_workers)
 
     work_done_file = f'{coupled_folder}/work_done_{worker_number}.txt'
+    designs_skipped = f'{coupled_folder}/skipped_designs{worker_number}.txt'
     results_folder = f'{coupled_folder}/results'
 
     # Check if we have anything to test
@@ -1444,6 +1445,8 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
                 if not result:
                     with open(work_done_file, 'a') as d:
                         d.write(str(big_idx) + '\n')
+                    with open(designs_skipped, 'a') as d:
+                        d.write(str(result.id) + '\n')
                     bar()
                     continue
 
@@ -1464,6 +1467,8 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             if not result:
                 with open(work_done_file, 'a') as d:
                     d.write(str(big_idx) + '\n')
+                with open(designs_skipped, 'a') as d:
+                    d.write(str(result.id) + '\n')
                 continue
 
             result_dict = result.to_dict(all_data=False)
@@ -1987,3 +1992,4 @@ def get_tm_gc(seq, strict=True, valueset=7, userset=None, mismatch=True, mismatc
     if mismatch:
         melting_temp -= d * (seq.count(mismatch_base) * 100.0 / len(seq))
     return melting_temp
+

@@ -3,7 +3,7 @@ import os
 from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data)
-from graph_making import make_graphs, make_sequence_logo_graph
+from graph_making import make_graphs, make_sequence_logo_graph, make_violin_plots
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -374,21 +374,23 @@ if __name__ == '__main__':
 
     print(f'Graphs done!\n########################################################\n')
 
-    # # The following code is to analyze the effects of changing the guide length on bacterial designs
-    out_folder_guide_lengths = 'test_output_files/varying_guide_lengths'
-    test_data_guide_len_pickles = []
-
+    # # # The following code is to analyze the effects of changing the guide length on bacterial designs
+    # out_folder_guide_lengths = 'test_output_files/varying_guide_lengths'
+    # test_data_guide_len_pickles = []
+    # start = 10
+    #
     # for i in range(start, 210, 10):
     #     test_out_file = out_folder_guide_lengths + f'/{i}_bp'
     #     if not os.path.exists(test_out_file):
     #         os.mkdir(test_out_file)
-    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
-    #                                                    guide_length=i, igs_length=m, min_length=i,
-    #                                                    folder_to_save=test_out_file, graph_results=True,
-    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
-    #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
-    #                                                    msa_fast=True)
-    #     test_data_guide_len_pickles.append(test_seqs_pickle_file_name)
+    #     # test_seqs_pickle_file_name = prepare_test_seqs(test_folder=background_data_bac, ref_sequence_file=ref_path,
+    #     #                                                guide_length=i, igs_length=m, min_length=i,
+    #     #                                                folder_to_save=test_out_file, graph_results=True,
+    #     #                                                var_regs=e_coli_var_regs, graph_file_type='png',
+    #     #                                                get_consensus_batches=True, batch_num=10, score_type='weighted',
+    #     #                                                msa_fast=True)
+    #     # test_data_guide_len_pickles.append(test_seqs_pickle_file_name)
+    #     test_seqs_pickle_file_name = test_out_file + '/test_sequences_Bacteria_Only_by_Genus_1.pickle'
     #
     #     # Now, we design bacterial sequences to go with these designs
     #     universal_pickle_file_name = ribodesigner(target_sequences_folder=universal_data_1, ref_sequence_file=ref_path,
@@ -405,7 +407,7 @@ if __name__ == '__main__':
 
     # This is for NOTS (make sure to upload coupled data with globus before you do this!)
     for i in range(10, 210, 10):
-        test_out_file = out_folder_guide_lengths + f'/{i}_bp/coupled'
+        test_out_file = f'test_output_files/varying_guide_lengths/{i}_bp/coupled'
         if not os.path.exists(test_out_file):
             # If we have not uploaded the file yet, skip this length
             print(f'No data found for guide length of {i} bp!')
@@ -413,3 +415,22 @@ if __name__ == '__main__':
         ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + test_out_file, number_of_workers=number_of_workers,
                      worker_number=worker_number, n_limit=1, get_tm_nn=True)
         print(f'{i} bp datasets analyzed.\n########################################################\n')
+
+    # # finally, we test! Below is for local
+    # get_tm_nn = True
+    # files_to_test = test_output_folder + '/coupled'
+    # for i in range(10, 210, 10):
+    #     test_out_file = f'test_output_files/varying_guide_lengths/{i}_bp/coupled'
+    #     if not os.path.exists(test_out_file):
+    #         # If we have not uploaded the file yet, skip this length
+    #         print(f'No data found for guide length of {i} bp!')
+    #         continue
+    #     in_data = [(test_out_file, number_of_workers, i, 1, False, n, get_tm_nn) for i in range(number_of_workers)]
+    #     with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #         with mp.Pool(processes=len(in_data)) as pool:
+    #             out_data = pool.starmap(ribo_checker, in_data)
+    #         bar()
+
+    # post_nots_output_folder = 'test_output_files/varying_guide_lengths/NOTS_ouptut'
+    #
+    # make_violin_plots(post_nots_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')

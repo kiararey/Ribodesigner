@@ -11,13 +11,35 @@ import icecream as ic
 import ribodesigner as rd
 import scipy
 from matplotlib.colors import LogNorm
+import os
 
 
-def import_data_to_df(designs_path, name):
-    designs_df = extract_info(designs_path[0], name)
-    for i in range(1, len(designs_path)):
+def import_data_to_df(designs_path, name, check_integrity: bool = True):
+    lengths = [int(name.split('/')[-1].split('_')[0]) for name in designs_path]
+    dfs = []
+    all_dupes_check = defaultdict(lambda: [])
+    all_without_dupes = defaultdict(lambda: [])
+
+    for i in range(0, len(designs_path)):
         temp = extract_info(designs_path[i], name)
-        designs_df = pd.concat([designs_df, temp])
+        if check_integrity:
+            dupes_check = len(temp.index)
+            all_dupes_check[lengths[i]].append(dupes_check)
+            without_dupes = len(temp.drop_duplicates().index)
+            all_without_dupes[lengths[i]].append(without_dupes)
+            if dupes_check != without_dupes:
+                print(f'\n{designs_path} has duplicate outputs!')
+            dfs.append(temp)
+
+    for key, val in all_without_dupes.items():
+        all_vals = sum(val)
+        if key == all_vals:
+            print(f'\n{key} designs file has correct number of outputs')
+        else:
+            print(f'\n{key} designs file is not done cooking! Missing {key - all_vals} designs. '
+                  f'Run again to complete analysis.')
+
+    designs_df = pd.concat(dfs)
     return designs_df
 
 
@@ -1088,17 +1110,28 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
     return
 
 
-def make_violin_plots(data_files: list[str], save_file_loc: str, names: list[str], vars_to_plot: list[str],
-                      file_type: str = 'png'):
+def make_violin_plots(folder: str, vars_to_plot: list[str], file_type: str = 'png'):
     print('Now loading data...')
-    with alive_bar(total=len(data_files), spinner='fishes') as bar:
-        all_data_df = import_data_to_df(data_files[0], names[0])
+    to_analyze = {}
+    files = [(f, f'{folder}/{f}/coupled/results') for f in os.listdir(folder) if f != '.DS_Store']
+    for name, file in files:
+        try:
+            items = [file + '/' + data_file for data_file in os.listdir(file) if data_file.endswith('.txt')]
+            to_analyze[name] = items
+        except FileNotFoundError:
+            continue
+
+    with alive_bar(total=len(folder), spinner='fishes') as bar:
+        all_data_df = None
+        for key, file in to_analyze.items():
+            next_design_df = import_data_to_df(file, key, True)
+            if not all_data_df:
+                all_data_df = next_design_df
+            else:
+                all_data_df = pd.concat([all_data_df, next_design_df])
         bar()
-        for condition_file, name in zip(data_files[1:], names[1:]):
-            next_design_df = import_data_to_df(condition_file, name)
-            all_data_df = pd.concat([all_data_df, next_design_df])
-            bar()
     print('Data loaded!')
+
 
     dfs = []
     for var in vars_to_plot:
@@ -1113,10 +1146,12 @@ def make_violin_plots(data_files: list[str], save_file_loc: str, names: list[str
     sns.stripplot(x=all_data_df.index, y='Score', hue='score_type', data=filtered_data_df, dodge=True)
 
     plt.tight_layout()
-    text = '_'.join(vars_to_plot)
-    plt.savefig(fname=f'{save_file_loc}/{text}.{file_type}', format=file_type)
+    text = '_and_'.join(vars_to_plot)
+    plt.savefig(fname=f'{folder}/{text}.{file_type}', format=file_type)
     plt.show()
 
     return
+
+
 
 # Delta difference plot between phyla?? for selective??
