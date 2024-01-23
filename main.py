@@ -413,7 +413,7 @@ if __name__ == '__main__':
             print(f'No data found for guide length of {i} bp!')
             continue
         ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + test_out_file, number_of_workers=number_of_workers,
-                     worker_number=worker_number, n_limit=1, get_tm_nn=True)
+                     worker_number=worker_number, n_limit=1, opti_len=i, get_tm_nn=True)
         print(f'{i} bp datasets analyzed.\n########################################################\n')
 
     # # finally, we test! Below is for local
@@ -425,12 +425,14 @@ if __name__ == '__main__':
     #         # If we have not uploaded the file yet, skip this length
     #         print(f'No data found for guide length of {i} bp!')
     #         continue
-    #     in_data = [(test_out_file, number_of_workers, i, 1, False, n, get_tm_nn) for i in range(number_of_workers)]
+    #     in_data = [(test_out_file, number_of_workers, j, 1, False, i, get_tm_nn) for j in range(number_of_workers)]
     #     with alive_bar(unknown='fish', spinner='fishes') as bar:
     #         with mp.Pool(processes=len(in_data)) as pool:
     #             out_data = pool.starmap(ribo_checker, in_data)
     #         bar()
-
-    # post_nots_output_folder = 'test_output_files/varying_guide_lengths/NOTS_ouptut'
+    #     print(f'{i} bp datasets analyzed.\n########################################################\n')
     #
-    # make_violin_plots(post_nots_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')
+    # post_nots_output_folder = 'test_output_files/varying_guide_lengths/NOTS_ouptut'
+    # post_local_output_folder = 'test_output_files/varying_guide_lengths'
+    #
+    # make_violin_plots(post_local_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')

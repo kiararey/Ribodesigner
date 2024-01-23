@@ -34,9 +34,9 @@ def import_data_to_df(designs_path, name, check_integrity: bool = True):
     for key, val in all_without_dupes.items():
         all_vals = sum(val)
         if key == all_vals:
-            print(f'\n{key} designs file has correct number of outputs')
+            print(f'\n{name} {key} designs file has correct number of outputs')
         else:
-            print(f'\n{key} designs file is not done cooking! Missing {key - all_vals} designs. '
+            print(f'\n{name} {key} designs file is not done cooking! Missing {key - all_vals} designs. '
                   f'Run again to complete analysis.')
 
     designs_df = pd.concat(dfs)
@@ -1114,26 +1114,42 @@ def make_violin_plots(folder: str, vars_to_plot: list[str], file_type: str = 'pn
     print('Now loading data...')
     to_analyze = {}
     files = [(f, f'{folder}/{f}/coupled/results') for f in os.listdir(folder) if f != '.DS_Store']
-    for name, file in files:
+    sorted_files = sorted(files, key=lambda a: int(a[0][:-3]))
+    for name, file in sorted_files:
         try:
             items = [file + '/' + data_file for data_file in os.listdir(file) if data_file.endswith('.txt')]
             to_analyze[name] = items
         except FileNotFoundError:
             continue
 
-    with alive_bar(total=len(folder), spinner='fishes') as bar:
+    with alive_bar(total=len(to_analyze), spinner='fishes') as bar:
         all_data_df = None
         for key, file in to_analyze.items():
             next_design_df = import_data_to_df(file, key, True)
-            if not all_data_df:
+            if all_data_df is None:
                 all_data_df = next_design_df
             else:
                 all_data_df = pd.concat([all_data_df, next_design_df])
-        bar()
+            bar()
     print('Data loaded!')
-
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 16 * 0.8)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
 
     dfs = []
+
+    # make separate figures first
+
+    for var in vars_to_plot:
+        plt.figure()
+        sns.boxplot(x=all_data_df.index, y=var, data=all_data_df, notch=True, boxprops={'alpha': 0.7})
+        sns.stripplot(x=all_data_df.index, y=var, data=all_data_df, dodge=True)
+
+        plt.tight_layout()
+        text = var
+        plt.savefig(fname=f'{folder}/{text}.{file_type}', format=file_type)
+        plt.show()
+
+    plt.figure()
     for var in vars_to_plot:
         score_data = all_data_df.loc[:, ['id', var]]
         score_data['score_type'] = var
@@ -1142,8 +1158,8 @@ def make_violin_plots(folder: str, vars_to_plot: list[str], file_type: str = 'pn
 
     filtered_data_df = pd.concat(dfs)
 
-    sns.boxplot(x=all_data_df.index, y='Score', hue='score_type', data=filtered_data_df, notch=True, boxprops={'alpha': 0.7})
-    sns.stripplot(x=all_data_df.index, y='Score', hue='score_type', data=filtered_data_df, dodge=True)
+    sns.boxplot(x=filtered_data_df.index, y='Score', hue='score_type', data=filtered_data_df, notch=True, boxprops={'alpha': 0.7})
+    sns.stripplot(x=filtered_data_df.index, y='Score', hue='score_type', data=filtered_data_df, dodge=True)
 
     plt.tight_layout()
     text = '_and_'.join(vars_to_plot)
