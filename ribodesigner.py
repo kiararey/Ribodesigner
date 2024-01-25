@@ -7,7 +7,7 @@ import subprocess
 import time
 from collections import defaultdict
 from math import exp, log
-from graph_making import make_split_graph
+from graph_making import make_test_seqs_graph
 
 import numpy as np
 import pandas as pd
@@ -667,7 +667,8 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
 
 def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
-                      graph_results, var_regs, graph_file_type, get_consensus_batches, batch_num, score_type, msa_fast):
+                      graph_results, var_regs, graph_file_type, get_consensus_batches, batch_num, score_type, msa_fast,
+                      remove_x_dupes_in_graph):
     start = time.perf_counter()
     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
     print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
@@ -751,11 +752,13 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
             ref_idxes_list.append(ref_idx)
             u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
             igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
-        make_split_graph(title, x_data=u_conservation_list, xlabel='U percent coverage',
-                         y_data=igs_true_perc_cov_list, ylabel='IGS true percent coverage', hue_data=None,
-                         huelabel=None, loc_data=ref_idxes_list, var_regs=var_regs, save_file_name=save_file_name,
-                         file_type=graph_file_type, add_control=False, alpha=0.3)
+        make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U percent coverage',
+                             y_data=igs_true_perc_cov_list, ylabel='IGS true percent coverage', loc_data=ref_idxes_list,
+                             var_regs=var_regs, save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
+                             remove_x_dupes=remove_x_dupes_in_graph, dataset_len=num_of_seqs)
 
+    if os.path.exists(f'{save_file_name}.pickle'):
+        os.remove(f'{save_file_name}.pickle')
     # remove .fasta from any files for pickle naming
     with open(f'{save_file_name}.pickle', 'wb') as handle:
         pickle.dump(test_seqs_dict, handle)
@@ -1367,7 +1370,10 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
     # Generate input results folder if it does not exist yet
     if not os.path.exists(results_folder):
-        os.mkdir(results_folder)
+        try:
+            os.mkdir(results_folder)
+        except FileExistsError:
+            h = 0
 
     # check the amount of work by summing the number of designs on each file in the coupled folder
     lengths = [int(name.split('/')[-1].split('_')[0]) for name in analysis_files]

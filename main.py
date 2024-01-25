@@ -99,15 +99,15 @@ if __name__ == '__main__':
     ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
     random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
 
-    # # Here we make the designs batched
-    # for test_data in test_data_folders:
-    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
-    #                                                    guide_length=n, igs_length=m, min_length=minlen,
-    #                                                    folder_to_save=test_output_folder, graph_results=True,
-    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
-    #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
-    #                                                    msa_fast=True)
-    #     test_data_pickles.append(test_seqs_pickle_file_name)
+    # Here we make the designs batched
+    for test_data in test_data_folders:
+        test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+                                                       guide_length=n, igs_length=m, min_length=minlen,
+                                                       folder_to_save=test_output_folder, graph_results=True,
+                                                       var_regs=e_coli_var_regs, graph_file_type='png',
+                                                       get_consensus_batches=True, batch_num=10, score_type='weighted',
+                                                       msa_fast=True, remove_x_dupes_in_graph=True)
+        test_data_pickles.append(test_seqs_pickle_file_name)
     #
     # # unbatched
     # for test_data in test_data_folders:
@@ -405,16 +405,16 @@ if __name__ == '__main__':
     #                                                                       flexible_igs=True, file_to_save=test_out_file)
     #     print(f'{i} bp datasets generated.\n########################################################\n')
 
-    # This is for NOTS (make sure to upload coupled data with globus before you do this!)
-    for i in range(10, 210, 10):
-        test_out_file = f'test_output_files/varying_guide_lengths/{i}_bp/coupled'
-        if not os.path.exists(test_out_file):
-            # If we have not uploaded the file yet, skip this length
-            print(f'No data found for guide length of {i} bp!')
-            continue
-        ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + test_out_file, number_of_workers=number_of_workers,
-                     worker_number=worker_number, n_limit=1, opti_len=i, get_tm_nn=True)
-        print(f'{i} bp datasets analyzed.\n########################################################\n')
+    # # This is for NOTS (make sure to upload coupled data with globus before you do this!)
+    # for i in range(10, 210, 10):
+    #     test_out_file = f'test_output_files/varying_guide_lengths/{i}_bp/coupled'
+    #     if not os.path.exists(test_out_file):
+    #         # If we have not uploaded the file yet, skip this length
+    #         print(f'No data found for guide length of {i} bp!')
+    #         continue
+    #     ribo_checker(coupled_folder='/scratch/kpr1/RiboDesigner/' + test_out_file, number_of_workers=number_of_workers,
+    #                  worker_number=worker_number, n_limit=1, opti_len=i, get_tm_nn=True)
+    #     print(f'{i} bp datasets analyzed.\n########################################################\n')
 
     # # finally, we test! Below is for local
     # get_tm_nn = True
@@ -431,8 +431,8 @@ if __name__ == '__main__':
     #             out_data = pool.starmap(ribo_checker, in_data)
     #         bar()
     #     print(f'{i} bp datasets analyzed.\n########################################################\n')
-    #
-    # post_nots_output_folder = 'test_output_files/varying_guide_lengths/NOTS_ouptut'
-    # post_local_output_folder = 'test_output_files/varying_guide_lengths'
-    #
-    # make_violin_plots(post_local_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')
+
+    # post_nots_output_folder = 'test_output_files/varying_guide_lengths_NOTS_output'
+    post_local_output_folder = 'test_output_files/varying_guide_lengths'
+
+    make_violin_plots(post_local_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')
