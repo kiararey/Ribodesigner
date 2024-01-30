@@ -276,12 +276,12 @@ if __name__ == '__main__':
 
     combined_results_folder = test_output_folder + '/coupled/results/combined'
     #
-    # # Batched
-    # make_graphs(control_designs_path=batched_control_design_results_file_names,
-    #             universal_designs_path=batched_all_targets_universal_design_file_names,
-    #             ref_seq_designs_path=batched_ref_design_results_file_names,
-    #             random_seq_designs_path=batched_random_design_results_file_names, var_regs=e_coli_var_regs,
-    #             save_fig=True, save_file_loc=results_folder + '/batched')
+    # Batched
+    make_graphs(control_designs_path=batched_control_design_results_file_names,
+                universal_designs_path=batched_all_targets_universal_design_file_names,
+                ref_seq_designs_path=batched_ref_design_results_file_names,
+                random_seq_designs_path=batched_random_design_results_file_names, var_regs=e_coli_var_regs,
+                save_fig=True, save_file_loc=results_folder + '/batched')
     folder_for_ref_seq_results = results_folder + '/batched' + '/ref_seq is MG1655'
     folder_for_random_seq_results = results_folder + '/batched' + '/ref_seq is L casei'
     #
