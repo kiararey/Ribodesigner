@@ -274,23 +274,23 @@ if __name__ == '__main__':
     #             random_seq_designs_path=random_design_results_file_names, var_regs=e_coli_var_regs,
     #             save_fig=True, save_file_loc=results_folder)
 
-    combined_results_folder = test_output_folder + '/coupled/results/combined'
+    # combined_results_folder = test_output_folder + '/coupled/results/combined'
     #
     # Batched
-    make_graphs(control_designs_path=batched_control_design_results_file_names,
-                universal_designs_path=batched_all_targets_universal_design_file_names,
-                ref_seq_designs_path=batched_ref_design_results_file_names,
-                random_seq_designs_path=batched_random_design_results_file_names, var_regs=e_coli_var_regs,
-                save_fig=True, save_file_loc=results_folder + '/batched')
-    folder_for_ref_seq_results = results_folder + '/batched' + '/ref_seq is MG1655'
-    folder_for_random_seq_results = results_folder + '/batched' + '/ref_seq is L casei'
-    #
-    batched_bacteria = combined_results_folder + '/' + batched_universal_design_bacteria_results_file_names[0].split('/')[-1][:-21] + '.txt'
-    batched_ref_seq = combined_results_folder + '/' + batched_ref_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
-    batched_random_seq = combined_results_folder + '/' + batched_random_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
-    #
-    make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[batched_bacteria],
-                             ref_data_path=[batched_ref_seq], save_fig=True, save_file_loc=folder_for_ref_seq_results)
+    # make_graphs(control_designs_path=batched_control_design_results_file_names,
+    #             universal_designs_path=batched_all_targets_universal_design_file_names,
+    #             ref_seq_designs_path=batched_ref_design_results_file_names,
+    #             random_seq_designs_path=batched_random_design_results_file_names, var_regs=e_coli_var_regs,
+    #             save_fig=True, save_file_loc=results_folder + '/batched')
+    # folder_for_ref_seq_results = results_folder + '/batched' + '/ref_seq is MG1655'
+    # folder_for_random_seq_results = results_folder + '/batched' + '/ref_seq is L casei'
+    # #
+    # batched_bacteria = combined_results_folder + '/' + batched_universal_design_bacteria_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    # batched_ref_seq = combined_results_folder + '/' + batched_ref_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    # batched_random_seq = combined_results_folder + '/' + batched_random_design_results_file_names[0].split('/')[-1][:-21] + '.txt'
+    # #
+    # make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[batched_bacteria],
+    #                          ref_data_path=[batched_ref_seq], save_fig=True, save_file_loc=folder_for_ref_seq_results)
     #
     # make_sequence_logo_graph(test_data_path=test_data_pickles[2], design_data_path=[batched_bacteria],
     #                          ref_data_path=[batched_random_seq], save_fig=True,
@@ -374,7 +374,9 @@ if __name__ == '__main__':
 
     print(f'Graphs done!\n########################################################\n')
 
-    # # # The following code is to analyze the effects of changing the guide length on bacterial designs
+    ################################################################################################################
+
+    # # The following code is to analyze the effects of changing the guide length on bacterial designs
     # out_folder_guide_lengths = 'test_output_files/varying_guide_lengths'
     # test_data_guide_len_pickles = []
     # start = 10
@@ -432,7 +434,59 @@ if __name__ == '__main__':
     #         bar()
     #     print(f'{i} bp datasets analyzed.\n########################################################\n')
 
-    # post_nots_output_folder = 'test_output_files/varying_guide_lengths_NOTS_output'
+    # # post_nots_output_folder = 'test_output_files/varying_guide_lengths_NOTS_output'
+    # post_local_output_folder = 'test_output_files/varying_guide_lengths'
+    #
+    # make_violin_plots(post_local_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')
+
+    ################################################################################################################
+
+    # # The following code is to analyze the effects of changing the guide length on our reference sequence
+    # out_folder_guide_lengths_ref_seq = 'test_output_files/varying_guide_lengths_e_coli'
+    # out_folder_guide_lengths_test_seqs = 'test_output_files/varying_guide_lengths'
+    # test_data_guide_len_pickles = []
+    # start = 10
+    #
+    # for i in range(start, 210, 10):
+    #     ref_target_out_file = out_folder_guide_lengths_ref_seq + f'/{i}_bp'
+    #     test_seqs_out_file = out_folder_guide_lengths_test_seqs + f'/{i}_bp'
+    #     if not os.path.exists(ref_target_out_file):
+    #         os.mkdir(ref_target_out_file)
+    #
+    #     # Now, we design bacterial sequences to go with these designs
+    #     ref_pickle_file_name = ribodesigner(target_sequences_folder=ref_path, ref_sequence_file=ref_path, igs_length=m,
+    #                                         guide_length=i, min_length=i, selective=False, min_true_cov=0,
+    #                                         msa_fast=True, score_type='weighted', n_limit=1,
+    #                                         percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+    #                                         random_guide_sample_size=10, folder_to_save=ref_target_out_file)
+    #     universal_data_pickles.append(ref_pickle_file_name)
+    #     test_seqs_out_file = test_seqs_out_file + '/test_sequences_Bacteria_Only_by_Genus_1.pickle'
+    #     # and we pair these designs
+    #     universal_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=ref_pickle_file_name,
+    #                                                                       test_seqs_input=test_seqs_out_file,
+    #                                                                       flexible_igs=True,
+    #                                                                       file_to_save=ref_target_out_file)
+    #     print(f'{i} bp datasets generated.\n########################################################\n')
+    #
+    # # finally, we test! Below is for local
+    # get_tm_nn = True
+    # for i in range(10, 210, 10):
+    #     test_out_file = f'test_output_files/varying_guide_lengths_e_coli/{i}_bp/coupled'
+    #     if not os.path.exists(test_out_file):
+    #         # If we have not uploaded the file yet, skip this length
+    #         print(f'No data found for guide length of {i} bp!')
+    #         continue
+    #     in_data = [(test_out_file, number_of_workers, j, 1, False, i, get_tm_nn) for j in range(number_of_workers)]
+    #     with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #         with mp.Pool(processes=len(in_data)) as pool:
+    #             out_data = pool.starmap(ribo_checker, in_data)
+    #         bar()
+    #     print(f'{i} bp datasets analyzed.\n########################################################\n')
+
+    post_local_output_folder_e_coli = 'test_output_files/varying_guide_lengths_e_coli'
     post_local_output_folder = 'test_output_files/varying_guide_lengths'
 
-    make_violin_plots(post_local_output_folder, vars_to_plot=['test_score', 'tm_nn_vs_test'], file_type='png')
+    make_violin_plots([('E. coli', post_local_output_folder_e_coli),
+                       ('Bacterial designs', post_local_output_folder)],
+                      vars_to_plot=['test_score', 'tm_nn_vs_test'], folder_to_save=post_local_output_folder_e_coli,
+                      file_type='png')

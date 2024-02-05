@@ -1216,48 +1216,64 @@ def do_hist_plot(fig, ax, graph, xvar, yvar, bins_wanted, min_max, top_control, 
         ax.set(ylim=[0, 1], xlim=[0, 1])
     return
 
-def make_violin_plots(folder: str, vars_to_plot: list[str], file_type: str = 'png'):
+def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: str, file_type: str = 'png'):
     print('Now loading data...')
-    to_analyze = {}
-    files = [(f, f'{folder}/{f}/coupled/results') for f in os.listdir(folder) if f != '.DS_Store']
-    sorted_files = sorted(files, key=lambda a: int(a[0][:-3]))
-    for name, file in sorted_files:
-        try:
-            items = [file + '/' + data_file for data_file in os.listdir(file) if data_file.endswith('.txt')]
-            to_analyze[name.replace('_', ' ')] = items
-        except FileNotFoundError:
-            continue
+    all_data_df = None
+    # folders: list of tuples of form (dataset name, folder) where dataset name is the category you want to plot by
+    for dset, sub_folder in folders:
+        to_analyze = {}
+        files = [(f, f'{sub_folder}/{f}/coupled/results') for f in os.listdir(sub_folder) if not os.path.isfile(f)]
+        sorted_files = sorted(files, key=lambda a: int(a[0][:-3]))
+        for name, file in sorted_files:
+            try:
+                items = [file + '/' + data_file for data_file in os.listdir(file) if data_file.endswith('.txt')]
+                to_analyze[name.replace('_', ' ')] = items
+            except FileNotFoundError:
+                continue
 
-    with alive_bar(total=len(to_analyze), spinner='fishes') as bar:
-        all_data_df = None
-        for key, file in to_analyze.items():
-            next_design_df = import_data_to_df(file, key, True)
-            if all_data_df is None:
-                all_data_df = next_design_df
-            else:
-                all_data_df = pd.concat([all_data_df, next_design_df])
-            bar()
+        with alive_bar(total=len(to_analyze), spinner='fishes') as bar:
+            for key, file in to_analyze.items():
+                next_design_df = import_data_to_df(file, key, True)
+                labels = [dset] * next_design_df.shape[0]
+                next_design_df.insert(0, 'Dataset', labels)
+                if all_data_df is None:
+                    all_data_df = next_design_df
+                else:
+                    all_data_df = pd.concat([all_data_df, next_design_df])
+                bar()
     print('Data loaded!')
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 20 * 0.8)}
-    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette=sns.color_palette(['#440154', '#5ec962']))
+    # sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
 
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=3 * len(vars_to_plot), ncols=7)
     joint_ax = {}
+    indexes = set(all_data_df.index)
+
     for i, var in enumerate(vars_to_plot):
         joint_ax[i] = jointplot_fig.add_subplot(gridspec[i * 3:i * 3 + 3, 0:7])
+        # std_data = [(idx, all_data_df[all_data_df.index == idx][var].std()) for idx in indexes]
+        # sorted_std_data = sorted(std_data, key=lambda a: int(a[0][:-3]))
         # sns.boxplot(x=all_data_df.index, y=var, data=all_data_df, notch=True, boxprops={'alpha': 0.7}, whis=(0, 100),
         #             fill=False, ax=joint_ax[i], color='#000000')
-        sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, split=True, ax=joint_ax[i], inner=None,
-                       color='#000000')
+        # sns.lineplot(x=all_data_df.index, y=var, data=all_data_df, ax=joint_ax[i], errorbar='sd', color='gray')
+        # sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, ax=joint_ax[i], inner=None, color='#000000')
+        # sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, split=True, ax=joint_ax[i], inner=None,
+        #                color='#000000')
         # sns.stripplot(x=all_data_df.index, y=var, linewidth=0, data=all_data_df, dodge=True, alpha=0.01, ax=joint_ax[i],
         #               color='gray')
+        sns.lineplot(x=all_data_df.index, y=var, data=all_data_df, ax=joint_ax[i], errorbar='sd', hue='Dataset')
+        sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, ax=joint_ax[i], inner=None, hue='Dataset')
         joint_ax[i].set(xlabel='Guide length', ylabel=var.replace('_', ' '))
         joint_ax[i].label_outer()
     jointplot_fig.suptitle('Scores vs. guide length')
+    joint_ax[0].set(ylim=[0, 1])
+    joint_ax[1].set(ylim=[-80, 110])
     text = '_and_'.join(vars_to_plot)
     plt.tight_layout()
-    plt.savefig(fname=f'{folder}/{text}.{file_type}', format=file_type)
+    plt.savefig(fname=f'{folder_to_save}/{text}.{file_type}', format=file_type)
     plt.show()
 
     return
