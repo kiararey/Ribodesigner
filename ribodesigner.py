@@ -755,7 +755,7 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U percent coverage',
                              y_data=igs_true_perc_cov_list, ylabel='IGS true percent coverage', loc_data=ref_idxes_list,
                              var_regs=var_regs, save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
-                             remove_x_dupes=remove_x_dupes_in_graph, dataset_len=num_of_seqs)
+                             dataset_len=num_of_seqs)
 
     if os.path.exists(f'{save_file_name}.pickle'):
         os.remove(f'{save_file_name}.pickle')

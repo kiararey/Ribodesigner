@@ -449,7 +449,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #     sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[0], alpha=0.2,
     #                     legend=False)
     #     # sns.kdeplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[0], fill=True,
-    #     #             cmap='viridis', legend=False)
+    #     #             cmap='viridis', legend=False, cut=0)
     #     markers = ['v', '^', '<', '>']
     #     for i, marker in enumerate(markers):
     #         jointplot_fig.axes[0].scatter(x=control_designs_df_1376[xvar].iloc[i],
@@ -461,9 +461,9 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #     # jointplot_fig.axes[0].scatter(x=control_designs_df_1376[xvar], y=control_designs_df_1376[yvar],
     #     #                               alpha=1, c='#fde725', marker=markers.pop(), label='Control')
     #     sns.kdeplot(x=xvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[1], fill=True,
-    #                 common_norm=True, alpha=.3, legend=False)
+    #                 common_norm=True, alpha=.3, legend=False, cut=0)
     #     sns.kdeplot(y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[2], fill=True,
-    #                 common_norm=True, alpha=.3, legend=False)
+    #                 common_norm=True, alpha=.3, legend=False, cut=0)
     #     jointplot_fig.axes[0].set_xlabel('IGS true percent coverage')
     #     jointplot_fig.axes[0].set_ylabel('Guide score')
     #     # Set variable regions for location plots
@@ -586,9 +586,9 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #         sns.scatterplot(x=x_var, y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i],
     #                         alpha=0.7)
     #         sns.kdeplot(x=x_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 1],
-    #                     fill=True, common_norm=True, alpha=.3, legend=False)
+    #                     fill=True, common_norm=True, alpha=.3, legend=False, cut=0)
     #         sns.kdeplot(y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 2],
-    #                     fill=True, common_norm=True, alpha=.3, legend=False)
+    #                     fill=True, common_norm=True, alpha=.3, legend=False, cut=0)
     #
     #         joint_ax[i].annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
     #
@@ -760,10 +760,10 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=7, ncols=14)
     joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[1:7, 0:7]),
-        1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
-        2: jointplot_fig.add_subplot(gridspec[1:7, 7:14]),
-        3: jointplot_fig.add_subplot(gridspec[0:1, 7:14]),
+        0: jointplot_fig.add_subplot(gridspec[0:7, 0:7]),
+        # 1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
+        2: jointplot_fig.add_subplot(gridspec[0:7, 7:14]),
+        # 3: jointplot_fig.add_subplot(gridspec[0:1, 7:14])
     }
     # Prepare hue data: color based on yes no var regs
     yes_no_var_reg = ['Conserved region'] * len(loc_data)
@@ -795,13 +795,14 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     plt.colorbar(colorbar_data, ticks=plt.FixedLocator([0.25, 0.75]), format=formatter, ax=joint_ax[2], pad=0.1,
                  orientation='horizontal', label='Variable region location')
 
-    sns.kdeplot(x=x_data, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000')
-    # sns.kdeplot(y=y_data, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000')
+    sns.kdeplot(x=x_data, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0,
+                clip=[0.1, 1])
+    # sns.kdeplot(y=y_data, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0)
     jointplot_fig.axes[1].tick_params(axis='both', labelleft=False)
-    sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
-                palette=yes_no_palette)
+    # sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
+    #             palette=yes_no_palette, cut=0, clip=[0.1, 1])
     # sns.kdeplot(y=y_data, ax=joint_ax[5], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
-    #             palette=yes_no_palette)
+    #             palette=yes_no_palette, cut=0)
     jointplot_fig.axes[0].set(xlabel=xlabel, ylabel=ylabel, xlim=[0, 1], ylim=[0, 1])
     jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
     jointplot_fig.axes[1].tick_params(axis='both', labelleft=False, labelbottom=False, left=False)
@@ -816,8 +817,8 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     plt.show()
 
     # Prepare axes for second figure
-    plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
-                           save_file_name, file_type)
+    # plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
+    #                        save_file_name, file_type)
     return
 
 
@@ -1264,13 +1265,16 @@ def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: st
         #                color='#000000')
         # sns.stripplot(x=all_data_df.index, y=var, linewidth=0, data=all_data_df, dodge=True, alpha=0.01, ax=joint_ax[i],
         #               color='gray')
-        sns.lineplot(x=all_data_df.index, y=var, data=all_data_df, ax=joint_ax[i], errorbar='sd', hue='Dataset')
+        sns.lineplot(x=all_data_df.index, y=var, data=all_data_df, ax=joint_ax[i], errorbar=('pi', 100), hue='Dataset',
+                     legend=None)
         sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, ax=joint_ax[i], inner=None, hue='Dataset')
         joint_ax[i].set(xlabel='Guide length', ylabel=var.replace('_', ' '))
         joint_ax[i].label_outer()
     jointplot_fig.suptitle('Scores vs. guide length')
     joint_ax[0].set(ylim=[0, 1])
+    joint_ax[0].get_legend().remove()
     joint_ax[1].set(ylim=[-80, 110])
+    joint_ax[1].legend(loc='lower right')
     text = '_and_'.join(vars_to_plot)
     plt.tight_layout()
     plt.savefig(fname=f'{folder_to_save}/{text}.{file_type}', format=file_type)
