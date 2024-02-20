@@ -7,7 +7,7 @@ import subprocess
 import time
 from collections import defaultdict
 from math import exp, log
-from graph_making import make_test_seqs_graph
+from graph_making import make_test_seqs_graph, import_data_to_df, set_percentages_for_bar
 
 import numpy as np
 import pandas as pd
@@ -96,7 +96,6 @@ class RibozymeDesign:
             self.number_of_targets_background = dict_initialize['num_of_targets_background']
             self.u_conservation_background = dict_initialize['u_conservation_background']
             self.background_score = dict_initialize['background_score']
-            self.background_tm_nn = dict_initialize['tm_nn_vs_background']
             self.perc_cov_background = dict_initialize['%_coverage_background']
             self.perc_on_target_background = dict_initialize['%_on target_background']
             self.true_perc_cov_background = dict_initialize['true_%_cov_background']
@@ -236,7 +235,7 @@ class RibozymeDesign:
         inputs = {}
         if not taxonomy:
             taxonomy = ['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Taxon']
-        if type(taxonomy) == list:
+        if type(taxonomy) is list:
             for target in taxonomy:
                 if self.targets:
                     target_input = (str(give_taxonomy(str(self.targets), level=target))
@@ -1010,7 +1009,8 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
         igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / aligned_targets.size,
                                        counts / counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
                                  for igs, counts in igs_ids_counts.items()}
-        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
+        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location
+        # of the target sequence
         # in our initial aligned_targets array
         igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
                        seq.cat_sites]
@@ -1032,14 +1032,15 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
         return output_dict, igs_ids_counts, counts_of_ref_idx
     else:
         # this gives us a dictionary where the ID is matched to the true percent coverage
-        # Measure true percent coverage of these and keep IGSes that are at least the minimum true percent coverage needed
+        # Measure true percent coverage of these and keep IGSes that are at least the minimum
+        # true percent coverage needed
         igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / aligned_targets.size,
                                        counts / counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
                                  for igs, counts in igs_ids_counts.items()
                                  if counts / aligned_targets.size >= min_true_cov}
 
-        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
-        # in our initial aligned_targets array
+        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the
+        # target sequence in our initial aligned_targets array
         igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
                        seq.cat_sites]
 
@@ -1370,10 +1371,11 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
 
     # Generate input results folder if it does not exist yet
     if not os.path.exists(results_folder):
-        try:
-            os.mkdir(results_folder)
-        except FileExistsError:
-            h = 0
+        os.mkdir(results_folder)
+        # try:
+        #     os.mkdir(results_folder)
+        # except FileExistsError:
+        #     h = 0
 
     # check the amount of work by summing the number of designs on each file in the coupled folder
     lengths = [int(name.split('/')[-1].split('_')[0]) for name in analysis_files]
@@ -1484,6 +1486,77 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             with open(work_done_file, 'a') as d:
                 d.write(str(big_idx) + '\n')
     return
+
+
+def select_designs(tested_to_targets_path: list[str], designs_required: int, results_folder: str,
+                   design_type: str = 'universal', igs_min: float = 0.7, guide_min: float = 0.7,
+                   choose_var_reg_site: bool = False, start_idx: int = 1295, end_idx: int = 1435,
+                   save_pickle: bool = True, file_extra_text: str = '', add_overhangs: bool = False,
+                   igs_overhang: str = 'GGTCTCttttt', guide_overhang: str = 'gtcgtGAGACC'):
+    """
+    By default find things in E. coli conserved region between V8-V9.default is E. coli from:
+    Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
+    segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
+
+    var_regs = {V1: (69, 99), V2:(137, 242), V3:(433, 497), V4:(576, 682), V5:(822, 879), V6:(986, 1043),
+    V7:(1117, 1173), V8:(1243, 1294), V9:(1435, 1465)}
+    :return:
+    """
+
+    if design_type not in ['universal', 'selective']:
+        print('Please indicate whether the designs are either universal or selective')
+        return -1
+
+    # Import tested designs
+    # This function is being repurposed from the graph making functions pay no mind to how many nested lists there are
+    with alive_bar(spinner='fishes') as bar:
+        target_seqs_df = import_data_to_df(tested_to_targets_path, None)
+        bar()
+
+    # Sort by highest IGS difference then by highest guide difference
+    if design_type == 'universal':
+        igs_var = 'true_%_cov_test'
+        guide_var = 'test_score'
+    else:
+        igs_var = 'delta_igs_vs_test'
+        guide_var = 'delta_guide_vs_test'
+
+    # Remove anything with an igs true coverage below the minimum asked
+    filtered_df = target_seqs_df[target_seqs_df[igs_var] >= igs_min]
+
+    # Remove anything with a guide score below the minimum asked
+    filtered_df = filtered_df[filtered_df[guide_var] >= guide_min]
+
+    # Remove those not in included variable regions if asked
+    if choose_var_reg_site:
+        filtered_df = filtered_df[(filtered_df['reference_idx'] <= end_idx) &
+                                  (filtered_df['reference_idx'] >= start_idx)]
+    # sort to select
+    filtered_df.sort_values(by=[igs_var, guide_var], ascending=False)
+
+    # Save designs into file
+    print(f'{filtered_df.shape[0]} out of {target_seqs_df.shape[0]} designs meet given parameters! '
+          f'Selecting top {designs_required}...\n')
+    file_name = f'{results_folder}/{design_type}_top_{designs_required}_designs{file_extra_text}.csv'
+    if os.path.exists(file_name):
+        os.remove(file_name)
+    filtered_df.head(designs_required).to_csv(file_name, index=False)
+    # Go ahead and save all the designs above parameters if asked
+    if save_pickle:
+        file_name_pickle = file_name.split('.')[0] + '.pickle'
+        filtered_df.to_pickle(file_name_pickle)
+    print('File saved!')
+
+    # Now get designs to order them easily
+    igses = filtered_df.head(designs_required)['igs'].tolist()
+    guides = filtered_df.head(designs_required)['guide'].tolist()
+    to_order = []
+    for igs, guide in zip(igses, guides):
+        design = igs + 'g' + guide
+        if add_overhangs:
+            design = igs_overhang + design + guide_overhang
+        to_order.append(design)
+    return to_order, filtered_df.head(designs_required)
 
 
 def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name, guide_len, get_tm_nn):
@@ -1820,10 +1893,12 @@ https://github.com/rsa-tools/rsat-code/blob/master/CITATION.cff
 
 
 # Changed some variable names
-def words2countmatrix(words, priori: list = [0.25, 0.25, 0.25, 0.25]):
+def words2countmatrix(words, priori: list = None):
     """
     Convert a list of words to a simple count matrix.
     """
+    if not priori:
+        priori = [0.25, 0.25, 0.25, 0.25]
     w = len(words[0])
     m = [[0.0] * 4 for i in range(w)]
     n = len(words)
@@ -1888,8 +1963,11 @@ CONSENSUS = {'A': 'A',
 
 
 # Changed some variable names
-def consensus(matrix, priori: list = [0.25, 0.25, 0.25, 0.25], mask=False):
+def consensus(matrix, priori: list = None, mask=False):
     w = len(matrix)
+
+    if not priori:
+        priori = [0.25, 0.25, 0.25, 0.25]
 
     str_list = []
     for i in range(w):
@@ -1998,4 +2076,3 @@ def get_tm_gc(seq, strict=True, valueset=7, userset=None, mismatch=True, mismatc
     if mismatch:
         melting_temp -= d * (seq.count(mismatch_base) * 100.0 / len(seq))
     return melting_temp
-

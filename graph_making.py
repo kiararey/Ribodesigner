@@ -15,43 +15,44 @@ import os
 
 
 def import_data_to_df(designs_path, name, check_integrity: bool = True):
-    lengths = [int(name.split('/')[-1].split('_')[0]) for name in designs_path]
+    # lengths = [int(name.split('/')[-1].split('_')[0]) for name in designs_path]
     dfs = []
     all_dupes_check = defaultdict(lambda: [])
     all_without_dupes = defaultdict(lambda: [])
 
     for i in range(0, len(designs_path)):
         temp = extract_info(designs_path[i], name)
+        file_name = designs_path[i].split('/')[-1].split('_worker')[0]
         if check_integrity:
             dupes_check = len(temp.index)
-            all_dupes_check[lengths[i]].append(dupes_check)
+            all_dupes_check[file_name].append(dupes_check)
             without_dupes = len(temp.drop_duplicates().index)
-            all_without_dupes[lengths[i]].append(without_dupes)
+            all_without_dupes[file_name].append(without_dupes)
             if dupes_check != without_dupes:
-                print(f'\n{designs_path} has duplicate outputs!')
+                print(f'\n{name} {file_name} has duplicate outputs!')
             dfs.append(temp)
 
     for key, val in all_without_dupes.items():
         all_vals = sum(val)
-        if key == all_vals:
-            print(f'\n{name} {key} designs file has correct number of outputs')
-        else:
-            print(f'\n{name} {key} designs file is not done cooking! Missing {key - all_vals} designs. '
+        design_amt = int(key.split('_')[0])
+        # if design_amt == all_vals:
+        #     print(f'\n{name} {key} designs file has correct number of outputs')
+        # else:
+        #     print(f'\n{name} {key} designs file is not done cooking! Missing {design_amt - all_vals} designs. '
+        #           f'Run again to complete analysis.')
+        if design_amt != all_vals:
+            print(f'\n{name} {key} designs file is not done cooking! Missing {design_amt - all_vals} designs. '
                   f'Run again to complete analysis.')
 
     designs_df = pd.concat(dfs)
     return designs_df
 
 
-def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str],
-                universal_designs_path: list[str] = '', selective_designs_path: list[str] = '',
-                ref_seq_designs_path: list[str] = '', random_seq_designs_path: list[str] = '', save_fig: bool = False,
-                file_type: str = 'png', save_file_loc: str = ''):
+def set_percentages_for_bar(list_of_paths):
     print('Loading data...')
     fn = lambda x: int(x.split('/')[-1].split('_')[0])
     percentages = []
-    for paths in [control_designs_path, universal_designs_path, selective_designs_path, ref_seq_designs_path,
-                  random_seq_designs_path]:
+    for paths in list_of_paths:
         if not paths:
             percentages.append(0)
             continue
@@ -59,6 +60,17 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         percentages.append(total_seqs)
 
     total_designs = sum(percentages)
+    return percentages, total_designs
+
+
+def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str],
+                universal_designs_path: list[str] = '', selective_designs_path: list[str] = '',
+                ref_seq_designs_path: list[str] = '', random_seq_designs_path: list[str] = '', save_fig: bool = False,
+                file_type: str = 'png', save_file_loc: str = ''):
+    percentages, total_designs = set_percentages_for_bar([control_designs_path, universal_designs_path,
+                                                          selective_designs_path, ref_seq_designs_path,
+                                                          random_seq_designs_path])
+
     # percentages = [perc/total_designs for perc in percentages]
     with alive_bar(total=total_designs, spinner='fishes') as bar:
         control_designs_df = import_data_to_df(control_designs_path, 'control')
@@ -95,7 +107,10 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # Get new column on all_data_df that has the target dataset
     labels = {'designs_e-coli': 'Reference', 'designs_Lacto': 'Random', 'designs_Bacteria': 'Bacteria',
               'designs_Archaea': 'Archaea', 'designs_Eukaryota': 'Eukaryota', 'designs_All': 'All kingdoms',
-              'designs_TTCAC1376': 'Control'}
+              'designs_TTCAC1376': 'Control', 'Pseudomonadales_only': 'Pseudomondales only',
+              'Enterobacterales_only': 'Enterobacterales only',
+              'no_pseudo_or_entero': 'No Enterobacterales or Pseudomondales',
+              'designs_Gram_positives_only': 'Gram positives only'}
     new_target_labels = []
     for line in all_data_df['name_of_test_dataset']:
         txt = line.split('/')[-1].split('vs_test_sequences')[0]
@@ -124,9 +139,22 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                         'universal bacterial': ('universal', '_designs_Bac'),
                         'universal archaeal': ('universal', 'designs_Arc'),
                         'universal eukaryotic': ('universal', 'designs_Euk'),
-                        'universal all': ('universal', 'designs_All')}
+                        'universal all': ('universal', 'designs_All'),
+                        'selective Enterobacterales': ('selective', '_designs_Entero'),
+                        'selective Pseudomondales': ('selective', '_designs_Pseudo'),
+                        'selective no Enterobacterales or Pseudomondales': ('selective', '_no_pseudo_or_entero'),
+                        'selective Gram positives': ('selective', 'designs_Gram_positives_only')}
+
+    # test_file_names = {'vs Bacteria': 'vs_test_sequences_Bac', 'vs Archaea': 'vs_test_sequences_Arc',
+    #                    'vs Eukaryota': 'vs_test_sequences_Euk', 'vs all': 'vs_test_sequences_All'}
+    # test_file_names_selective = {'Bacteria - Pseudomondales': 'no_pseudo', 'Bacteria - Enterobacterales': 'no_entero',
+    #                              'Enterobacterales and Pseudomondales': 'Pseudo_and_entero_only'}
+
     test_file_names = {'vs Bacteria': 'vs_test_sequences_Bac', 'vs Archaea': 'vs_test_sequences_Arc',
-                       'vs Eukaryota': 'vs_test_sequences_Euk', 'vs all': 'vs_test_sequences_All'}
+                       'vs Eukaryota': 'vs_test_sequences_Euk', 'vs all': 'vs_test_sequences_All',
+                       'Bacteria - Pseudomondales': 'no_pseudo.c', 'Bacteria - Enterobacterales': 'no_entero.c',
+                       'Enterobacterales and Pseudomondales': 'Pseudo_and_entero_only_by_Genus_1.c',
+                       'Gram positives': 'No_Gram_positives.c'}
     # paired_names = [('reference', 'vs Bacteria'), ('random', 'vs Bacteria'),
     #                 ('universal bacterial', 'vs Bacteria'), ('universal archaeal', 'vs Archaea'),
     #                 ('universal eukaryotic', 'vs Eukaryota'), ('universal all', 'vs all')]
@@ -140,8 +168,11 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             # Next, get everyone in that design type that has the correct subset, if needed
             if target_name:
                 target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(target_name)]
+
             # Finally, get everyone in correct design type and subset that has been tested against the correct dataset
             target_subset = target_subset[target_subset['name_of_test_dataset'].str.contains(test_name)]
+            if target_subset.size == 0:
+                continue
             all_subsets[subset_key][test_key] = target_subset
 
     # Figures 2a and 2b
@@ -247,9 +278,11 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                     save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}_a.{file_type}'
                     plt.savefig(fname=save_file_name, format=file_type)
                 plt.show()
-                save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}_b.{file_type}'
+                save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}_b'
                 plot_three_panel_graph(var_regs, graph['reference_idx'], graph[xvar], 0.3, graph[yvar], xlabel,
-                                       ylabel, len(graph['reference_idx']), title, save_file_name, file_type)
+                                       ylabel, len(graph['reference_idx']), title, save_file_name, file_type,
+                                       add_control=True, control_loc_data=top_control['reference_idx'],
+                                       control_x_data=top_control[xvar], control_y_data=top_control[yvar])
             else:
                 jointplot_fig = plt.figure()
                 gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
@@ -300,6 +333,10 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                 title = f'Designs from {target_name} target sequences against {test_name} test dataset'
                 jointplot_fig.suptitle(title)
                 plt.tight_layout()
+                if save_fig:
+                    save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}.{file_type}'
+                    plt.savefig(fname=save_file_name, format=file_type)
+                plt.show()
 
     # Fig 6
     # Set plot parameters
@@ -421,6 +458,11 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         if save_fig:
             plt.savefig(fname=f'{save_file_loc}/figure_3b_{target_name}.{file_type}', format=file_type)
         plt.show()
+
+    # Okay. For the next graph, I'll have to add some detail to the index of the data! Specifically, labeling universal
+    # and selective designs by type using test_file_names and test_file_names_selective
+
+
 
     # # Fig 3b: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
     # # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
@@ -760,10 +802,10 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=7, ncols=14)
     joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[0:7, 0:7]),
-        # 1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
-        2: jointplot_fig.add_subplot(gridspec[0:7, 7:14]),
-        # 3: jointplot_fig.add_subplot(gridspec[0:1, 7:14])
+        0: jointplot_fig.add_subplot(gridspec[1:7, 0:7]),
+        1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
+        2: jointplot_fig.add_subplot(gridspec[1:7, 7:14]),
+        3: jointplot_fig.add_subplot(gridspec[0:1, 7:14])
     }
     # Prepare hue data: color based on yes no var regs
     yes_no_var_reg = ['Conserved region'] * len(loc_data)
@@ -798,9 +840,9 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     sns.kdeplot(x=x_data, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0,
                 clip=[0.1, 1])
     # sns.kdeplot(y=y_data, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0)
-    jointplot_fig.axes[1].tick_params(axis='both', labelleft=False)
-    # sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
-    #             palette=yes_no_palette, cut=0, clip=[0.1, 1])
+    # jointplot_fig.axes[1].tick_params(axis='both', labelleft=False)
+    sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
+                palette=yes_no_palette, cut=0, clip=[0.1, 1])
     # sns.kdeplot(y=y_data, ax=joint_ax[5], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
     #             palette=yes_no_palette, cut=0)
     jointplot_fig.axes[0].set(xlabel=xlabel, ylabel=ylabel, xlim=[0, 1], ylim=[0, 1])
@@ -823,7 +865,8 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
 
 
 def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
-                           save_file_name, file_type):
+                           save_file_name, file_type, add_control: bool = False, control_loc_data=None,
+                           control_x_data=None, control_y_data=None):
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 18 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
@@ -865,6 +908,11 @@ def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, yl
     jointplot_fig.axes[1].label_outer()
     sns.scatterplot(x=loc_data, y=y_data, linewidth=0, size=0.5, color='#000000',
                     ax=jointplot_fig.axes[2], alpha=alpha / 2, legend=False)
+    if add_control:
+        jointplot_fig.axes[0].scatter(x=control_loc_data, y=control_x_data, alpha=1, c='#FCC2DC', edgecolors='black',
+                                      linewidth=0.8, marker='^', sizes=[100] * len(control_loc_data))
+        jointplot_fig.axes[2].scatter(x=control_loc_data, y=control_y_data, alpha=1, c='#FCC2DC', edgecolors='black',
+                                      linewidth=0.8, marker='^', sizes=[100] * len(control_loc_data))
     jointplot_fig.axes[2].set_title(f'{len(loc_data)} unique U-IGS sites', loc='left')
     # Set graph settings for pretti graphing
     jointplot_fig.axes[0].set_ylabel(xlabel)
@@ -892,7 +940,7 @@ def plot_variable_regions(ax, var_regs):
     return
 
 
-def extract_info(results_file_path: str, dataset: str):
+def extract_info(results_file_path: str, dataset: str, data_type: str = 'dict'):
     with open(results_file_path, 'r') as read_file:
         list_of_designs = read_file.readlines()
     # Now extact data here:
@@ -935,7 +983,10 @@ def extract_info(results_file_path: str, dataset: str):
         # extracted_design = pd.DataFrame(design_dict, index=[dataset])
         # design_df = pd.concat([design_df, extracted_design])
         designs.append(design_dict)
-    design_df = pd.DataFrame.from_records(designs, index=[dataset] * len(designs))
+    if dataset is not None:
+        design_df = pd.DataFrame.from_records(designs, index=[dataset] * len(designs))
+    else:
+        design_df = pd.DataFrame.from_records(designs, index=dataset)
     return design_df
 
 
@@ -1192,22 +1243,20 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
     return
 
 
-
 def do_hist_plot(fig, ax, graph, xvar, yvar, bins_wanted, min_max, top_control, xlabel, ylabel, tm_min, tm_max):
-
     # Plot scatter and kde plots
     # # below is for individual log norms
     # hist_data = jointplot_fig.axes[0].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=bins_wanted,
     #                                          norm='log')
     hist_data = ax.hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=bins_wanted,
-                                             norm=LogNorm(vmin=1, vmax=min_max[f'{xvar}_vs_{yvar}'][-1]))
+                          norm=LogNorm(vmin=1, vmax=min_max[f'{xvar}_vs_{yvar}'][-1]))
     fig.colorbar(hist_data[-1], ax=ax)
     ax.scatter(x=top_control[xvar], marker='^', y=top_control[yvar], alpha=1, c='#000000',
-                                  label='Control', edgecolors='black', linewidth=0.8,
-                                  sizes=[150] * len(top_control[yvar]))
+               label='Control', edgecolors='black', linewidth=0.8,
+               sizes=[150] * len(top_control[yvar]))
     regstats = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
     ax.annotate(f'$r^2$={round(regstats.rvalue ** 2, 3)}', xy=(0.1, 0.9),
-                                   xycoords='axes fraction')
+                xycoords='axes fraction')
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
@@ -1216,6 +1265,7 @@ def do_hist_plot(fig, ax, graph, xvar, yvar, bins_wanted, min_max, top_control, 
     else:
         ax.set(ylim=[0, 1], xlim=[0, 1])
     return
+
 
 def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: str, file_type: str = 'png'):
     print('Now loading data...')
@@ -1243,6 +1293,13 @@ def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: st
                     all_data_df = pd.concat([all_data_df, next_design_df])
                 bar()
     print('Data loaded!')
+    violin_plot_routine(vars_to_plot=vars_to_plot, all_data_df=all_data_df, folder_to_save=folder_to_save,
+                        file_type='png')
+    return
+
+
+def violin_plot_routine(vars_to_plot, all_data_df, folder_to_save, file_type: str = 'png'):
+    # This will be plotted by index
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 20 * 0.8)}
     # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette=sns.color_palette(['#440154', '#5ec962']))
@@ -1251,20 +1308,8 @@ def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: st
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=3 * len(vars_to_plot), ncols=7)
     joint_ax = {}
-    indexes = set(all_data_df.index)
 
     for i, var in enumerate(vars_to_plot):
-        joint_ax[i] = jointplot_fig.add_subplot(gridspec[i * 3:i * 3 + 3, 0:7])
-        # std_data = [(idx, all_data_df[all_data_df.index == idx][var].std()) for idx in indexes]
-        # sorted_std_data = sorted(std_data, key=lambda a: int(a[0][:-3]))
-        # sns.boxplot(x=all_data_df.index, y=var, data=all_data_df, notch=True, boxprops={'alpha': 0.7}, whis=(0, 100),
-        #             fill=False, ax=joint_ax[i], color='#000000')
-        # sns.lineplot(x=all_data_df.index, y=var, data=all_data_df, ax=joint_ax[i], errorbar='sd', color='gray')
-        # sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, ax=joint_ax[i], inner=None, color='#000000')
-        # sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, split=True, ax=joint_ax[i], inner=None,
-        #                color='#000000')
-        # sns.stripplot(x=all_data_df.index, y=var, linewidth=0, data=all_data_df, dodge=True, alpha=0.01, ax=joint_ax[i],
-        #               color='gray')
         sns.lineplot(x=all_data_df.index, y=var, data=all_data_df, ax=joint_ax[i], errorbar=('pi', 100), hue='Dataset',
                      legend=None)
         sns.violinplot(x=all_data_df.index, y=var, data=all_data_df, cut=0, ax=joint_ax[i], inner=None, hue='Dataset')
@@ -1279,7 +1324,6 @@ def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: st
     plt.tight_layout()
     plt.savefig(fname=f'{folder_to_save}/{text}.{file_type}', format=file_type)
     plt.show()
-
     return
 
 # Delta difference plot between phyla?? for selective??

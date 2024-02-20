@@ -73,7 +73,8 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     :return:
     """
 
-    if (exclude_only or include_only) and exclude_taxonomy_level not in ['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Taxon']:
+    if (exclude_only or include_only) and exclude_taxonomy_level not in ['Domain', 'Phylum', 'Class', 'Order', 'Family',
+                                                                         'Genus', 'Species', 'Taxon']:
         taxonomy_choose = {0: 'Domain', 1: 'Phylum', 2: 'Class', 3: 'Order',
                            4: 'Family', 5: 'Genus', 6: 'Species', 7: 'Taxon'}
         ini = -1

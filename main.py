@@ -2,7 +2,8 @@ import sys
 import os
 from alive_progress import alive_bar
 import multiprocessing as mp
-from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data)
+from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
+                          select_designs)
 from graph_making import make_graphs, make_sequence_logo_graph, make_violin_plots
 
 if __name__ == '__main__':
@@ -65,6 +66,8 @@ if __name__ == '__main__':
     big_data_no_pseudo = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
     big_data_no_entero = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
     big_data_only_entero_and_pseudo = path + 'Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta'
+    big_data_gram_pos_only = path + 'Gram_positives_only/Gram_positives_only.fasta'
+    big_data_no_gram_pos = path + 'No_Gram_positives/No_Gram_positives.fasta'
     background_data_bac = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
     background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
     background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
@@ -75,6 +78,10 @@ if __name__ == '__main__':
     ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
 
     test_data_folders = [background_data_euk, background_data_arc, background_data_bac, background_data_all]
+    selective_data_folders_targets = [big_data_no_entero_or_pseudo, big_data_entero_only, big_data_pseudo_only,
+                                      big_data_gram_pos_only]
+    selective_data_folders_tests = [big_data_only_entero_and_pseudo, big_data_no_entero, big_data_no_pseudo,
+                                    big_data_no_gram_pos]
     universal_data_files = [universal_data_1, universal_data_2, universal_data_3, universal_data_4]
     test_data_folders_test = [bad_targets, big_data_entero_only]
     # Test new RiboDesigner for images
@@ -218,8 +225,10 @@ if __name__ == '__main__':
     control_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                          if f.startswith('1_designs')]
     control_design_results_file_names.sort()
-    batched_control_design_results_file_names = [name for name in control_design_results_file_names if 'batched' in name]
-    unbatched_control_design_results_file_names = [name for name in control_design_results_file_names if not 'batched' in name]
+    batched_control_design_results_file_names = [name for name in control_design_results_file_names if
+                                                 'batched' in name]
+    unbatched_control_design_results_file_names = [name for name in control_design_results_file_names if
+                                                   not 'batched' in name]
 
     ref_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                      if f.startswith('304_designs')]
@@ -231,31 +240,44 @@ if __name__ == '__main__':
                                         if f.startswith('326_designs')]
     random_design_results_file_names.sort()
     batched_random_design_results_file_names = [name for name in random_design_results_file_names if 'batched' in name]
-    unbatched_random_design_results_file_names = [name for name in random_design_results_file_names if not 'batched' in name]
+    unbatched_random_design_results_file_names = [name for name in random_design_results_file_names if
+                                                  not 'batched' in name]
 
     universal_design_archaea_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                    if f.startswith('14652_designs')]
     universal_design_archaea_results_file_names.sort()
-    batched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names if 'batched' in name]
-    unbatched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names if not 'batched' in name]
+    batched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names
+                                                           if 'batched' in name]
+    unbatched_universal_design_archaea_results_file_names = [name for name in
+                                                             universal_design_archaea_results_file_names if
+                                                             not 'batched' in name]
 
     universal_design_eukarya_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                    if f.startswith('72490_designs')]
     universal_design_eukarya_results_file_names.sort()
-    batched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names if 'batched' in name]
-    unbatched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names if not 'batched' in name]
+    batched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names
+                                                           if 'batched' in name]
+    unbatched_universal_design_eukarya_results_file_names = [name for name in
+                                                             universal_design_eukarya_results_file_names if
+                                                             not 'batched' in name]
 
     universal_design_bacteria_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                     if f.startswith('77193_designs')]
     universal_design_bacteria_results_file_names.sort()
-    batched_universal_design_bacteria_results_file_names = [name for name in universal_design_bacteria_results_file_names if 'batched' in name]
-    unbatched_universal_design_bacteria_results_file_names = [name for name in universal_design_bacteria_results_file_names if not 'batched' in name]
+    batched_universal_design_bacteria_results_file_names = [name for name in
+                                                            universal_design_bacteria_results_file_names if
+                                                            'batched' in name]
+    unbatched_universal_design_bacteria_results_file_names = [name for name in
+                                                              universal_design_bacteria_results_file_names if
+                                                              not 'batched' in name]
 
     universal_design_all_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
                                                if f.startswith('137620_designs')]
     universal_design_all_results_file_names.sort()
-    batched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if 'batched' in name]
-    unbatched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if not 'batched' in name]
+    batched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if
+                                                       'batched' in name]
+    unbatched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if
+                                                         not 'batched' in name]
 
     batched_all_targets_universal_design_file_names = [*batched_universal_design_archaea_results_file_names,
                                                        *batched_universal_design_eukarya_results_file_names,
@@ -265,7 +287,6 @@ if __name__ == '__main__':
                                                          *unbatched_universal_design_eukarya_results_file_names,
                                                          *unbatched_universal_design_bacteria_results_file_names,
                                                          *unbatched_universal_design_all_results_file_names]
-
 
     # # All data
     # make_graphs(control_designs_path=control_design_results_file_names,
@@ -371,8 +392,8 @@ if __name__ == '__main__':
     #                          design_data_path=[universal_design_results_file_names[5]],
     #                          ref_data_path=[random_design_results_file_names[4]], save_fig=True,
     #                          save_file_loc=folder_for_random_seq_results)
-
-    print(f'Graphs done!\n########################################################\n')
+    #
+    # print(f'Graphs done!\n########################################################\n')
 
     ################################################################################################################
 
@@ -482,11 +503,138 @@ if __name__ == '__main__':
     #             out_data = pool.starmap(ribo_checker, in_data)
     #         bar()
     #     print(f'{i} bp datasets analyzed.\n########################################################\n')
+    #
+    # post_local_output_folder_e_coli = 'test_output_files/varying_guide_lengths_e_coli'
+    # post_local_output_folder = 'test_output_files/varying_guide_lengths'
+    #
+    # make_violin_plots([('E. coli', post_local_output_folder_e_coli),
+    #                    ('Bacterial designs', post_local_output_folder)],
+    #                   vars_to_plot=['test_score', 'tm_nn_vs_test'], folder_to_save=post_local_output_folder_e_coli,
+    #                   file_type='png')
 
-    post_local_output_folder_e_coli = 'test_output_files/varying_guide_lengths_e_coli'
-    post_local_output_folder = 'test_output_files/varying_guide_lengths'
+    # ################################################################################################################
+    # # Selective designs!
+    # selective_background_data_pickles = []
+    '/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/test_outputs_selective'
+    selective_output_folder = 'test_output_files/test_outputs_selective'
+    # selective_background_data_pickles = []
+    # for test_data in selective_data_folders_tests:
+    #     print(f'Now testing {test_data}')
+    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+    #                                                    guide_length=n, igs_length=m, min_length=minlen,
+    #                                                    folder_to_save=selective_output_folder, graph_results=True,
+    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
+    #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
+    #                                                    msa_fast=True, remove_x_dupes_in_graph=True)
+    #     selective_background_data_pickles.append(test_seqs_pickle_file_name)
+    # selective_target_data_pickles = []
+    # for target_path in selective_data_folders_targets:
+    #     print(f'Now generating designs for {target_path}')
+    #     target_seq_file_name = ribodesigner(target_sequences_folder=target_path, ref_sequence_file=ref_path,
+    #                                         igs_length=m, guide_length=n, min_length=minlen, selective=False,
+    #                                         min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
+    #                                         percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+    #                                         random_guide_sample_size=10, folder_to_save=selective_output_folder)
+    #     selective_target_data_pickles.append(target_seq_file_name)
+    # selective_target_data_pickles = ['designs_Background_Bacteria_squished_no_pseudo_or_entero_universal.pickle',
+    #                                  'designs_Enterobacterales_only_by_Genus_1_universal.pickle',
+    #                                  'designs_Pseudomonadales_only_by_Genus_1_universal.pickle',
+    #                                  'designs_Gram_positives_only_universal.pickle']
+    # selective_target_data_pickles = [f'{selective_output_folder}/{file}' for file in selective_target_data_pickles]
+    # selective_background_data_pickles = ['test_sequences_Pseudo_and_entero_only_by_Genus_1.pickle',
+    #                                      'test_sequences_Background_Bacteria_squished_no_entero.pickle',
+    #                                      'test_sequences_Background_Bacteria_squished_no_pseudo.pickle',
+    #                                      'test_sequences_No_Gram_positives.pickle']
+    # selective_background_data_pickles = [f'{selective_output_folder}/{file}' for file in
+    #                                      selective_background_data_pickles]
+    #
+    # for target, background in zip(selective_target_data_pickles, selective_background_data_pickles):
+    #     print(f'Now coupling designs for {target} vs. {background} test sequences')
+    #     selective_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=target,
+    #                                                                       test_seqs_input=background,
+    #                                                                       flexible_igs=True,
+    #                                                                       file_to_save=selective_output_folder)
+    #     # Also go ahead and evaluate against all bacteria dataset
+    #     selective_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=target,
+    #                                                                       test_seqs_input=test_data_pickles[2],
+    #                                                                       flexible_igs=True,
+    #                                                                       file_to_save=selective_output_folder)
 
-    make_violin_plots([('E. coli', post_local_output_folder_e_coli),
-                       ('Bacterial designs', post_local_output_folder)],
-                      vars_to_plot=['test_score', 'tm_nn_vs_test'], folder_to_save=post_local_output_folder_e_coli,
-                      file_type='png')
+    # # finally, we test! Below is for local
+    # print('\n now testing... \n')
+    # get_tm_nn = True
+    coupled_file = 'test_output_files/test_outputs_selective/coupled/'
+    # in_data = [(coupled_file, number_of_workers, j, 1, False, n, get_tm_nn) for j in range(number_of_workers)]
+    # with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #     with mp.Pool(processes=len(in_data)) as pool:
+    #         out_data = pool.starmap(ribo_checker, in_data)
+    #     bar()
+
+    selective_designs_results_file_names = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results')
+                                            if f.endswith('results.txt')]
+    make_graphs(control_designs_path=batched_control_design_results_file_names,
+                universal_designs_path=batched_all_targets_universal_design_file_names,
+                ref_seq_designs_path=batched_ref_design_results_file_names,
+                random_seq_designs_path=batched_random_design_results_file_names,
+                selective_designs_path=selective_designs_results_file_names,
+                var_regs=e_coli_var_regs,
+                save_fig=True, save_file_loc=results_folder + '/batched')
+
+    print('Selecting best designs...')
+    order_these = []
+    out_file = 'test_output_files/best_designs'
+    # Get two best universal designs from bacteria at v8-9
+    test_files = batched_universal_design_bacteria_results_file_names
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=2,
+                                                      results_folder=out_file, design_type='universal', igs_min=0.7,
+                                                      guide_min=0.7, choose_var_reg_site=True,
+                                                      file_extra_text='_best_v8_to_9_bacteria', add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    # Get best bacteria design at v3-v4
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1,
+                                                      results_folder=out_file,
+                                      design_type='universal', igs_min=0.7, guide_min=0.7, choose_var_reg_site=True,
+                                      start_idx=497, end_idx=576, file_extra_text='_best_v3_to_4_bacteria',
+                                      add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    # Get three best universal designs at v8-9
+    test_files = batched_universal_design_all_results_file_names
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=3, results_folder=out_file,
+                                      design_type='universal', igs_min=0.7, guide_min=0.7, choose_var_reg_site=True,
+                                      file_extra_text='_best_true_universal', add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    # Get one best selective design for each testing set
+    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
+                  'Enterobacterales_only_by_Genus_1_universal_vs_test_sequences_Background_Bacteria_squished_no_entero'
+                  in f]
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+                                      file_extra_text='_best_for_entero_good_igs', add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
+                  'no_pseudo_or_entero_universal_vs_test_sequences_Pseudo_and_entero_only' in f]
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+                                      file_extra_text='_best_for_all_but_entero_or_pseudo_good_igs', add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
+                  'Pseudomonadales_only_by_Genus_1_universal_vs_test_sequences_Background_Bacteria_squished_no_pseudo'
+                  in f]
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+                                      file_extra_text='_best_for_pseudo_good_igs', add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if 'Gram_positives' in f]
+    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+                                      file_extra_text='_best_for_Gram_positives', add_overhangs=True)
+    order_these.append(design_with_overhangs)
+
+    print('Best designs selected')
+    print(order_these)
