@@ -1326,4 +1326,18 @@ def violin_plot_routine(vars_to_plot, all_data_df, folder_to_save, file_type: st
     plt.show()
     return
 
+
+def graphs_multiple_guide_lengths(universal_folders, selective_folders, output_folder):
+    # Load combined data
+
+
+    # generate categories: index is category (universal, selective vs. __), hue is bp ('Dataset' column)
+
+    # Extract categories: anything with target IGS > 0.7, target guide = 1 (no ambiguity)
+
+    # Couple selective designs by ID: selective relevant tested vs. background and tested vs. all bacteria
+    # Calculate a delta score for these (relevant test - background)
+
+    return
+
 # Delta difference plot between phyla?? for selective??

@@ -91,21 +91,21 @@ include_only_gram_pos = ['Actinobacteriota', 'Firmicutes']
 #                         num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_pseudo,
 #                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
 #
-# print('all but pseudo or entero')
-# generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_p_or_e, num_of_datasets=1,
-#                         num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_both,
-#                         exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
-
-print('gram positives only')
-generate_silva_datasets(silva_by_taxonomy_path, output_path_background_gram_pos, num_of_datasets=1,
-                        num_of_sequences=num_of_sequences_per_genus, include_only=include_only_gram_pos,
-                        exclude_taxonomy_level='Phylum', seed=seed)
-
-
-print('all but gram positives')
-generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_gram_pos, num_of_datasets=1,
-                        num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_gram_pos,
-                        exclude_taxonomy_level='Phylum', seed=seed)
+print('all but pseudo or entero')
+generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_p_or_e, num_of_datasets=2,
+                        num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_both,
+                        exclude_taxonomy_level=taxonomy_level_of_inclusion, seed=seed)
+#
+# print('gram positives only')
+# generate_silva_datasets(silva_by_taxonomy_path, output_path_background_gram_pos, num_of_datasets=2,
+#                         num_of_sequences=num_of_sequences_per_genus, include_only=include_only_gram_pos,
+#                         exclude_taxonomy_level='Phylum', seed=seed)
+#
+#
+# print('all but gram positives')
+# generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_gram_pos, num_of_datasets=2,
+#                         num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_gram_pos,
+#                         exclude_taxonomy_level='Phylum', seed=seed)
 
 print('done!')
 

@@ -513,72 +513,115 @@ if __name__ == '__main__':
     #                   file_type='png')
 
     # ################################################################################################################
-    # # Selective designs!
+    # # Selective designs! Testing guide lengths from 10 to 40 to complete my 10 to 50 dataset
+    # # selective_background_data_pickles = []
+    # '/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/test_outputs_selective'
+    # selective_output_folder_root = 'test_output_files/test_outputs_selective'
     # selective_background_data_pickles = []
-    '/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/KRG Thesis/test_outputs_selective'
-    selective_output_folder = 'test_output_files/test_outputs_selective'
-    # selective_background_data_pickles = []
-    # for test_data in selective_data_folders_tests:
-    #     print(f'Now testing {test_data}')
-    #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
-    #                                                    guide_length=n, igs_length=m, min_length=minlen,
-    #                                                    folder_to_save=selective_output_folder, graph_results=True,
-    #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
-    #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
-    #                                                    msa_fast=True, remove_x_dupes_in_graph=True)
-    #     selective_background_data_pickles.append(test_seqs_pickle_file_name)
-    # selective_target_data_pickles = []
-    # for target_path in selective_data_folders_targets:
-    #     print(f'Now generating designs for {target_path}')
-    #     target_seq_file_name = ribodesigner(target_sequences_folder=target_path, ref_sequence_file=ref_path,
-    #                                         igs_length=m, guide_length=n, min_length=minlen, selective=False,
-    #                                         min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
-    #                                         percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
-    #                                         random_guide_sample_size=10, folder_to_save=selective_output_folder)
-    #     selective_target_data_pickles.append(target_seq_file_name)
-    # selective_target_data_pickles = ['designs_Background_Bacteria_squished_no_pseudo_or_entero_universal.pickle',
-    #                                  'designs_Enterobacterales_only_by_Genus_1_universal.pickle',
-    #                                  'designs_Pseudomonadales_only_by_Genus_1_universal.pickle',
-    #                                  'designs_Gram_positives_only_universal.pickle']
-    # selective_target_data_pickles = [f'{selective_output_folder}/{file}' for file in selective_target_data_pickles]
-    # selective_background_data_pickles = ['test_sequences_Pseudo_and_entero_only_by_Genus_1.pickle',
-    #                                      'test_sequences_Background_Bacteria_squished_no_entero.pickle',
-    #                                      'test_sequences_Background_Bacteria_squished_no_pseudo.pickle',
-    #                                      'test_sequences_No_Gram_positives.pickle']
-    # selective_background_data_pickles = [f'{selective_output_folder}/{file}' for file in
-    #                                      selective_background_data_pickles]
+    # for i in range(10, 50, 10):
+    #     selective_output_folder = selective_output_folder_root + f'/{i}_bp'
+    #     for test_data in selective_data_folders_tests:
+    #         print(f'Now testing {test_data}')
+    #         test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+    #                                                        guide_length=i, igs_length=m, min_length=minlen,
+    #                                                        folder_to_save=selective_output_folder, graph_results=True,
+    #                                                        var_regs=e_coli_var_regs, graph_file_type='png',
+    #                                                        get_consensus_batches=True, batch_num=10,
+    #                                                        score_type='weighted',  msa_fast=True,
+    #                                                        remove_x_dupes_in_graph=True)
+    #         selective_background_data_pickles.append(test_seqs_pickle_file_name)
+    #     selective_target_data_pickles = []
+    #     for target_path in selective_data_folders_targets:
+    #         print(f'Now generating designs for {target_path}')
+    #         target_seq_file_name = ribodesigner(target_sequences_folder=target_path, ref_sequence_file=ref_path,
+    #                                             igs_length=m, guide_length=i, min_length=minlen, selective=False,
+    #                                             min_true_cov=0, msa_fast=True, score_type='weighted', n_limit=1,
+    #                                             percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+    #                                             random_guide_sample_size=10, folder_to_save=selective_output_folder)
+    #         selective_target_data_pickles.append(target_seq_file_name)
+    #     # selective_target_data_pickles = ['designs_Background_Bacteria_squished_no_pseudo_or_entero_universal.pickle',
+    #     #                                  'designs_Enterobacterales_only_by_Genus_1_universal.pickle',
+    #     #                                  'designs_Pseudomonadales_only_by_Genus_1_universal.pickle',
+    #     #                                  'designs_Gram_positives_only_universal.pickle']
+    #     # selective_target_data_pickles = [f'{selective_output_folder}/{file}' for file in selective_target_data_pickles]
+    #     # selective_background_data_pickles = ['test_sequences_Pseudo_and_entero_only_by_Genus_1.pickle',
+    #     #                                      'test_sequences_Background_Bacteria_squished_no_entero.pickle',
+    #     #                                      'test_sequences_Background_Bacteria_squished_no_pseudo.pickle',
+    #     #                                      'test_sequences_No_Gram_positives.pickle']
+    #     # selective_background_data_pickles = [f'{selective_output_folder}/{file}' for file in
+    #     #                                      selective_background_data_pickles]
     #
-    # for target, background in zip(selective_target_data_pickles, selective_background_data_pickles):
-    #     print(f'Now coupling designs for {target} vs. {background} test sequences')
-    #     selective_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=target,
-    #                                                                       test_seqs_input=background,
-    #                                                                       flexible_igs=True,
-    #                                                                       file_to_save=selective_output_folder)
-    #     # Also go ahead and evaluate against all bacteria dataset
-    #     selective_designs_coupled_file_name = couple_designs_to_test_seqs(designs_input=target,
-    #                                                                       test_seqs_input=test_data_pickles[2],
-    #                                                                       flexible_igs=True,
-    #                                                                       file_to_save=selective_output_folder)
-
-    # # finally, we test! Below is for local
-    # print('\n now testing... \n')
-    # get_tm_nn = True
-    coupled_file = 'test_output_files/test_outputs_selective/coupled/'
-    # in_data = [(coupled_file, number_of_workers, j, 1, False, n, get_tm_nn) for j in range(number_of_workers)]
-    # with alive_bar(unknown='fish', spinner='fishes') as bar:
-    #     with mp.Pool(processes=len(in_data)) as pool:
-    #         out_data = pool.starmap(ribo_checker, in_data)
-    #     bar()
-
-    selective_designs_results_file_names = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results')
-                                            if f.endswith('results.txt')]
-    make_graphs(control_designs_path=batched_control_design_results_file_names,
-                universal_designs_path=batched_all_targets_universal_design_file_names,
-                ref_seq_designs_path=batched_ref_design_results_file_names,
-                random_seq_designs_path=batched_random_design_results_file_names,
-                selective_designs_path=selective_designs_results_file_names,
-                var_regs=e_coli_var_regs,
-                save_fig=True, save_file_loc=results_folder + '/batched')
+    #     for target, background in zip(selective_target_data_pickles, selective_background_data_pickles):
+    #         print(f'Now coupling designs for {target} vs. {background} test sequences')
+    #         _ = couple_designs_to_test_seqs(designs_input=target, test_seqs_input=background, flexible_igs=True,
+    #                                         file_to_save=selective_output_folder)
+    #         # Also go ahead and evaluate against all bacteria dataset
+    #         _ = couple_designs_to_test_seqs(designs_input=target, test_seqs_input=test_data_pickles[2],
+    #                                         flexible_igs=True, file_to_save=selective_output_folder)
+    #
+    #     # finally, we test! Below is for local
+    #     print(f'\n now testing {i} bp... \n')
+    #     get_tm_nn = True
+    #     coupled_file = selective_output_folder + '/coupled/'
+    #     in_data = [(coupled_file, number_of_workers, j, 1, False, i, get_tm_nn) for j in range(number_of_workers)]
+    #     with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #         with mp.Pool(processes=len(in_data)) as pool:
+    #             out_data = pool.starmap(ribo_checker, in_data)
+    #         bar()
+    test_data_all = ['Datasets_used/SILVA_squished_datasets_1_per_genus/Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo_or_entero_2.fasta',
+     'Datasets_used/SILVA_squished_datasets_1_per_genus/Enterobacterales_only_squished/Enterobacterales_only_by_Genus_2.fasta',
+     'Datasets_used/SILVA_squished_datasets_1_per_genus/Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_2.fasta',
+     'Datasets_used/SILVA_squished_datasets_1_per_genus/Gram_positives_only/Gram_positives_only_2.fasta']
+    # for i in range(20, 60, 10):
+        # selective_output_folder = f'test_output_files/test_outputs_selective/{i}_bp'
+        # selective_background_data_pickles = []
+        # for test_data in test_data_all:
+        #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
+        #                                                    guide_length=i, igs_length=m, min_length=minlen,
+        #                                                    folder_to_save=selective_output_folder, graph_results=True,
+        #                                                    var_regs=e_coli_var_regs, graph_file_type='png',
+        #                                                    get_consensus_batches=True, batch_num=10,
+        #                                                    score_type='weighted',  msa_fast=True,
+        #                                                    remove_x_dupes_in_graph=True)
+        #     selective_background_data_pickles.append(test_seqs_pickle_file_name)
+        # selective_target_data_pickles = ['designs_Background_Bacteria_squished_no_pseudo_or_entero_universal.pickle',
+        #                                      'designs_Enterobacterales_only_by_Genus_1_universal.pickle',
+        #                                      'designs_Pseudomonadales_only_by_Genus_1_universal.pickle',
+        #                                      'designs_Gram_positives_only_universal.pickle']
+        # selective_target_data_pickles = [f'{selective_output_folder}/{file}' for file in selective_target_data_pickles]
+        # selective_background_data_pickles = ['test_sequences_Background_Bacteria_squished_no_pseudo_or_entero_2.pickle',
+        #                                          'test_sequences_Enterobacterales_only_by_Genus_2.pickle',
+        #                                          'test_sequences_Pseudomonadales_only_by_Genus_2.pickle',
+        #                                          'test_sequences_Gram_positives_only_2.pickle']
+        # selective_background_data_pickles = [f'{selective_output_folder}/{file}' for file in
+        #                                          selective_background_data_pickles]
+    #     out_file = f'test_output_files/test_outputs_selective/out_file/{i}_bp'
+    #     for target, background in zip(selective_target_data_pickles, selective_background_data_pickles):
+    #         print(f'Now coupling designs for {target} vs. {background} test sequences')
+    #         _ = couple_designs_to_test_seqs(designs_input=target, test_seqs_input=background, flexible_igs=True,
+    #                                         file_to_save=out_file)
+    #     # combine_data(f'test_output_files/test_outputs_selective/{i}_bp/coupled/results')
+    #     # finally, we test! Below is for local
+    #     print(f'\n now testing {i} bp... \n')
+    #     get_tm_nn = True
+    #     coupled_file = out_file + '/coupled/'
+    #     in_data = [(coupled_file, number_of_workers, j, 1, False, i, get_tm_nn) for j in range(number_of_workers)]
+    #     with alive_bar(unknown='fish', spinner='fishes') as bar:
+    #         with mp.Pool(processes=len(in_data)) as pool:
+    #             out_data = pool.starmap(ribo_checker, in_data)
+    #         bar()
+    # selective_designs_results_file_names = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results')
+    #                                         if f.endswith('results.txt')]
+    for i in range(10, 60, 10):
+        out_file = f'test_output_files/test_outputs_selective/out_file/{i}_bp'
+        combine_data(out_file + '/coupled/results/')
+    # make_graphs(control_designs_path=batched_control_design_results_file_names,
+    #             universal_designs_path=batched_all_targets_universal_design_file_names,
+    #             ref_seq_designs_path=batched_ref_design_results_file_names,
+    #             random_seq_designs_path=batched_random_design_results_file_names,
+    #             selective_designs_path=selective_designs_results_file_names,
+    #             var_regs=e_coli_var_regs,
+    #             save_fig=True, save_file_loc=results_folder + '/batched')
 
     print('Selecting best designs...')
     order_these = []
