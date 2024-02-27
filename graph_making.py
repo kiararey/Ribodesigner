@@ -1327,16 +1327,178 @@ def violin_plot_routine(vars_to_plot, all_data_df, folder_to_save, file_type: st
     return
 
 
-def graphs_multiple_guide_lengths(universal_folders, selective_folders, output_folder):
+def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder, file_type='png',
+                                  add_overhangs: bool = False, igs_overhang: str = 'GGTCTCttttt',
+                                  guide_overhang: str = 'gtcgtGAGACC'):
     # Load combined data
+    # generate categories: index is category (universal, selective), hue is bp ('Dataset' column)
+    all_data_df = None
+    for i in range(10, 60, 10):
+        print(f'Extracting designs for guide len {i} bp...')
+        u_files_root = universal_path + f'/{i}_bp/coupled/results/combined'
+        s_files_root = selective_path + f'/{i}_bp/coupled/results'
+        u_files = [f'{u_files_root}/{f}' for f in os.listdir(u_files_root) if f.endswith('.txt')]
+        s_files = [f'{s_files_root}/{f}' for f in os.listdir(s_files_root) if f.endswith('.txt')]
+        percentages, total_designs = set_percentages_for_bar([u_files, s_files])
+        with alive_bar(total=total_designs, spinner='fishes') as bar:
+            print('Now loading universal data...')
+            if all_data_df is None:
+                all_data_df = import_data_to_df(u_files, 'universal')
+                labels = [f'{i} bp'] * all_data_df.shape[0]
+                all_data_df.insert(0, 'Dataset', labels)
+            else:
+                universal_designs_df = import_data_to_df(u_files, 'universal')
+                labels = [f'{i} bp'] * universal_designs_df.shape[0]
+                universal_designs_df.insert(0, 'Dataset', labels)
+                all_data_df = pd.concat([all_data_df, universal_designs_df])
+            bar(percentages[0])
+            print('Universal data loaded! Now loading selective data...')
+            selective_designs_df = import_data_to_df(s_files, 'selective')
+            labels = [f'{i} bp'] * selective_designs_df.shape[0]
+            selective_designs_df.insert(0, 'Dataset', labels)
+            all_data_df = pd.concat([all_data_df, selective_designs_df])
+            bar(percentages[1])
+            print('Selective data loaded!\n')
 
+    # generate categories: Extract target and test dataset names
+    fn_target = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[0]
+    fn_test = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[1]
+    all_data_df['target_dataset'] = all_data_df['name_of_test_dataset'].map(fn_target)
+    all_data_df['test_dataset'] = all_data_df['name_of_test_dataset'].map(fn_test)
 
-    # generate categories: index is category (universal, selective vs. __), hue is bp ('Dataset' column)
+    # The names of the corresponding test sequences for each target ({target name: background name})
+    paired_names = {'Enterobacterales_only_by_Genus_2.coupled': 'Background_Bacteria_squished_no_entero.coupled',
+                    'Pseudomonadales_only_by_Genus_2.coupled': 'Background_Bacteria_squished_no_pseudo.coupled',
+                    'Gram_positives_only_2.coupled': 'No_Gram_positives.coupled',
+                    'Background_Bacteria_squished_no_pseudo_or_entero_2.coupled':
+                        'Pseudo_and_entero_only_by_Genus_1.coupled'}
 
-    # Extract categories: anything with target IGS > 0.7, target guide = 1 (no ambiguity)
+    # Get relevant columns for this graph
+    filtered_df_all = all_data_df[['Dataset', 'id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
+                               'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
+                               'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
+                                   'target_dataset', 'test_dataset']]
+    filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
+                                  + '_' + filtered_df_all['Dataset'])
+    # Extract categories: anything with target guide = 1 (no ambiguity) and target coverage > 0.7
+    filtered_df_all = filtered_df_all[filtered_df_all['score'] == 1]
+    filtered_df = filtered_df_all[filtered_df_all['true_%_cov'] >= 0.1]
+
+    # selective
+    selective_subset = filtered_df[filtered_df.index == 'selective']
+    # selective_subset['to_pair'] = (selective_subset['id'] + '_' + selective_subset['target_dataset']
+    #                                + '_' + selective_subset['Dataset'])
+    selective_subset.reset_index(inplace=True)
 
     # Couple selective designs by ID: selective relevant tested vs. background and tested vs. all bacteria
     # Calculate a delta score for these (relevant test - background)
+    best_selective = []
+    for target, background in paired_names.items():
+        target_row = selective_subset[selective_subset['test_dataset'] == target]
+        background_row = selective_subset[selective_subset['test_dataset'] == background]
+        background_row.index = target_row.index
+        background_row['igs_test_minus_background'] = target_row['true_%_cov_test'] - background_row['true_%_cov_test']
+        background_row['guide_test_minus_background'] = target_row['test_score'] - background_row['test_score']
+        background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
+        background_row['test_score_test_is_target'] = target_row['test_score']
+        background_row.index = background_row['index']
+        for i in range(10, 60, 10):
+            subset = background_row[background_row['Dataset'] == f'{i} bp']
+            best_design = subset[subset['igs_test_minus_background'] ==
+                                 subset['igs_test_minus_background'].max()]
+            best_selective.append(best_design)
+
+    best_selective_designs = pd.concat(best_selective)
+    # best_selective_designs.drop(columns='index')
+    fn_cleanup_name = lambda x: x.split('designs_')[-1].split('_universal')[0].split('_only')[0].replace('_', ' ').replace('Background Bacteria squished', '')
+    best_selective_designs['Design type'] = best_selective_designs['target_dataset'].map(fn_cleanup_name)
+
+    # Find best design for each universal
+    universal_designs = filtered_df_all[(filtered_df_all.index == 'universal') &
+                                (filtered_df_all['target_dataset'] == 'designs_Bacteria_Only_by_Genus_2_universal')]
+    # Pull out designs at u1376
+    u1376_designs = universal_designs[(universal_designs['id'] == 'TTCAC1376') ]
+    best_universal = []
+    worst_universal = []
+    worst_subset = []
+    for i in range(10, 60, 10):
+        subset = universal_designs[universal_designs['Dataset'] == f'{i} bp']
+        best_universal.append(subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].max()])
+        worst_universal.append(subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].min()])
+        worst_subset.append(subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].min()].head(1))
+    best_universal = pd.concat(best_universal)
+    best_universal['Design type'] = ['Best universal bacteria'] * best_universal.shape[0]
+    worst_universal = pd.concat(worst_universal)
+    worst_universal['Design type'] = ['Worst universal bacteria'] * worst_universal.shape[0]
+    u1376_designs['Design type'] = ['Original design'] * u1376_designs.shape[0]
+    worst_subset = pd.concat(worst_subset)
+    worst_subset['Design type']  = ['Worst universal bacteria'] * worst_subset.shape[0]
+    universal_designs_select = pd.concat([best_universal, worst_universal, worst_subset])
+
+    best_all_to_order = pd.concat([best_universal, u1376_designs, best_selective_designs, worst_subset])
+
+    # Finally, graph!
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20 * 0.8, 20 * 0.8)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    vars = [('true_%_cov_test', 'test_score'), ('true_%_cov_test_is_target', 'test_score_test_is_target')]
+    for name, current_set , current_vars in [('universal', universal_designs_select, vars[0]),
+                                             ('selective', best_selective_designs, vars[1])]:
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=7)
+        joint_ax = {0: jointplot_fig.add_subplot(gridspec[0:3, 0:7]), 1: jointplot_fig.add_subplot(gridspec[3:6, 0:7])}
+        sns.pointplot(x='Design type', y=current_vars[0], hue='Dataset', data=current_set, ax=joint_ax[0], dodge=.4,
+                      linestyle='none')
+        sns.pointplot(x='Design type', y=current_vars[1], hue='Dataset', data=current_set, ax=joint_ax[1], dodge=.4,
+                      linestyle='none')
+        joint_ax[0].label_outer()
+        jointplot_fig.suptitle(f'Scores vs. guide length {name}')
+        joint_ax[0].set(ylim=[0, 1.1], ylabel='IGS true coverage')
+        joint_ax[0].get_legend().remove()
+        joint_ax[1].set(ylim=[0, 1.1], ylabel='Guide score')
+        joint_ax[1].legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=5, title='Guide length')
+
+        plt.tight_layout()
+        plt.savefig(fname=f'{output_folder}/{name}_scores.{file_type}', format=file_type)
+        plt.show()
+
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=7)
+    joint_ax = {0: jointplot_fig.add_subplot(gridspec[0:3, 0:7]), 1: jointplot_fig.add_subplot(gridspec[3:6, 0:7])}
+    sns.pointplot(x='Design type', y='igs_test_minus_background', hue='Dataset', data=best_selective_designs,
+                  ax=joint_ax[0], dodge=.4, linestyle='none')
+    sns.pointplot(x='Design type', y='guide_test_minus_background', hue='Dataset', data=best_selective_designs,
+                  ax=joint_ax[1], dodge=.4, linestyle='none')
+    joint_ax[0].label_outer()
+    jointplot_fig.suptitle('Delta scores for selective designs')
+    joint_ax[0].set(ylim=[0, 1.1], ylabel='\u0394 IGS true coverage')
+    joint_ax[0].get_legend().remove()
+    joint_ax[1].set(ylim=[-0.1, 1.1], ylabel='\u0394 guide score')
+    joint_ax[1].legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=5, title='Guide length')
+
+    plt.tight_layout()
+    plt.savefig(fname=f'{output_folder}/{name}_delta_scores.{file_type}', format=file_type)
+    plt.show()
+
+    # Extract designs too
+    best_all_to_order = pd.concat([best_universal, u1376_designs, best_selective_designs, worst_subset])
+
+    # rearrange columns
+    best_all_to_order['Dataset'] = best_all_to_order['to_pair']
+    best_all_to_order.drop('to_pair')
+
+    igses = best_all_to_order['igs'].tolist()
+    guides = best_all_to_order['guide'].tolist()
+    to_order = []
+    for igs, guide in zip(igses, guides):
+        design = igs + 'g' + guide
+        if add_overhangs:
+            design = igs_overhang + design + guide_overhang
+        to_order.append(design)
+    best_all_to_order.insert(loc=2, column='Sequence with ordering overhangs', value=to_order)
+    file_name = f'{output_folder}/best_designs.csv'
+    if os.path.exists(file_name):
+        os.remove(file_name)
+    best_all_to_order.to_csv(file_name, index=False)
 
     return
 
