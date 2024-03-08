@@ -1497,9 +1497,6 @@ def select_designs(tested_to_targets_path: list[str], designs_required: int, res
     By default find things in E. coli conserved region between V8-V9.default is E. coli from:
     Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
     segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
-
-    var_regs = {V1: (69, 99), V2:(137, 242), V3:(433, 497), V4:(576, 682), V5:(822, 879), V6:(986, 1043),
-    V7:(1117, 1173), V8:(1243, 1294), V9:(1435, 1465)}
     :return:
     """
 

@@ -86,6 +86,9 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     fasta_file_names = np.array(
         [file_name for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
 
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
+
     # Prepare list to store data in:
     seqs_to_write = [np.empty(0)] * num_of_datasets
 

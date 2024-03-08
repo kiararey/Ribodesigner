@@ -4,7 +4,8 @@ from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
                           select_designs)
-from graph_making import make_graphs, make_sequence_logo_graph, make_violin_plots, graphs_multiple_guide_lengths
+from graph_making import (make_graphs, make_sequence_logo_graph, make_violin_plots, graphs_multiple_guide_lengths,
+                          graphs_multiple_conditions)
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -21,6 +22,20 @@ if __name__ == '__main__':
         number_of_workers = mp.cpu_count()
         pass
 
+    def run_local(output_folder, guide_len):
+        # finally, we test! Below is for local
+        print(f'\n now testing {output_folder}... \n')
+        get_tm_nn = True
+        coupled_file = output_folder + '/coupled/'
+        in_data = [(coupled_file, number_of_workers, j, 1, False, guide_len, get_tm_nn)
+                   for j in range(number_of_workers)]
+        with alive_bar(unknown='fish', spinner='fishes') as bar:
+            with mp.Pool(processes=len(in_data)) as pool:
+                out_data = pool.starmap(ribo_checker, in_data)
+            bar()
+        combine_data(output_folder + '/coupled/results/')
+        return  out_data
+
     # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
     barcode_seq_file = 'Common_sequences/sfGFP_2_seq_barcode.txt'
 
@@ -35,6 +50,8 @@ if __name__ == '__main__':
 
     # Reference sequence - will have to be E. coli to graph the variable regions
     ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
+    ref_path_arc = 'Common_sequences/Methanobrevibacter smithii 16s.fasta'
+    ref_path_euk = 'Common_sequences/Saccharomyces cerevisiae 18s.fasta'
 
     # Our random sequence!
     random_seq_path = 'Common_sequences/Lactobacillus_casei_example.fasta'
@@ -108,6 +125,7 @@ if __name__ == '__main__':
 
     # # Here we make the designs batched
     # for test_data in test_data_folders:
+    #     test_data = background_data_bac
     #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
     #                                                    guide_length=n, igs_length=m, min_length=minlen,
     #                                                    folder_to_save=test_output_folder, graph_results=True,
@@ -115,7 +133,7 @@ if __name__ == '__main__':
     #                                                    get_consensus_batches=True, batch_num=10, score_type='weighted',
     #                                                    msa_fast=True, remove_x_dupes_in_graph=True)
     #     test_data_pickles.append(test_seqs_pickle_file_name)
-    # #
+    # # #
     # # unbatched
     # for test_data in test_data_folders:
     #     test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_data, ref_sequence_file=ref_path,
@@ -650,65 +668,141 @@ if __name__ == '__main__':
     #         bar()
     #     combine_data(output_folder + '/coupled/results/')
 
-    graphs_multiple_guide_lengths(universal_path='test_output_files/varying_guide_lengths',
-                                  selective_path='test_output_files/test_outputs_selective',
-                                  output_folder='test_output_files/best_designs')
+    # graphs_multiple_guide_lengths(universal_path='test_output_files/varying_guide_lengths',
+    #                               selective_path='test_output_files/test_outputs_selective',
+    #                               output_folder='test_output_files/best_designs', add_overhangs=True)
 
-    print('Selecting best designs...')
-    order_these = []
-    out_file = 'test_output_files/best_designs'
-    # Get two best universal designs from bacteria at v8-9
-    test_files = batched_universal_design_bacteria_results_file_names
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=2,
-                                                      results_folder=out_file, design_type='universal', igs_min=0.7,
-                                                      guide_min=0.7, choose_var_reg_site=True,
-                                                      file_extra_text='_best_v8_to_9_bacteria', add_overhangs=True)
-    order_these.append(design_with_overhangs)
+    # print('Selecting best designs...')
+    # order_these = []
+    # out_file = 'test_output_files/best_designs'
+    # # Get two best universal designs from bacteria at v8-9
+    # test_files = batched_universal_design_bacteria_results_file_names
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=2,
+    #                                                   results_folder=out_file, design_type='universal', igs_min=0.7,
+    #                                                   guide_min=0.7, choose_var_reg_site=True,
+    #                                                   file_extra_text='_best_v8_to_9_bacteria', add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # # Get best bacteria design at v3-v4
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1,
+    #                                                   results_folder=out_file,
+    #                                   design_type='universal', igs_min=0.7, guide_min=0.7, choose_var_reg_site=True,
+    #                                   start_idx=497, end_idx=576, file_extra_text='_best_v3_to_4_bacteria',
+    #                                   add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # # Get three best universal designs at v8-9
+    # test_files = batched_universal_design_all_results_file_names
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=3, results_folder=out_file,
+    #                                   design_type='universal', igs_min=0.7, guide_min=0.7, choose_var_reg_site=True,
+    #                                   file_extra_text='_best_true_universal', add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # # Get one best selective design for each testing set
+    # test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
+    #               'Enterobacterales_only_by_Genus_1_universal_vs_test_sequences_Background_Bacteria_squished_no_entero'
+    #               in f]
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+    #                                   design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+    #                                   file_extra_text='_best_for_entero_good_igs', add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
+    #               'no_pseudo_or_entero_universal_vs_test_sequences_Pseudo_and_entero_only' in f]
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+    #                                   design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+    #                                   file_extra_text='_best_for_all_but_entero_or_pseudo_good_igs', add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
+    #               'Pseudomonadales_only_by_Genus_1_universal_vs_test_sequences_Background_Bacteria_squished_no_pseudo'
+    #               in f]
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+    #                                   design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+    #                                   file_extra_text='_best_for_pseudo_good_igs', add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if 'Gram_positives' in f]
+    # design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
+    #                                   design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
+    #                                   file_extra_text='_best_for_Gram_positives', add_overhangs=True)
+    # order_these.append(design_with_overhangs)
+    #
+    # print('Best designs selected')
+    # print(order_these)
 
-    # Get best bacteria design at v3-v4
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1,
-                                                      results_folder=out_file,
-                                      design_type='universal', igs_min=0.7, guide_min=0.7, choose_var_reg_site=True,
-                                      start_idx=497, end_idx=576, file_extra_text='_best_v3_to_4_bacteria',
-                                      add_overhangs=True)
-    order_these.append(design_with_overhangs)
+    # # Ok here we're going to generate archaeal designs w archaeal ref seq and eukaryotic designs w eukaryotic ref seq
+    # files = [(background_data_arc, ref_path_arc, e_coli_var_regs, 'archaea', universal_data_2),
+    #          (background_data_euk, ref_path_euk, s_cerevisiae_var_regs, 'eukarya', universal_data_3)]
+    # for file, ref_seq, var_regs, a, target in files:
+        # test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_seq, guide_length=n,
+        #                                                igs_length=m, min_length=minlen, folder_to_save=output_path + a,
+        #                                                graph_results=True, var_regs=var_regs, graph_file_type='png',
+        #                                                get_consensus_batches=True, batch_num=10, score_type='weighted',
+        #                                                msa_fast=True, remove_x_dupes_in_graph=True)
+        # # make appropriate designs
+        # design_pickle_name = ribodesigner(target_sequences_folder=target, ref_sequence_file=ref_seq, guide_length=n,
+        #                                   igs_length=m, min_length=minlen, folder_to_save=output_path + a,
+        #                                   selective=False, min_true_cov=0, msa_fast=True, score_type='weighted',
+        #                                   n_limit=1, percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+        #                                   random_guide_sample_size=10)
+        # _ = couple_designs_to_test_seqs(designs_input=design_pickle_name, test_seqs_input=test_seqs_pickle_file_name,
+        #                                 flexible_igs=True, file_to_save=output_path + a)
+        # output = run_local(output_folder=output_path+a, guide_len=n)
 
-    # Get three best universal designs at v8-9
-    test_files = batched_universal_design_all_results_file_names
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=3, results_folder=out_file,
-                                      design_type='universal', igs_min=0.7, guide_min=0.7, choose_var_reg_site=True,
-                                      file_extra_text='_best_true_universal', add_overhangs=True)
-    order_these.append(design_with_overhangs)
+    # # Generate test sequences with taxonomy
+    # taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
+    # to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes'],
+    #                'Class': ['Gammaproteobacteria', 'Bacilli'],
+    #                'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
+    #                'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
+    #                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
+    # test_seq_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Selective datasets per taxonomy/'
+    # save_file_path = output_path + 'selective_by_taxonomy/'
+    #
+    # # Graph!
+    # test_seqs_to_process = [([test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_1.fasta',
+    #                           test_seq_path + f'{taxonomy}_{include}_excluded/{taxonomy}_{include}_excluded_1.fasta'],
+    #                          save_file_path + f'{taxonomy}_{include}')
+    #                         for taxonomy in taxonomy_levels_all for include in to_generate[taxonomy]]
+    # target_seqs_to_process = [test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_2.fasta'
+    #                         for taxonomy in taxonomy_levels_all for include in to_generate[taxonomy]]
+    # for (test_files, out_path), target_file in zip(test_seqs_to_process, target_seqs_to_process):
+    #     all_test_file_names = []
+    #     for file in test_files:
+    #         title = file.split('.')[0].split('/')[-1]
+    #         test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
+    #         all_test_file_names.append(test_save_file_name)
+    #         if not os.path.exists(test_save_file_name):
+    #             test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_path,
+    #                                                            guide_length=n, igs_length=m, min_length=minlen,
+    #                                                            folder_to_save=out_path,
+    #                                                            graph_results=True, var_regs=e_coli_var_regs,
+    #                                                            graph_file_type='png', get_consensus_batches=True,
+    #                                                            batch_num=10, score_type='weighted', msa_fast=True,
+    #                                                            remove_x_dupes_in_graph=True)
+    #         else:
+    #             print(f'{test_save_file_name} exists already! Moving on...')
+    #
+    #     target_title = target_file.split('.')[0].split('/')[-1]
+    #     target_save_file_name = f'{out_path}/designs_{target_title}_universal.pickle'
+    #
+    #     if not os.path.exists(target_save_file_name):
+    #         design_pickle_name = ribodesigner(target_sequences_folder=target_file, ref_sequence_file=ref_path,
+    #                                               guide_length=n,
+    #                                               igs_length=m, min_length=minlen, fileout=False,
+    #                                               folder_to_save=out_path,
+    #                                               selective=False, min_true_cov=0, msa_fast=True, score_type='weighted',
+    #                                               n_limit=1, percent_of_target_seqs_used=1, gaps_allowed=False,
+    #                                               random_guide_sample_size=10)
+    #     else:
+    #         print(f'{target_save_file_name} exists already! Moving on...')
+    #     # for test_outfile in all_test_file_names:
+    #         # _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
+    #         #                                 flexible_igs=True, file_to_save=out_path)
+    #     output = run_local(output_folder=out_path, guide_len=n)
 
-    # Get one best selective design for each testing set
-    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
-                  'Enterobacterales_only_by_Genus_1_universal_vs_test_sequences_Background_Bacteria_squished_no_entero'
-                  in f]
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
-                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
-                                      file_extra_text='_best_for_entero_good_igs', add_overhangs=True)
-    order_these.append(design_with_overhangs)
-
-    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
-                  'no_pseudo_or_entero_universal_vs_test_sequences_Pseudo_and_entero_only' in f]
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
-                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
-                                      file_extra_text='_best_for_all_but_entero_or_pseudo_good_igs', add_overhangs=True)
-    order_these.append(design_with_overhangs)
-
-    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if
-                  'Pseudomonadales_only_by_Genus_1_universal_vs_test_sequences_Background_Bacteria_squished_no_pseudo'
-                  in f]
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
-                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
-                                      file_extra_text='_best_for_pseudo_good_igs', add_overhangs=True)
-    order_these.append(design_with_overhangs)
-
-    test_files = [f'{coupled_file}results/{f}' for f in os.listdir(coupled_file + 'results') if 'Gram_positives' in f]
-    design_with_overhangs, design_df = select_designs(tested_to_targets_path=test_files, designs_required=1, results_folder=out_file,
-                                      design_type='selective', igs_min=0.7, guide_min=0, choose_var_reg_site=False,
-                                      file_extra_text='_best_for_Gram_positives', add_overhangs=True)
-    order_these.append(design_with_overhangs)
-
-    print('Best designs selected')
-    print(order_these)
+    graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
+                               selective_path='test_output_files/selective_by_taxonomy',
+                               output_folder='test_output_files/best_designs/For experimental selection',
+                               add_overhangs=True)
