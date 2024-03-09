@@ -75,63 +75,7 @@ class RibozymeDesign:
                  u_consv_background_attr: float = None, tested_design_attr: bool = False,
                  perc_cov_test_attr: float = None,
                  perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None):
-        if dict_initialize:
-            # First, do most data
-            self.id = dict_initialize['id']
-            self.igs = dict_initialize['igs']
-            self.ref_idx = dict_initialize['reference_idx']
-            self.optimized_to_targets = dict_initialize['optimized_to_targets']
-            self.optimized_to_background = dict_initialize['optimized_to_background']
-            self.tested = dict_initialize['tested']
-            self.tested_design = dict_initialize['tested_design']
-            self.guide = dict_initialize['guide']
-            self.number_of_targets = dict_initialize['num_of_targets']
-            self.score_type = dict_initialize['score_type']
-            self.score = dict_initialize['score']
-            self.perc_cov = dict_initialize['%_coverage']
-            self.perc_on_target = dict_initialize['%_on target']
-            self.true_perc_cov = dict_initialize['true_%_cov']
-            self.composite_score = dict_initialize['composite_score']
-            self.number_of_targets_background = dict_initialize['num_of_targets_background']
-            self.u_conservation_background = dict_initialize['u_conservation_background']
-            self.background_score = dict_initialize['background_score']
-            self.perc_cov_background = dict_initialize['%_coverage_background']
-            self.perc_on_target_background = dict_initialize['%_on target_background']
-            self.true_perc_cov_background = dict_initialize['true_%_cov_background']
-            self.composite_background_score = dict_initialize['composite_background_score']
-            self.delta_igs_vs_background = dict_initialize['delta_igs_vs_background']
-            self.delta_guide_vs_background = dict_initialize['delta_guide_vs_background']
-            self.delta_vs_background = dict_initialize['delta_vs_background']
-            self.name_of_test_dataset = dict_initialize['name_of_test_dataset']
-            self.number_of_targets_test = dict_initialize['num_of_targets_test']
-            self.u_conservation_test = dict_initialize['u_conservation_test']
-            self.test_score = dict_initialize['test_score']
-            self.test_tm_nn = dict_initialize['tm_nn_vs_test']
-            self.perc_cov_test = dict_initialize['%_coverage_test']
-            self.perc_on_target_test = dict_initialize['%_on target_test']
-            self.true_perc_cov_test = dict_initialize['true_%_cov_test']
-            self.composite_test_score = dict_initialize['composite_test_score']
-            self.delta_igs_vs_test = dict_initialize['delta_igs_vs_test']
-            self.delta_guide_vs_test = dict_initialize['delta_guide_vs_test']
-            self.delta_vs_test = dict_initialize['delta_vs_test']
-            # Then, targets will be a bit messy. Should fix this later, right now I just need it to work
-            self.targets = zip(dict_initialize['target_Domain'], dict_initialize['target_Phylum'],
-                               dict_initialize['target_Class'], dict_initialize['target_Order'],
-                               dict_initialize['target_Family'], dict_initialize['target_Genus'],
-                               dict_initialize['target_Species'], dict_initialize['target_Taxon'])
-            self.test_targets = zip(dict_initialize['target_Domain_test'], dict_initialize['target_Phylum_test'],
-                                    dict_initialize['target_Class_test'], dict_initialize['target_Order_test'],
-                                    dict_initialize['target_Family_test'], dict_initialize['target_Genus_test'],
-                                    dict_initialize['target_Species_test'], dict_initialize['target_Taxon_test'])
-            self.background_targets = zip(dict_initialize['target_Domain_background'],
-                                          dict_initialize['target_Phylum_background'],
-                                          dict_initialize['target_Class_background'],
-                                          dict_initialize['target_Order_background'],
-                                          dict_initialize['target_Family_background'],
-                                          dict_initialize['target_Genus_background'],
-                                          dict_initialize['target_Species_background'],
-                                          dict_initialize['target_Taxon_background'])
-        else:
+        
             self.id = id_attr
             if igs_attr:
                 self.igs = igs_attr
