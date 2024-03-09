@@ -74,8 +74,7 @@ class RibozymeDesign:
                  background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
                  u_consv_background_attr: float = None, tested_design_attr: bool = False,
                  perc_cov_test_attr: float = None,
-                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None,
-                 dict_initialize: dict = None):
+                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None):
         if dict_initialize:
             # First, do most data
             self.id = dict_initialize['id']
