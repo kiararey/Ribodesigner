@@ -482,6 +482,9 @@ class RibozymeDesign:
             print('Please optimize to targets or optimize to targets then to background first.')
             return
         return text
+    
+    def initizalize_by_dict(self, init_dict: dict):
+        self.__dict__.update(init_dict)
 
 
 def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
