@@ -35,7 +35,7 @@ class PercentCoverage:
         if self.on_target and self.true and not self.with_igs:
             self.with_igs = self.true / self.on_target
 
-    
+
 # Expanded version of SilvaSequence
 class TargetSeq:
     # Important: TargetSeq id must be formatted like a Silva sequence if we want the give_taxonomy function to work!
@@ -80,16 +80,13 @@ class RibozymeDesign:
     """
 
     def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
-                 guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
-                 perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
+                 guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', design_coverage: PercentCoverage = PercentCoverage(),
                  background_tm_nn_attr: float = None,
-                 background_score_attr: float = None, perc_cov_background_attr: float = None,
-                 perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
+                 background_score_attr: float = None, background_coverage: PercentCoverage = PercentCoverage(),
                  background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
                  background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
                  u_consv_background_attr: float = None, tested_design_attr: bool = False,
-                 perc_cov_test_attr: float = None,
-                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None,
+                 test_coverage: PercentCoverage = PercentCoverage(),
                  dict_initialize: dict = None):
         if dict_initialize:
             # First, do most data
