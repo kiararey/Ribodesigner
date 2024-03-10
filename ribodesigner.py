@@ -213,9 +213,7 @@ class RibozymeDesign:
             self.guide_batches = None
             self.test_targets = None
             self.u_conservation_test = None
-            self.perc_cov_test = perc_cov_test_attr
-            self.perc_on_target_test = perc_on_target_test_attr
-            self.true_perc_cov_test = true_perc_cov_test_attr
+            self.design_coverage = design_coverage
             self.test_score = None
             self.test_tm_nn = None
             self.composite_test_score = None
