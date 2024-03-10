@@ -17,10 +17,19 @@ from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from alive_progress import alive_bar
 from icecream import ic
+from dataclasses import dataclass
 
 ic.configureOutput(prefix='debug | --> ')
 
+@dataclass
+class PercentCoverage:
+    with_igs: float | None = None
+    on_target: float | None = None 
+    true: float | None = None 
 
+    def __post_init__(self):
+        raise NotImplementedError
+    
 # Expanded version of SilvaSequence
 class TargetSeq:
     # Important: TargetSeq id must be formatted like a Silva sequence if we want the give_taxonomy function to work!
