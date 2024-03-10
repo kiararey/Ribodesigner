@@ -28,7 +28,13 @@ class PercentCoverage:
     true: float | None = None 
 
     def __post_init__(self):
-        raise NotImplementedError
+        if self.with_igs and self.on_target and not self.true:
+            self.true = self.with_igs * self.on_target
+        if self.with_igs and self.true and not self.on_target:
+            self.on_target = self.true / self.with_igs
+        if self.on_target and self.true and not self.with_igs:
+            self.with_igs = self.true / self.on_target
+
     
 # Expanded version of SilvaSequence
 class TargetSeq:
