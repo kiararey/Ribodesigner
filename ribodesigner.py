@@ -101,16 +101,16 @@ class RibozymeDesign:
             self.number_of_targets = dict_initialize['num_of_targets']
             self.score_type = dict_initialize['score_type']
             self.score = dict_initialize['score']
-            self.perc_cov = dict_initialize['%_coverage']
-            self.perc_on_target = dict_initialize['%_on target']
-            self.true_perc_cov = dict_initialize['true_%_cov']
+            # self.perc_cov = dict_initialize['%_coverage']
+            # self.perc_on_target = dict_initialize['%_on target']
+            # self.true_perc_cov = dict_initialize['true_%_cov']
             self.composite_score = dict_initialize['composite_score']
             self.number_of_targets_background = dict_initialize['num_of_targets_background']
             self.u_conservation_background = dict_initialize['u_conservation_background']
             self.background_score = dict_initialize['background_score']
-            self.perc_cov_background = dict_initialize['%_coverage_background']
-            self.perc_on_target_background = dict_initialize['%_on target_background']
-            self.true_perc_cov_background = dict_initialize['true_%_cov_background']
+            # self.perc_cov_background = dict_initialize['%_coverage_background']
+            # self.perc_on_target_background = dict_initialize['%_on target_background']
+            # self.true_perc_cov_background = dict_initialize['true_%_cov_background']
             self.composite_background_score = dict_initialize['composite_background_score']
             self.delta_igs_vs_background = dict_initialize['delta_igs_vs_background']
             self.delta_guide_vs_background = dict_initialize['delta_guide_vs_background']
@@ -120,9 +120,9 @@ class RibozymeDesign:
             self.u_conservation_test = dict_initialize['u_conservation_test']
             self.test_score = dict_initialize['test_score']
             self.test_tm_nn = dict_initialize['tm_nn_vs_test']
-            self.perc_cov_test = dict_initialize['%_coverage_test']
-            self.perc_on_target_test = dict_initialize['%_on target_test']
-            self.true_perc_cov_test = dict_initialize['true_%_cov_test']
+            # self.perc_cov_test = dict_initialize['%_coverage_test']
+            # self.perc_on_target_test = dict_initialize['%_on target_test']
+            # self.true_perc_cov_test = dict_initialize['true_%_cov_test']
             self.composite_test_score = dict_initialize['composite_test_score']
             self.delta_igs_vs_test = dict_initialize['delta_igs_vs_test']
             self.delta_guide_vs_test = dict_initialize['delta_guide_vs_test']
@@ -301,17 +301,17 @@ class RibozymeDesign:
             'num_of_targets': self.number_of_targets,
             'score_type': self.score_type,
             'score': self.score,
-            '%_coverage': self.perc_cov,
-            '%_on target': self.perc_on_target,
-            'true_%_cov': self.true_perc_cov,
+            # '%_coverage': self.perc_cov,
+            # '%_on target': self.perc_on_target,
+            # 'true_%_cov': self.true_perc_cov,
             'composite_score': self.composite_score,
             'num_of_targets_background': self.number_of_targets_background,
             'u_conservation_background': self.u_conservation_background,
             'background_score': self.background_score,
             # 'tm_nn_vs_background': self.background_tm_nn,
-            '%_coverage_background': self.perc_cov_background,
-            '%_on target_background': self.perc_on_target_background,
-            'true_%_cov_background': self.true_perc_cov_background,
+            # '%_coverage_background': self.perc_cov_background,
+            # '%_on target_background': self.perc_on_target_background,
+            # 'true_%_cov_background': self.true_perc_cov_background,
             'composite_background_score': self.composite_background_score,
             'delta_igs_vs_background': self.delta_igs_vs_background,
             'delta_guide_vs_background': self.delta_guide_vs_background,
@@ -321,9 +321,9 @@ class RibozymeDesign:
             'u_conservation_test': self.u_conservation_test,
             'test_score': self.test_score,
             'tm_nn_vs_test': self.test_tm_nn,
-            '%_coverage_test': self.perc_cov_test,
-            '%_on target_test': self.perc_on_target_test,
-            'true_%_cov_test': self.true_perc_cov_test,
+            # '%_coverage_test': self.perc_cov_test,
+            # '%_on target_test': self.perc_on_target_test,
+            # 'true_%_cov_test': self.true_perc_cov_test,
             'composite_test_score': self.composite_test_score,
             'delta_igs_vs_test': self.delta_igs_vs_test,
             'delta_guide_vs_test': self.delta_guide_vs_test,
