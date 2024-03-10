@@ -386,40 +386,6 @@ class RibozymeDesign:
         else:
             return text_basic + ')'
 
-    def calc_percent_coverages(self, perc_cov_attr: float = None, true_perc_cov_attr: float = None,
-                               perc_on_target_attr: float = None):
-        self.perc_cov = perc_cov_attr
-        self.true_perc_cov = true_perc_cov_attr
-        self.perc_on_target = perc_on_target_attr
-
-        if perc_cov_attr is not None and true_perc_cov_attr is not None and perc_on_target_attr is not None:
-            return
-        if not perc_cov_attr and true_perc_cov_attr and perc_on_target_attr:
-            self.perc_cov = true_perc_cov_attr / perc_on_target_attr
-
-        if not perc_on_target_attr and true_perc_cov_attr and perc_cov_attr:
-            self.perc_on_target = true_perc_cov_attr / perc_cov_attr
-
-        if not true_perc_cov_attr and perc_on_target_attr and perc_cov_attr:
-            self.true_perc_cov = perc_on_target_attr * perc_cov_attr
-        return
-
-    def calc_background_percent_coverages(self, perc_cov_background_attr: float = None,
-                                          true_perc_cov_background_attr: float = None,
-                                          perc_on_target_background_attr: float = None):
-        self.perc_cov_background = perc_cov_background_attr
-        self.true_perc_cov_background = true_perc_cov_background_attr
-        self.perc_on_target_background = perc_on_target_background_attr
-
-        if not perc_on_target_background_attr and true_perc_cov_background_attr and perc_on_target_background_attr:
-            self.perc_cov_background = true_perc_cov_background_attr / perc_on_target_background_attr
-
-        if not perc_on_target_background_attr and true_perc_cov_background_attr and perc_cov_background_attr:
-            self.perc_on_target_background = true_perc_cov_background_attr / perc_cov_background_attr
-
-        if not true_perc_cov_background_attr and perc_on_target_background_attr and perc_cov_background_attr:
-            self.true_perc_cov_background = perc_on_target_background_attr * perc_cov_background_attr
-
     def update_after_optimizing(self, score_attr, guide_attr, score_type_attr, reset_guides: bool = False):
         self.score = score_attr
         self.guide = guide_attr
