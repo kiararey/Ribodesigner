@@ -163,10 +163,13 @@ class RibozymeDesign:
                 self.number_of_targets = None
             self.score = score_attr
             self.score_type = score_type_attr
+            self.design_coverage = design_coverage
+            self.test_coverage = test_coverage
+            self.background_coverage = background_coverage
             
             # If we initialized using an optimized design, set these attributes now.
-            if self.score and self.true_perc_cov:
-                self.composite_score = self.true_perc_cov * self.score
+            if self.score and self.design_coverage.true:
+                self.composite_score = self.design_coverage.true * self.score
             else:
                 self.composite_score = 0
             if self.guide and self.score and self.score_type:
@@ -188,17 +191,17 @@ class RibozymeDesign:
             self.anti_guide = anti_guide_attr
             self.anti_guide_score = anti_guide_score_attr
             
-            if self.true_perc_cov_background and background_score_attr:
-                self.composite_background_score = self.true_perc_cov_background * background_score_attr
+            if self.background_coverage.true and background_score_attr:
+                self.composite_background_score = self.background_coverage.true * background_score_attr
             else:
                 self.composite_background_score = None
 
             if self.composite_score and self.composite_background_score:
-                self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
+                self.delta_igs_vs_background = self.background_coverage.true - self.background_coverage.true
                 self.delta_guide_vs_background = self.score - self.background_score
                 self.delta_vs_background = self.composite_score - self.composite_background_score
             elif self.composite_score:
-                self.delta_igs_vs_background = self.true_perc_cov
+                self.delta_igs_vs_background = self.design_coverage.true
                 self.delta_guide_vs_background = self.score
                 self.delta_vs_background = self.composite_score
             else:
@@ -213,17 +216,16 @@ class RibozymeDesign:
             self.guide_batches = None
             self.test_targets = None
             self.u_conservation_test = None
-            self.design_coverage = design_coverage
             self.test_score = None
             self.test_tm_nn = None
             self.composite_test_score = None
 
             if self.composite_score and self.composite_test_score:
-                self.delta_igs_vs_test = self.true_perc_cov - self.true_perc_cov_test
+                self.delta_igs_vs_test = self.design_coverage.true - self.test_coverage.true
                 self.delta_guide_vs_test = self.score - self.test_score
                 self.delta_vs_test = self.composite_score - self.composite_test_score
             elif self.composite_score:
-                self.delta_igs_vs_test = self.true_perc_cov
+                self.delta_igs_vs_test = self.design_coverage.true
                 self.delta_guide_vs_test = self.score
                 self.delta_vs_test = self.composite_score
             else:
@@ -356,16 +358,16 @@ class RibozymeDesign:
 
     def __repr__(self):
         text_basic = f'{type(self).__name__} {self.id}: (IGS={self.igs}, ref_idx={self.ref_idx}, ' \
-                     f'targets_to_use={self.number_of_targets}, perc_cov={self.perc_cov}, ' \
-                     f'perc_on_target={self.perc_on_target}, true_perc_cov={self.true_perc_cov}, ' \
+                     f'targets_to_use={self.number_of_targets}, perc_cov={self.design_coverage.with_igs}, ' \
+                     f'perc_on_target={self.design_coverage.on_target}, true_perc_cov={self.design_coverage.true}, ' \
                      f'optimized_to_targets={self.optimized_to_targets}, ' \
                      f'optimized_to_background={self.optimized_to_background}'
         target_info = f'\nGuide_sequence={self.guide}, score={self.score}, score_type={self.score_type}, ' \
                       f'composite_score={self.composite_score}'
         background_info = f'\nbackground_score={self.background_score}, ' \
-                          f'perc_cov_background={self.perc_cov_background}, ' \
-                          f'perc_on_target_background={self.perc_on_target_background}, ' \
-                          f'true_perc_cov_background={self.true_perc_cov_background}, ' \
+                          f'perc_cov_background={self.background_coverage.with_igs}, ' \
+                          f'perc_on_target_background={self.background_coverage.on_target}, ' \
+                          f'true_perc_cov_background={self.background_coverage.true}, ' \
                           f'composite_background_score={self.composite_background_score}, ' \
                           f'delta_composite_scores={self.delta_vs_background}'
         if self.optimized_to_targets and self.optimized_to_background:
@@ -385,7 +387,7 @@ class RibozymeDesign:
             self.anti_guide = None
         self.score_type = score_type_attr
         self.optimized_to_targets = True
-        self.composite_score = self.true_perc_cov * score_attr
+        self.composite_score = self.design_coverage.true * score_attr
 
     def update_to_background(self, background_score_attr: float, new_guide: Seq, new_score: float,
                              reset_guides: bool = False, tm_nn_attr: float = None):
@@ -402,8 +404,8 @@ class RibozymeDesign:
         if reset_guides:
             self.background_guides = None
         self.guide = new_guide
-        self.composite_background_score = self.true_perc_cov_background * background_score_attr
-        self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
+        self.composite_background_score = self.background_coverage.true * background_score_attr
+        self.delta_igs_vs_background = self.design_coverage.true - self.background_coverage.true
         self.delta_guide_vs_background = self.score - self.background_score
         self.delta_vs_background = self.composite_score - self.composite_background_score
 
@@ -416,9 +418,9 @@ class RibozymeDesign:
             self.number_of_targets_test = len(self.test_targets)
         else:
             self.number_of_targets_test = 0
-        self.composite_test_score = self.true_perc_cov_test * test_score_attr
-        if self.true_perc_cov and self.true_perc_cov_test:
-            self.delta_igs_vs_test = self.true_perc_cov - self.true_perc_cov_test
+        self.composite_test_score = self.test_coverage.true * test_score_attr
+        if self.design_coverage.true and self.test_coverage.true:
+            self.delta_igs_vs_test = self.design_coverage.true - self.test_coverage.true
         if self.score and self.test_score:
             self.delta_guide_vs_test = self.score - self.test_score
         if self.composite_score and self.composite_test_score:
@@ -427,13 +429,13 @@ class RibozymeDesign:
     def print_attributes(self, taxonomy='Order'):
         if self.optimized_to_targets and self.optimized_to_background:
             text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.score_type},' \
-                   f'{self.perc_cov},{self.perc_on_target},{self.true_perc_cov},{self.composite_score},' \
-                   f'{self.background_score},{self.perc_cov_background},{self.perc_on_target_background},' \
-                   f'{self.true_perc_cov_background},{self.composite_background_score},{self.delta_vs_background},' \
+                   f'{self.design_coverage.with_igs},{self.design_coverage.on_target},{self.design_coverage.true},{self.composite_score},' \
+                   f'{self.background_score},{self.background_coverage.with_igs},{self.background_coverage.on_target},' \
+                   f'{self.background_coverage.true},{self.composite_background_score},{self.delta_vs_background},' \
                    f'{self.guide},{self.guide}G{self.igs}\n'
         elif self.optimized_to_targets:
             text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.score_type},' \
-                   f'{self.perc_cov},{self.perc_on_target},{self.true_perc_cov},{self.composite_score},' \
+                   f'{self.design_coverage.with_igs},{self.design_coverage.on_target},{self.design_coverage.true},{self.composite_score},' \
                    f'{self.guide},{self.guide}G{self.igs}\n'
         elif self.tested_design:
             background_target_input = str(give_taxonomy(str(self.background_targets),
@@ -442,8 +444,8 @@ class RibozymeDesign:
             # Score on targets,% cov background,% on target background,true % cov background,Composite score background,
             # Optimized guide,Optimized guide + G + IGS,Ideal guide,Ideal guide + G + IGS\n'
             text = f'{self.igs},{self.ref_idx},{self.number_of_targets_background},{background_target_input},' \
-                   f'{self.score_type},{self.score},{self.background_score},{self.perc_cov_background},' \
-                   f'{self.perc_on_target_background},{self.true_perc_cov_background},' \
+                   f'{self.score_type},{self.score},{self.background_score},{self.background_coverage.with_igs},' \
+                   f'{self.background_coverage.on_target},{self.background_coverage.true},' \
                    f'{self.composite_background_score},{self.guide},{self.guide}G{self.igs},{self.anti_guide},' \
                    f'{self.anti_guide}G{self.igs}\n'
 
