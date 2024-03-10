@@ -163,11 +163,7 @@ class RibozymeDesign:
                 self.number_of_targets = None
             self.score = score_attr
             self.score_type = score_type_attr
-
-            # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
-            self.calc_percent_coverages(perc_cov_attr=perc_cov_attr, perc_on_target_attr=perc_on_target_attr,
-                                        true_perc_cov_attr=true_perc_cov_attr)
-
+            
             # If we initialized using an optimized design, set these attributes now.
             if self.score and self.true_perc_cov:
                 self.composite_score = self.true_perc_cov * self.score
@@ -191,10 +187,7 @@ class RibozymeDesign:
             self.u_conservation_background = u_consv_background_attr
             self.anti_guide = anti_guide_attr
             self.anti_guide_score = anti_guide_score_attr
-            self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
-                                                   perc_on_target_background_attr=perc_on_target_background_attr,
-                                                   true_perc_cov_background_attr=true_perc_cov_background_attr)
-
+            
             if self.true_perc_cov_background and background_score_attr:
                 self.composite_background_score = self.true_perc_cov_background * background_score_attr
             else:
