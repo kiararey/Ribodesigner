@@ -1852,32 +1852,28 @@ def give_scoring_dict():
 
 def combine_data(folder_path):
     # Get all files in the folder that end in .txt
-    files = [f'{folder_path}/{f}' for f in os.listdir(folder_path) if f.endswith('.txt')]
-    file_names_to_split = ['_'.join(f.split('_')[:-3]) for f in files]
-    only_names = [(name.split('/')[-1], name) for name in file_names_to_split]
+    files = [f'{folder_path}/{f}'.replace('//', '/') for f in os.listdir(folder_path)
+             if f.endswith('.txt')]
+    worker_file_names = defaultdict(lambda: [])
 
-    # Divide into batches of files with the same name but different worker
-    worker_batched_file_names = {}
-    for file_name, folder_name in only_names:
-        worker_batched_file_names[f'{folder_path}/combined/{file_name}.txt'] = (file for file in files if
-                                                                                file.startswith(folder_name))
+    for file_temp in files:
+        file_name = file_temp.split('/')[-1].split('_worker')[0]
+        worker_file_names[f'{folder_path}/combined/{file_name}.txt'].append(file_temp)
 
     # Append the data from each file in a batch to combined name file
-    # (will be the same appending as we used to generate the data basically)
     if not os.path.exists(f'{folder_path}/combined'):
         os.mkdir(f'{folder_path}/combined')
     else:
         for file in os.listdir(f'{folder_path}/combined'):
             os.remove(f'{folder_path}/combined/{file}')
 
-    for new_file_name, items_to_write in worker_batched_file_names.items():
+    for new_file_name, items_to_write in worker_file_names.items():
         for item in items_to_write:
             with open(item, 'r') as r:
                 designs = r.readlines()
             with open(new_file_name, 'a') as d:
                 for line in designs:
                     d.write(line)
-
     return
 
 

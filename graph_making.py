@@ -1371,7 +1371,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
 
     # generate categories: Extract target and test dataset names
     fn_target = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[0]
-    fn_test = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[1]
+    fn_test = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[1].replace('.coupled', '')
     all_data_df['target_dataset'] = all_data_df['name_of_test_dataset'].map(fn_target)
     all_data_df['test_dataset'] = all_data_df['name_of_test_dataset'].map(fn_test)
 
@@ -1428,7 +1428,8 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     best_selective_designs = pd.concat(best_selective)
     selective_diffs_designs = pd.concat(selective_diffs)
     # best_selective_designs.drop(columns='index')
-    fn_cleanup_name = lambda x: x.split('designs_')[-1].split('_universal')[0].split('_only')[0].replace('_', ' ').replace('Background Bacteria squished', '')
+    fn_cleanup_name = lambda x: (x.split('designs_')[-1].split('_universal')[0].split('_only')[0].replace('_', ' ')
+                                 .replace('Background Bacteria squished', '').replace('.coupled', ''))
     best_selective_designs['Design type'] = best_selective_designs['target_dataset'].map(fn_cleanup_name)
     selective_diffs_designs['Design type'] = selective_diffs_designs['target_dataset'].map(fn_cleanup_name)
 
@@ -1620,12 +1621,11 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
                     labels = [file_name] * all_data_df.shape[0]
                     all_data_df.insert(0, 'Dataset', labels)
                 else:
-                    universal_designs_df = import_data_to_df(results_files, current_dset)
-                    labels =  [file_name] * universal_designs_df.shape[0]
-                    universal_designs_df.insert(0, 'Dataset', labels)
-                    all_data_df = pd.concat([all_data_df, universal_designs_df])
+                    sub_df = import_data_to_df(results_files, current_dset)
+                    labels =  [file_name] * sub_df.shape[0]
+                    sub_df.insert(0, 'Dataset', labels)
+                    all_data_df = pd.concat([all_data_df, sub_df])
                 bar()
-
 
     # generate categories: Extract target and test dataset names
     fn_target = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[0]
@@ -1633,55 +1633,51 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
     all_data_df['target_dataset'] = all_data_df['name_of_test_dataset'].map(fn_target)
     all_data_df['test_dataset'] = all_data_df['name_of_test_dataset'].map(fn_test)
 
-    # For selective, _included is targets, _excluded is background
-    paired_names = {'Enterobacterales_only_by_Genus_2.coupled': 'Background_Bacteria_squished_no_entero.coupled',
-                    'Pseudomonadales_only_by_Genus_2.coupled': 'Background_Bacteria_squished_no_pseudo.coupled',
-                    'Gram_positives_only_2.coupled': 'No_Gram_positives.coupled',
-                    'Background_Bacteria_squished_no_pseudo_or_entero_2.coupled':
-                        'Pseudo_and_entero_only_by_Genus_1.coupled'}
+    dset_names = set(all_data_df['Dataset'].items())
 
     # Get relevant columns for this graph
     filtered_df_all = all_data_df[['Dataset', 'id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
                                'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
                                'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
                                    'target_dataset', 'test_dataset']]
-    filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
-                                  + '_' + filtered_df_all['Dataset'])
+    # filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
+    #                               + '_' + filtered_df_all['Dataset'])
     # Extract categories: anything with target guide = 1 (no ambiguity) and target coverage > 0.7
-    filtered_df_all = filtered_df_all[filtered_df_all['score'] == 1]
-    filtered_df = filtered_df_all[filtered_df_all['true_%_cov'] >= 0.7]
+    filtered_df = filtered_df_all[filtered_df_all['score'] == 1]
+    # filtered_df = filtered_df_all[filtered_df_all['true_%_cov'] >= 0.7]
 
     # selective
     selective_subset = filtered_df[filtered_df.index == 'selective']
-    # selective_subset['to_pair'] = (selective_subset['id'] + '_' + selective_subset['target_dataset']
-    #                                + '_' + selective_subset['Dataset'])
     selective_subset.reset_index(inplace=True)
 
     # Couple selective designs by ID: selective relevant tested vs. background and tested vs. all bacteria
     # Calculate a delta score for these (relevant test - background)
     best_selective = []
     selective_diffs = []
-    for target, background in paired_names.items():
-        target_row = selective_subset[selective_subset['test_dataset'] == target]
-        background_row = selective_subset[selective_subset['test_dataset'] == background]
-        background_row.index = target_row.index
-        background_row['u_test_minus_background'] = (target_row['u_conservation_test'] -
-                                                     background_row['u_conservation_test'])
-        background_row['igs_test_minus_background'] = target_row['true_%_cov_test'] - background_row['true_%_cov_test']
-        background_row['guide_test_minus_background'] = target_row['test_score'] - background_row['test_score']
-        background_row['u_conservation_test_is_target'] = target_row['u_conservation_test']
-        background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
-        background_row['test_score_test_is_target'] = target_row['test_score']
-        background_row.index = background_row['index']
-        for i in range(10, 60, 10):
-            subset = background_row[background_row['Dataset'] == f'{i} bp']
-            best_design = subset[subset['u_test_minus_background'] ==
-                                 subset['u_test_minus_background'].max()]
+    for type, target in dset_names:
+        if type != 'selective':
+            continue
+        subset = selective_subset[selective_subset['Dataset'] == target]
+        for include_exclude in ('_included', '_excluded'):
+            subset_in_ex = subset[subset['target_dataset'].str.contains(include_exclude)]
+            target_row = subset_in_ex[subset_in_ex['test_dataset'].str.contains(f'_included')]
+            background_row = subset_in_ex[subset_in_ex['test_dataset'].str.contains(f'_excluded')]
+            background_row.index = target_row.index
+            background_row['u_test_minus_background'] = (target_row['u_conservation_test'] -
+                                                         background_row['u_conservation_test'])
+            background_row['igs_test_minus_background'] = target_row['true_%_cov_test'] - background_row['true_%_cov_test']
+            background_row['guide_test_minus_background'] = target_row['test_score'] - background_row['test_score']
+            background_row['u_conservation_test_is_target'] = target_row['u_conservation_test']
+            background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
+            background_row['test_score_test_is_target'] = target_row['test_score']
+            background_row.index = background_row['index']
+            best_design = subset_in_ex[subset_in_ex['u_test_minus_background'] ==
+                                 subset_in_ex['u_test_minus_background'].max()]
             # In case there are several tied values, just give me the ones with the best igs difference
             best_design.sort_values(by=['igs_test_minus_background', 'test_score_test_is_target'], ascending=False)
             # And if we're still tied, give me the one with the best guide score
             best_selective.append(best_design.head(1))
-            selective_diffs.append(subset)
+            selective_diffs.append(subset_in_ex)
 
     best_selective_designs = pd.concat(best_selective)
     selective_diffs_designs = pd.concat(selective_diffs)
@@ -1751,7 +1747,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
                       linestyle='none', legend=False)
         sns.pointplot(x='Design type', y=current_vars[2], hue='Dataset', data=current_set, ax=joint_ax[2], dodge=0.4,
                       linestyle='none', legend=False)
-        plot_variable_regions(joint_ax[3], var_regs, invert=True)
+        plot_variable_regions(joint_ax[3], e_coli_var_regs, invert=True)
         sns.pointplot(x='Design type', y='reference_idx', hue='Dataset', data=current_set, ax=joint_ax[3], dodge=0.4,
                       linestyle='none')
 
