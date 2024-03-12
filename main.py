@@ -771,20 +771,20 @@ if __name__ == '__main__':
     for (test_files, out_path), target_files in zip(test_seqs_to_process, target_seqs_to_process):
         all_test_file_names = []
         all_target_file_names = []
-        # for file in test_files:
-        #     title = file.split('.')[0].split('/')[-1]
-        #     test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
-        #     all_test_file_names.append(test_save_file_name)
-        #     if not os.path.exists(test_save_file_name):
-        #         test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_path,
-        #                                                        guide_length=n, igs_length=m, min_length=minlen,
-        #                                                        folder_to_save=out_path,
-        #                                                        graph_results=True, var_regs=e_coli_var_regs,
-        #                                                        graph_file_type='png', get_consensus_batches=True,
-        #                                                        batch_num=10, score_type='weighted', msa_fast=True,
-        #                                                        remove_x_dupes_in_graph=True)
-        #     else:
-        #         print(f'{test_save_file_name} exists already! Moving on...')
+        for file in test_files:
+            title = file.split('.')[0].split('/')[-1]
+            test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
+            all_test_file_names.append(test_save_file_name)
+            if not os.path.exists(test_save_file_name):
+                test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_path,
+                                                               guide_length=n, igs_length=m, min_length=minlen,
+                                                               folder_to_save=out_path,
+                                                               graph_results=True, var_regs=e_coli_var_regs,
+                                                               graph_file_type='png', get_consensus_batches=True,
+                                                               batch_num=10, score_type='weighted', msa_fast=True,
+                                                               remove_x_dupes_in_graph=True)
+            else:
+                print(f'{test_save_file_name} exists already! Moving on...')
         # for target_file in target_files:
         #     target_title = target_file.split('.')[0].split('/')[-1]
         #     target_save_file_name = f'{out_path}/designs_{target_title}_universal.pickle'
@@ -804,7 +804,7 @@ if __name__ == '__main__':
         # #     for test_outfile in all_test_file_names:
         # #         _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
         # #                                         flexible_igs=True, file_to_save=out_path)
-        output = run_local(output_folder=out_path, guide_len=n)
+        # output = run_local(output_folder=out_path, guide_len=n)
 
     graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
                                selective_path='test_output_files/selective_by_taxonomy',
