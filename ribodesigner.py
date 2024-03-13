@@ -7,7 +7,7 @@ import subprocess
 import time
 from collections import defaultdict
 from math import exp, log
-from graph_making import make_test_seqs_graph, import_data_to_df, set_percentages_for_bar
+from graph_making import make_test_seqs_graph, import_data_to_df, make_guide_score_plot
 
 import numpy as np
 import pandas as pd
@@ -699,10 +699,11 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
 
     time1 = time.perf_counter()
+    guide_scores = {}
 
     if get_consensus_batches:
         print('Getting consensus sequences for test locations...')
-        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[np.ndarray, str], excluded=['muscle_exe_name', 'msa_fast',
+        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[str, float], excluded=['muscle_exe_name', 'msa_fast',
                                                                                          'score_type', 'guide_len'])
         with alive_bar(len(test_seqs_dict), spinner='fishes') as bar:
             for idx, loc_data in test_seqs_dict.items():
@@ -711,7 +712,8 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
                     guides_to_use = idx_id_data[0]
                     # If there is only one guide, just keep it and continue
                     if len(guides_to_use) == 1:
-                        continue
+                        guides = guides_to_use
+                        score = 1
                     elif (len(guides_to_use) / batch_num) >= 2:
                         random_indices = np.random.permutation(np.arange(len(guides_to_use)))
 
@@ -724,13 +726,20 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
                         seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast,
                                                     score_type=score_type, guide_len=guide_length)
                         guides = [*seqs_and_scores[0]]
+                        # Get the average score
+                        score = sum(seqs_and_scores[1])/ len(seqs_and_scores[1])
 
                     else:
-                        best_guide, _ = muscle_msa_routine(sequences_to_align=guides_to_use, name_of_file=idx_id,
+                        best_guide, best_score = muscle_msa_routine(sequences_to_align=guides_to_use, name_of_file=idx_id,
                                                            muscle_exe_name='muscle5', msa_fast=msa_fast,
                                                            score_type=score_type, guide_len=guide_length)
                         guides = [best_guide]
+                        score = best_score
                     test_seqs_dict[idx][0][idx_id][0] = guides
+                    # test_seqs_dict[idx][0][idx_id].append(score)
+                    guide_scores[idx_id] = score
+                    if len(test_seqs_dict[idx][0][idx_id]) > 6:
+                        print('uh oh')
                 bar()
         time2 = time.perf_counter()
         round_convert_time(start=time1, end=time2, round_to=4, task_timed='getting consensus sequences')
@@ -742,19 +751,27 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
     title = test_folder.split('.')[0].split('/')[-1]
     save_file_name = f'{folder_to_save}/test_sequences_{title}'
     if graph_results:
+        # Graph IGS data
         num_of_seqs = len(test_names_and_seqs)
         u_conservation_list = []
         igs_true_perc_cov_list = []
         ref_idxes_list = []
+        guide_scores_list = []
         for igs_id, igs_id_count in igs_ids_counts.items():
             ref_idx = int(igs_id[igs_length:])
             ref_idxes_list.append(ref_idx)
             u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
             igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
+            guide_scores_list.append(guide_scores[igs_id])
         make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U percent coverage',
-                             y_data=igs_true_perc_cov_list, ylabel='IGS true percent coverage', loc_data=ref_idxes_list,
+                             y_data=igs_true_perc_cov_list, ylabel='IGS true coverage', loc_data=ref_idxes_list,
                              var_regs=var_regs, save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
                              dataset_len=num_of_seqs)
+        # Graph guide score data
+        make_guide_score_plot(xdata=igs_true_perc_cov_list, xlabel='IGS true coverage', ydata=guide_scores_list,
+                              ylabel='Average guide score', loc_data=ref_idxes_list, var_regs=var_regs,
+                              save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True)
+
 
     if os.path.exists(f'{save_file_name}.pickle'):
         os.remove(f'{save_file_name}.pickle')

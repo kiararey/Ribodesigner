@@ -794,7 +794,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
 
 def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, ylabel: str,
                          loc_data: list[int], var_regs: list, save_file_name: str, alpha=0.5,
-                         file_type: str = 'png', dataset_len: int = None):
+                         file_type: str = 'png', dataset_len: int = None, add_three_panel: bool = True):
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 18 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
@@ -859,8 +859,9 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     plt.show()
 
     # Prepare axes for second figure
-    # plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
-    #                        save_file_name, file_type)
+    plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
+                               save_file_name, file_type)
+
     return
 
 
@@ -1705,8 +1706,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
             background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
             background_row['test_score_test_is_target'] = target_row['test_score']
             background_row.index = background_row['index']
-            best_design = background_row[background_row['u_test_minus_background'] ==
-                                         background_row['u_test_minus_background'].max()]
+            best_design = background_row[background_row['igs_test_minus_background'] ==
+                                         background_row['igs_test_minus_background'].max()]
             # In case there are several tied values, just give me the ones with the best igs difference
             best_design.sort_values(by=['igs_test_minus_background', 'test_score_test_is_target'], ascending=False)
             # And if we're still tied, give me the one with the best guide score
@@ -1900,6 +1901,51 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
     if os.path.exists(file_name):
         os.remove(file_name)
     best_all_to_order.to_csv(file_name, index=False)
+
+    return
+
+def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, loc_data: list,
+                          var_regs: list, save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True):
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
+    joint_ax = {
+        0: jointplot_fig.add_subplot(gridspec[0:6, 6:14]),
+        1: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
+    }
+    # Plot scatter and kde plots
+    # below is for individual log norms
+    good_guides = 0
+    for x, y in zip(xdata, ydata):
+        if x > 0.7 and y > 0.7:
+            good_guides += 1
+
+    jointplot_fig.axes[0].axhline(y=0.7, color='orange', linestyle='-')
+    jointplot_fig.axes[0].axvline(x=0.7, color='orange', linestyle='-')
+    hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
+    jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
+
+    jointplot_fig.axes[0].annotate(f'n = {good_guides}\ngood guides', xy=(0.75, 0.15), xycoords='axes fraction')
+
+    jointplot_fig.axes[0].set_xlabel(xlabel)
+    jointplot_fig.axes[0].set_ylabel(ylabel)
+    # Set variable regions for location plots
+    plot_variable_regions(joint_ax[1], var_regs)
+    # Plot test data for each testing condition
+    sns.scatterplot(x=loc_data, y=ydata, ax=joint_ax[1], alpha=0.3, legend=False, linewidth=0, size=0.5,
+                    color='#000000')
+    jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
+    jointplot_fig.axes[1].set_ylabel(ylabel)
+    jointplot_fig.axes[0].set(xlim=[0, 1.1], ylim=[0, 1.1], ylabel=None)
+    # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
+    jointplot_fig.axes[1].set(xlim=[-0.1, 1580])
+    jointplot_fig.axes[1].set(xlabel='Reference 16s rRNA index')
+    jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
+    jointplot_fig.axes[0].tick_params(labelleft=False)
+    plt.tight_layout()
+    # if save_fig:
+    #     save_file_name = f'{save_file_name}_guide_scores.{file_type}'
+    #     plt.savefig(fname=save_file_name, format=file_type)
+    plt.show()
 
     return
 

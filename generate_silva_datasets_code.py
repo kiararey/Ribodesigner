@@ -117,13 +117,13 @@ for taxonomy in taxonomy_levels_all:
 
     for include in to_generate[taxonomy]:
         print(f'\nDataset is now {include}:')
-        output_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Selective datasets per taxonomy/{taxonomy}_{include}'
+        output_path = f'Datasets_used/SILVA_squished_datasets_5_per_genus/Selective datasets per taxonomy/{taxonomy}_{include}'
         generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included', num_of_datasets=2,
-                                num_of_sequences=num_of_sequences_per_genus, include_only=include,
+                                num_of_sequences=5, include_only=include,
                                 exclude_taxonomy_level=taxonomy, seed=seed)
         try:
             generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded', num_of_datasets=2,
-                                    num_of_sequences=num_of_sequences_per_genus, exclude_only=include,
+                                    num_of_sequences=5, exclude_only=include,
                                     exclude_taxonomy_level=taxonomy, seed=seed)
         except ZeroDivisionError:
             print(f'Dataset {include} has too few sequences to make exclude data')
