@@ -1935,16 +1935,16 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
                     color='#000000')
     jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
     jointplot_fig.axes[1].set_ylabel(ylabel)
-    jointplot_fig.axes[0].set(xlim=[0, 1.1], ylim=[0, 1.1], ylabel=None)
+    jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02], ylabel=None)
     # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
     jointplot_fig.axes[1].set(xlim=[-0.1, 1580])
     jointplot_fig.axes[1].set(xlabel='Reference 16s rRNA index')
     jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
     jointplot_fig.axes[0].tick_params(labelleft=False)
     plt.tight_layout()
-    # if save_fig:
-    #     save_file_name = f'{save_file_name}_guide_scores.{file_type}'
-    #     plt.savefig(fname=save_file_name, format=file_type)
+    if save_fig:
+        save_file_name = f'{save_file_name}_guide_scores.{file_type}'
+        plt.savefig(fname=save_file_name, format=file_type)
     plt.show()
 
     return

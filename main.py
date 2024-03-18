@@ -3,7 +3,7 @@ import os
 from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
-                          select_designs)
+                          select_designs, adjust_var_regs)
 from graph_making import (make_graphs, make_sequence_logo_graph, make_violin_plots, graphs_multiple_guide_lengths,
                           graphs_multiple_conditions)
 
@@ -67,6 +67,11 @@ if __name__ == '__main__':
     # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
     e_coli_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
                        (1243, 1294), (1435, 1465)]
+
+    # get archaeal 16s variable regions by aligning to e_coli variable regions. This way we can graph anything aligned
+    # to m_smithii with its own index
+    m_smithii_var_regs = adjust_var_regs(known_seq_file=ref_path, known_var_regs=e_coli_var_regs,
+                                         unknown_seq_file=ref_path_arc)
 
     # ########################################################
     # test data targeted
@@ -731,83 +736,101 @@ if __name__ == '__main__':
     # print('Best designs selected')
     # print(order_these)
 
-    # # Ok here we're going to generate archaeal designs w archaeal ref seq and eukaryotic designs w eukaryotic ref seq
-    # files = [(background_data_arc, ref_path_arc, e_coli_var_regs, 'archaea', universal_data_2),
-    #          (background_data_euk, ref_path_euk, s_cerevisiae_var_regs, 'eukarya', universal_data_3)]
-    # for file, ref_seq, var_regs, a, target in files:
-        # test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_seq, guide_length=n,
-        #                                                igs_length=m, min_length=minlen, folder_to_save=output_path + a,
-        #                                                graph_results=True, var_regs=var_regs, graph_file_type='png',
-        #                                                get_consensus_batches=True, batch_num=10, score_type='weighted',
-        #                                                msa_fast=True, remove_x_dupes_in_graph=True)
-        # # make appropriate designs
-        # design_pickle_name = ribodesigner(target_sequences_folder=target, ref_sequence_file=ref_seq, guide_length=n,
-        #                                   igs_length=m, min_length=minlen, folder_to_save=output_path + a,
-        #                                   selective=False, min_true_cov=0, msa_fast=True, score_type='weighted',
-        #                                   n_limit=1, percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
-        #                                   random_guide_sample_size=10)
-        # _ = couple_designs_to_test_seqs(designs_input=design_pickle_name, test_seqs_input=test_seqs_pickle_file_name,
-        #                                 flexible_igs=True, file_to_save=output_path + a)
-        # output = run_local(output_folder=output_path+a, guide_len=n)
-
+    # Ok here we're going to generate archaeal designs w archaeal ref seq and eukaryotic designs w eukaryotic ref seq
+    files = [(background_data_arc, ref_path_arc, m_smithii_var_regs, 'Archaea', universal_data_2),
+             (background_data_euk, ref_path_euk, s_cerevisiae_var_regs, 'Eukaryota', universal_data_3),
+             (background_data_bac, ref_path, e_coli_var_regs, 'Bacteria', universal_data_1),
+             (background_data_all, ref_path, e_coli_var_regs, 'All', universal_data_4)]
+    for file, ref_seq, var_regs, a, target in files:
+        out = f'{output_path}universal_diff_var_regs/{a}'
+        if a == 'All':
+            test_save_file_name = f'{out}/test_sequences_{a}_by_Genus_1.pickle'
+        else:
+            test_save_file_name = f'{out}/test_sequences_{a}_Only_by_Genus_1.pickle'
+        if not os.path.exists(test_save_file_name):
+            test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_seq, guide_length=n,
+                                                           igs_length=m, min_length=minlen, folder_to_save=out,
+                                                           graph_results=True, var_regs=var_regs, graph_file_type='png',
+                                                           get_consensus_batches=True, batch_num=10,
+                                                           score_type='weighted', msa_fast=True,
+                                                           remove_x_dupes_in_graph=True)
+    #     else:
+    #         print(f'{test_save_file_name} exists already! Moving on...')
+    #     # make appropriate designs
+    #     if a == 'All':
+    #         target_save_file_name = f'{out}/designs_{a}_by_Genus_2_universal.pickle'
+    #     else:
+    #         target_save_file_name = f'{out}/designs_{a}_Only_by_Genus_2_universal.pickle'
+    #     if not os.path.exists(target_save_file_name):
+    #         design_pickle_name = ribodesigner(target_sequences_folder=target, ref_sequence_file=ref_seq, guide_length=n,
+    #                                           igs_length=m, min_length=minlen, folder_to_save=out,
+    #                                           selective=False, min_true_cov=0, msa_fast=True, score_type='weighted',
+    #                                           n_limit=1, percent_of_target_seqs_used=1, gaps_allowed=False, fileout=False,
+    #                                           random_guide_sample_size=10)
+    #     else:
+    #         print(f'{target_save_file_name} exists already! Moving on...')
+    #     # _ = couple_designs_to_test_seqs(designs_input=design_pickle_name, test_seqs_input=test_seqs_pickle_file_name,
+    #     #                                 flexible_igs=True, file_to_save=out)
+    #     output = run_local(output_folder=out, guide_len=n)
+    #
     # Generate test sequences with taxonomy
-    taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
-    to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes', 'Actinobacteriota_and_Firmicutes'],
-                   'Class': ['Gammaproteobacteria', 'Bacilli'],
-                   'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
-                   'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
-                   'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
-    test_seq_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Selective datasets per taxonomy/'
-    # test_seq_path = f'Datasets_used/SILVA_squished_datasets_5_per_genus/Selective datasets per taxonomy/'
-    save_file_path = output_path + 'selective_by_taxonomy/'
-
-    # Graph!
-    test_seqs_to_process = [([test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_1.fasta',
-                              test_seq_path + f'{taxonomy}_{include}_excluded/{taxonomy}_{include}_excluded_1.fasta'],
-                             save_file_path + f'{taxonomy}_{include}')
-                            for taxonomy in taxonomy_levels_all for include in to_generate[taxonomy]]
-    test_seqs_to_process.reverse()
-    target_seqs_to_process = [[test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_2.fasta',
-                              test_seq_path + f'{taxonomy}_{include}_excluded/{taxonomy}_{include}_excluded_2.fasta']
-                            for taxonomy in taxonomy_levels_all for include in to_generate[taxonomy]]
-    target_seqs_to_process.reverse()
-    for (test_files, out_path), target_files in zip(test_seqs_to_process, target_seqs_to_process):
-        all_test_file_names = []
-        all_target_file_names = []
-        for file in test_files:
-            title = file.split('.')[0].split('/')[-1]
-            test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
-            all_test_file_names.append(test_save_file_name)
-            if not os.path.exists(test_save_file_name):
-                test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_path,
-                                                               guide_length=n, igs_length=m, min_length=minlen,
-                                                               folder_to_save=out_path,
-                                                               graph_results=True, var_regs=e_coli_var_regs,
-                                                               graph_file_type='png', get_consensus_batches=True,
-                                                               batch_num=10, score_type='weighted', msa_fast=True,
-                                                               remove_x_dupes_in_graph=True)
-            else:
-                print(f'{test_save_file_name} exists already! Moving on...')
-        for target_file in target_files:
-            target_title = target_file.split('.')[0].split('/')[-1]
-            target_save_file_name = f'{out_path}/designs_{target_title}_universal.pickle'
-            all_target_file_names.append(target_save_file_name)
-
-            if not os.path.exists(target_save_file_name):
-                design_pickle_name = ribodesigner(target_sequences_folder=target_file, ref_sequence_file=ref_path,
-                                                      guide_length=n,
-                                                      igs_length=m, min_length=minlen, fileout=False,
-                                                      folder_to_save=out_path,
-                                                      selective=False, min_true_cov=0, msa_fast=True, score_type='weighted',
-                                                      n_limit=1, percent_of_target_seqs_used=1, gaps_allowed=False,
-                                                      random_guide_sample_size=10)
-            else:
-                print(f'{target_save_file_name} exists already! Moving on...')
-                continue
-            for test_outfile in all_test_file_names:
-                _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
-                                                flexible_igs=True, file_to_save=out_path)
-        output = run_local(output_folder=out_path, guide_len=n)
+    # taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
+    # to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes', 'Actinobacteriota_and_Firmicutes'],
+    #                'Class': ['Gammaproteobacteria', 'Bacilli'],
+    #                'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
+    #                'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
+    #                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
+    # test_seq_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Selective datasets per taxonomy/'
+    # # test_seq_path = f'Datasets_used/SILVA_squished_datasets_5_per_genus/Selective datasets per taxonomy/'
+    # save_file_path = output_path + 'selective_by_taxonomy/'
+    #
+    # # Graph!
+    # test_seqs_to_process = [([test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_1.fasta',
+    #                           test_seq_path + f'{taxonomy}_{include}_excluded/{taxonomy}_{include}_excluded_1.fasta'],
+    #                          save_file_path + f'{taxonomy}_{include}')
+    #                         for taxonomy in taxonomy_levels_all for include in to_generate[taxonomy]]
+    # # test_seqs_to_process.reverse()
+    # target_seqs_to_process = [[test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_2.fasta',
+    #                           test_seq_path + f'{taxonomy}_{include}_excluded/{taxonomy}_{include}_excluded_2.fasta']
+    #                         for taxonomy in taxonomy_levels_all for include in to_generate[taxonomy]]
+    # # target_seqs_to_process.reverse()
+    # for (test_files, out_path), target_files in zip(test_seqs_to_process, target_seqs_to_process):
+    #     all_test_file_names = []
+    #     all_target_file_names = []
+    #     for file in test_files:
+    #         title = file.split('.')[0].split('/')[-1]
+    #         test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
+    #         all_test_file_names.append(test_save_file_name)
+    #         if os.path.exists(test_save_file_name):
+    #             test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_path,
+    #                                                            guide_length=n, igs_length=m, min_length=minlen,
+    #                                                            folder_to_save=out_path,
+    #                                                            graph_results=True, var_regs=e_coli_var_regs,
+    #                                                            graph_file_type='png', get_consensus_batches=True,
+    #                                                            batch_num=10, score_type='weighted', msa_fast=True,
+    #                                                            remove_x_dupes_in_graph=True)
+    #         else:
+    #             print(f'{test_save_file_name} exists already! Moving on...')
+    #     for target_file in target_files:
+    #         target_title = target_file.split('.')[0].split('/')[-1]
+    #         target_save_file_name = f'{out_path}/designs_{target_title}_universal.pickle'
+    #         all_target_file_names.append(target_save_file_name)
+    #
+    #         if not os.path.exists(target_save_file_name):
+    #             design_pickle_name = ribodesigner(target_sequences_folder=target_file, ref_sequence_file=ref_path,
+    #                                                   guide_length=n,
+    #                                                   igs_length=m, min_length=minlen, fileout=False,
+    #                                                   folder_to_save=out_path,
+    #                                                   selective=False, min_true_cov=0, msa_fast=True, score_type='weighted',
+    #                                                   n_limit=1, percent_of_target_seqs_used=1, gaps_allowed=False,
+    #                                                   random_guide_sample_size=10)
+    #         else:
+    #             print(f'{target_save_file_name} exists already! Moving on...')
+    #             continue
+    #         for test_outfile in all_test_file_names:
+    #             _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
+    #                                             flexible_igs=True, file_to_save=out_path)
+    #     output = run_local(output_folder=out_path, guide_len=n)
 
     # graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
     #                            selective_path='test_output_files/selective_by_taxonomy',
