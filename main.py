@@ -73,6 +73,10 @@ if __name__ == '__main__':
     m_smithii_var_regs = adjust_var_regs(known_seq_file=ref_path, known_var_regs=e_coli_var_regs,
                                          unknown_seq_file=ref_path_arc)
 
+    # find equivalent location of our original design in archaea and eukaryota
+    arch_1376_idx = adjust_var_regs(known_seq_file=ref_path, known_var_regs=1376, unknown_seq_file=ref_path_arc)
+    euk_1376_idx = adjust_var_regs(known_seq_file=ref_path, known_var_regs=1376, unknown_seq_file=ref_path_euk)
+
     # ########################################################
     # test data targeted
     path = 'Datasets_used/SILVA_squished_datasets_1_per_genus/'
@@ -736,24 +740,24 @@ if __name__ == '__main__':
     # print('Best designs selected')
     # print(order_these)
 
-    # Ok here we're going to generate archaeal designs w archaeal ref seq and eukaryotic designs w eukaryotic ref seq
-    files = [(background_data_arc, ref_path_arc, m_smithii_var_regs, 'Archaea', universal_data_2),
-             (background_data_euk, ref_path_euk, s_cerevisiae_var_regs, 'Eukaryota', universal_data_3),
-             (background_data_bac, ref_path, e_coli_var_regs, 'Bacteria', universal_data_1),
-             (background_data_all, ref_path, e_coli_var_regs, 'All', universal_data_4)]
-    for file, ref_seq, var_regs, a, target in files:
-        out = f'{output_path}universal_diff_var_regs/{a}'
-        if a == 'All':
-            test_save_file_name = f'{out}/test_sequences_{a}_by_Genus_1.pickle'
-        else:
-            test_save_file_name = f'{out}/test_sequences_{a}_Only_by_Genus_1.pickle'
-        if not os.path.exists(test_save_file_name):
-            test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_seq, guide_length=n,
-                                                           igs_length=m, min_length=minlen, folder_to_save=out,
-                                                           graph_results=True, var_regs=var_regs, graph_file_type='png',
-                                                           get_consensus_batches=True, batch_num=10,
-                                                           score_type='weighted', msa_fast=True,
-                                                           remove_x_dupes_in_graph=True)
+    # # Ok here we're going to generate archaeal designs w archaeal ref seq and eukaryotic designs w eukaryotic ref seq
+    # files = [(background_data_arc, ref_path_arc, m_smithii_var_regs, 'Archaea', universal_data_2, 1450),
+    #          (background_data_euk, ref_path_euk, s_cerevisiae_var_regs, 'Eukaryota', universal_data_3, 1850),
+    #          (background_data_bac, ref_path, e_coli_var_regs, 'Bacteria', universal_data_1, 1580),
+    #          (background_data_all, ref_path, e_coli_var_regs, 'All', universal_data_4, 1580)]
+    # for file, ref_seq, var_regs, a, target, lim in files:
+    #     out = f'{output_path}universal_diff_var_regs/{a}'
+    #     if a == 'All':
+    #         test_save_file_name = f'{out}/test_sequences_{a}_by_Genus_1.pickle'
+    #     else:
+    #         test_save_file_name = f'{out}/test_sequences_{a}_Only_by_Genus_1.pickle'
+    #     if not os.path.exists(test_save_file_name):
+    #         test_seqs_pickle_file_name = prepare_test_seqs(test_folder=file, ref_sequence_file=ref_seq, guide_length=n,
+    #                                                        igs_length=m, min_length=minlen, folder_to_save=out,
+    #                                                        graph_results=True, var_regs=var_regs, graph_file_type='png',
+    #                                                        get_consensus_batches=True, batch_num=10,
+    #                                                        score_type='weighted', msa_fast=True,
+    #                                                        remove_x_dupes_in_graph=True, lim=lim)
     #     else:
     #         print(f'{test_save_file_name} exists already! Moving on...')
     #     # make appropriate designs
@@ -769,8 +773,8 @@ if __name__ == '__main__':
     #                                           random_guide_sample_size=10)
     #     else:
     #         print(f'{target_save_file_name} exists already! Moving on...')
-    #     # _ = couple_designs_to_test_seqs(designs_input=design_pickle_name, test_seqs_input=test_seqs_pickle_file_name,
-    #     #                                 flexible_igs=True, file_to_save=out)
+    #     _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_save_file_name,
+    #                                     flexible_igs=True, file_to_save=out)
     #     output = run_local(output_folder=out, guide_len=n)
     #
     # Generate test sequences with taxonomy
@@ -832,7 +836,7 @@ if __name__ == '__main__':
     #                                             flexible_igs=True, file_to_save=out_path)
     #     output = run_local(output_folder=out_path, guide_len=n)
 
-    # graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
-    #                            selective_path='test_output_files/selective_by_taxonomy',
-    #                            output_folder='test_output_files/best_designs/For experimental selection',
-    #                            add_overhangs=True)
+    graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
+                               selective_path='test_output_files/selective_by_taxonomy',
+                               output_folder='test_output_files/best_designs/For experimental selection',
+                               add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs)

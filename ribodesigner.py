@@ -667,7 +667,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
 def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
                       graph_results, var_regs, graph_file_type, get_consensus_batches, batch_num, score_type, msa_fast,
-                      remove_x_dupes_in_graph):
+                      remove_x_dupes_in_graph, lim):
     start = time.perf_counter()
     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
     print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
@@ -769,7 +769,7 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
                              dataset_len=num_of_seqs)
         # Graph guide score data
         make_guide_score_plot(xdata=igs_true_perc_cov_list, xlabel='IGS true coverage', ydata=guide_scores_list,
-                              ylabel='Average guide score', loc_data=ref_idxes_list, var_regs=var_regs,
+                              ylabel='Average guide score', loc_data=ref_idxes_list, var_regs=var_regs, lim=lim,
                               save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True)
 
 
@@ -937,7 +937,7 @@ def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length
     return
 
 
-def adjust_var_regs(known_seq_file: str, known_var_regs: list, unknown_seq_file: str):
+def adjust_var_regs(known_seq_file: str, known_var_regs: list | int, unknown_seq_file: str):
     known_seq = read_fasta(known_seq_file)[0][1]
     unknown_seq = read_fasta(unknown_seq_file)[0][1]
     aligner = PairwiseAligner(mode='global')
@@ -945,23 +945,34 @@ def adjust_var_regs(known_seq_file: str, known_var_regs: list, unknown_seq_file:
 
     # seq_a is the test sequence, seq_b is the reference sequence
     unknown_seq_aligned, known_seq_aligned = alignments
-    unknown_var_regs = []
-    for idxs in known_var_regs:
-        temp_idx_for_var_reg = []
-        for unaligned_current_idx in idxs:
-            # extract the position that is known
-            current_spot = unaligned_current_idx
-            known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
-            while known_current_idx != unaligned_current_idx:
-                current_spot += 1
+
+    if type(known_var_regs) == list:
+        unknown_var_regs = []
+        for idxs in known_var_regs:
+            temp_idx_for_var_reg = []
+            for unaligned_current_idx in idxs:
+                # extract the position that is known
+                current_spot = unaligned_current_idx
                 known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
+                while known_current_idx != unaligned_current_idx:
+                    current_spot += 1
+                    known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
 
-            # now use this info to find what the corresponding unknown sequence index is
-            unknown_current_idx = len(unknown_seq_aligned[:current_spot].replace('-', ''))
-            temp_idx_for_var_reg.append(unknown_current_idx)
-        unknown_var_regs.append((temp_idx_for_var_reg[0], temp_idx_for_var_reg[1]))
+                # now use this info to find what the corresponding unknown sequence index is
+                unknown_current_idx = len(unknown_seq_aligned[:current_spot].replace('-', ''))
+                temp_idx_for_var_reg.append(unknown_current_idx)
+            unknown_var_regs.append((temp_idx_for_var_reg[0], temp_idx_for_var_reg[1]))
+        return unknown_var_regs
+    else:
+        current_spot = known_var_regs
+        known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
+        while known_current_idx != known_var_regs:
+            current_spot += 1
+            known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
 
-    return unknown_var_regs
+        # now use this info to find what the corresponding unknown sequence index is
+        unknown_current_idx = len(unknown_seq_aligned[:current_spot].replace('-', ''))
+        return unknown_current_idx
 
 
 def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int = 5, guide_length: int = 50,

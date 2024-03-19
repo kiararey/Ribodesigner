@@ -794,7 +794,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
 
 def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, ylabel: str,
                          loc_data: list[int], var_regs: list, save_file_name: str, alpha=0.5,
-                         file_type: str = 'png', dataset_len: int = None, add_three_panel: bool = True):
+                         file_type: str = 'png', dataset_len: int = None, add_three_panel: bool = True,
+                         add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None):
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 18 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
@@ -860,7 +861,8 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
 
     # Prepare axes for second figure
     plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
-                               save_file_name, file_type)
+                           save_file_name, file_type, add_control=add_control, control_x_data=control_x_data,
+                           control_y_data=control_y_data, control_loc_data=control_loc_data)
 
     return
 
@@ -1593,7 +1595,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     return
 
 
-def graphs_multiple_conditions(universal_path, selective_path, output_folder, file_type='png',
+def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_smithii_var_regs: list, file_type='png',
                                add_overhangs: bool = False, igs_overhang: str = 'GGTCTCttttt',
                                guide_overhang: str = 'gtcgtGAGACC'):
 
@@ -1606,6 +1608,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
     # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
     e_coli_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
                        (1243, 1294), (1435, 1465)]
+
     # Load combined data
     # generate categories: index is category (universal, selective), hue is bp ('Dataset' column)
     all_data_df = None
@@ -1724,15 +1727,31 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
 
     # Find best design for each universal
     universal_subset = filtered_df[filtered_df.index == 'universal']
+
     # Pull out designs at u1376
-    u1376_designs = universal_subset[(universal_subset['id'] == 'TTCAC1376') ]
+    u1376_dict = {'All': ('TTCAC1376', e_coli_var_regs, 1580), 'Bacteria':  ('TTCAC1376', e_coli_var_regs, 1580),
+                  'Archaea': ('TTCAC1323', m_smithii_var_regs, 1450),
+                  'Eukaryota': ('TTCAC1612', s_cerevisiae_var_regs, 1850)}
+    tm_min = universal_subset['tm_nn_test'].min()
+    tm_max = universal_subset['tm_nn_test'].max()
+    make_summary_graph(subsets=u1376_dict, tm_min, tm_max, universal_subset, control_df, lims, save_fig, save_file_loc,
+                       file_type='png')
+    # u1376_designs = universal_subset[(universal_subset['id'] == 'TTCAC1376') ]
     best_universal = []
     worst_universal = []
     worst_subset = []
+    u1376_designs = []
     for type, target in dset_names:
         if type != 'universal':
             continue
         subset = universal_subset[universal_subset['Dataset'] == target]
+        u1376_equivalent = subset[(subset['id'] == u1376_dict[target][0])]
+        if len(u1376_equivalent) == 0:
+            print('uh oh')
+            u1376_equivalent_temp = filtered_df_all[filtered_df_all['Dataset'] == target]
+            u1376_equivalent = u1376_equivalent_temp[(u1376_equivalent_temp['id'] == u1376_dict[target])]
+        u1376_equivalent['Design type'] = ['Original design'] * u1376_equivalent.shape[0]
+        u1376_designs.append(u1376_equivalent)
         best_universal_temp = subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].max()]
         best_universal_temp['Design type'] = ['Best universal'] * best_universal_temp.shape[0]
         best_universal.append(best_universal_temp)
@@ -1742,13 +1761,32 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
         worst_subset_temp = subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].min()].head(1)
         worst_subset_temp['Design type'] = ['Worst universal'] * worst_subset_temp.shape[0]
         worst_subset.append(worst_subset_temp)
+
+        # go ahead and graph guide scores of subset
+        save_file_name = f'{output_folder}/{target}_vs_test_scores'
+        make_test_seqs_graph(target, x_data=subset['u_conservation_test'], xlabel='U coverage',
+                             y_data=subset['true_%_cov_test'], ylabel='IGS true coverage',
+                             loc_data=subset['reference_idx'], var_regs=u1376_dict[target][1],
+                             save_file_name=save_file_name, file_type='png', alpha=0.3, dataset_len=len(subset),
+                             add_control=True, control_x_data=u1376_equivalent['u_conservation_test'],
+                             control_y_data=u1376_equivalent['true_%_cov_test'],
+                             control_loc_data=u1376_equivalent['reference_idx'])
+        # Graph guide score data
+        make_guide_score_plot(xdata=subset['true_%_cov_test'], xlabel='IGS true coverage', ydata=subset['test_score'],
+                              ylabel='Guide score', loc_data=subset['reference_idx'], var_regs=u1376_dict[target][1],
+                              save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True,
+                             add_control=True, control_x_data=u1376_equivalent['u_conservation_test'],
+                             control_y_data=u1376_equivalent['true_%_cov_test'],
+                             control_loc_data=u1376_equivalent['reference_idx'], lim=u1376_dict[target][2])
+
+    u1376_designs = pd.concat(u1376_designs)
     best_universal = pd.concat(best_universal)
     worst_universal = pd.concat(worst_universal)
-    u1376_designs['Design type'] = ['Original design'] * u1376_designs.shape[0]
     worst_subset = pd.concat(worst_subset)
     universal_designs_select = pd.concat([best_universal, worst_universal, u1376_designs])
 
     # Finally, graph!
+    # Here we graph the best designs
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.8, 20 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     vars = [('u_conservation_test', 'true_%_cov_test', 'test_score'),
@@ -1905,7 +1943,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, fi
     return
 
 def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, loc_data: list,
-                          var_regs: list, save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True):
+                          var_regs: list, save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True,
+                          add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None, lim=1580):
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
     joint_ax = {
@@ -1933,11 +1972,18 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
     # Plot test data for each testing condition
     sns.scatterplot(x=loc_data, y=ydata, ax=joint_ax[1], alpha=0.3, legend=False, linewidth=0, size=0.5,
                     color='#000000')
+
+    if add_control:
+        sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#FCC2DC',
+                        edgecolors = 'black', linewidth = 0.8, marker = '^', sizes = [100] * len(control_loc_data))
+        sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#FCC2DC',
+                        edgecolors='black', linewidth=0.8, marker='^', sizes=[100] * len(control_loc_data))
+
     jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
     jointplot_fig.axes[1].set_ylabel(ylabel)
     jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02], ylabel=None)
     # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
-    jointplot_fig.axes[1].set(xlim=[-0.1, 1580])
+    jointplot_fig.axes[1].set(xlim=[-0.1, lim])
     jointplot_fig.axes[1].set(xlabel='Reference 16s rRNA index')
     jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
     jointplot_fig.axes[0].tick_params(labelleft=False)
@@ -1950,3 +1996,69 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
     return
 
 # Delta difference plot between phyla?? for selective??
+def make_summary_graph(subsets, tm_min, tm_max, data_df, control_df, save_fig, save_file_loc,
+                       file_type='png'):
+    # Set plot parameters
+    # sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=8, ncols=27)
+    joint_ax = {
+        0: jointplot_fig.add_subplot(gridspec[0:2, 0:6]),
+        1: jointplot_fig.add_subplot(gridspec[0:2, 7:13]),
+        2: jointplot_fig.add_subplot(gridspec[0:2, 14:20]),
+        3: jointplot_fig.add_subplot(gridspec[0:2, 21:27]),
+
+        4: jointplot_fig.add_subplot(gridspec[2:4, 0:6]),
+        5: jointplot_fig.add_subplot(gridspec[2:4, 7:13]),
+        6: jointplot_fig.add_subplot(gridspec[2:4, 14:20]),
+        7: jointplot_fig.add_subplot(gridspec[2:4, 21:27]),
+
+        8: jointplot_fig.add_subplot(gridspec[4:6, 0:6]),
+        9: jointplot_fig.add_subplot(gridspec[4:6, 7:13]),
+        10: jointplot_fig.add_subplot(gridspec[4:6, 14:20]),
+        11: jointplot_fig.add_subplot(gridspec[4:6, 21:27]),
+
+        12: jointplot_fig.add_subplot(gridspec[6:8, 0:6]),
+        13: jointplot_fig.add_subplot(gridspec[6:8, 7:13]),
+        14: jointplot_fig.add_subplot(gridspec[6:8, 14:20]),
+        15: jointplot_fig.add_subplot(gridspec[6:8, 21:27]),
+    }
+    for i in range(0, len(joint_ax)):
+        plot_variable_regions(joint_ax[i], var_regs)
+
+    # Each row is a group, each column is a metric to graph
+    vars_and_titles = [('U conservation', 'u_conservation_test', [0, 1]),
+                       ('IGS conservation', 'true_%_cov_test', [0, 1]),
+                       ('Guide score', 'test_score', [0, 1]),
+                       ('Tm GC', 'tm_nn_vs_test', [tm_min, tm_max])]
+    current_graph = 0
+    for dataset, var_regs, lim in subsets:
+        graph = data_df[data_df['Dataset'] == dataset]
+        top_control = control_df[control_df['Dataset'] == dataset]
+
+        # Plot test data for each testing condition
+        for i, (title, yvar, lims) in enumerate(vars_and_titles):
+            sns.scatterplot(x='reference_idx', y=yvar, linewidth=0, size=0.5, data=graph,
+                            ax=joint_ax[current_graph + i], alpha=0.3, legend=False, color='#000000')
+            jointplot_fig.axes[current_graph + i].scatter(x=top_control['reference_idx'], y=top_control[yvar],
+                                                          alpha=1, c='#FCC2DC', edgecolors='black', linewidth=0.8,
+                                                          marker='^', sizes=[100] * len(top_control[yvar]))
+            jointplot_fig.axes[current_graph + i].set(xlabel=None, ylabel=None, ylim=lims,
+                                                      xlim=[-0.1, lim])
+            jointplot_fig.axes[current_graph + i].set_title(f'{title} {dataset}', loc='left')
+            jointplot_fig.axes[current_graph + i].tick_params(labelbottom=False)
+        current_graph += 4
+
+    # Now make the axes conserved
+    multipliers = [4, 8, 12]
+    for i in range(4):
+        for j in multipliers:
+            jointplot_fig.axes[j].sharey(jointplot_fig.axes[i])
+            jointplot_fig.axes[j].sharex(jointplot_fig.axes[i])
+        jointplot_fig.axes[multipliers[-1]].set(xlabel='Reference 16s rRNA index')
+        multipliers = [val + 1 for val in multipliers]
+    plt.tight_layout()
+    if save_fig:
+        plt.savefig(fname=f'{save_file_loc}/figure_3a.{file_type}', format=file_type)
+    plt.show()
+    return
