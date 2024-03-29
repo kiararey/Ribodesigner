@@ -106,27 +106,37 @@ include_only_gram_pos = ['Actinobacteriota', 'Firmicutes']
 # generate_silva_datasets(silva_by_taxonomy_path, output_path_background_no_gram_pos, num_of_datasets=2,
 #                         num_of_sequences=num_of_sequences_per_genus, exclude_only=include_only_gram_pos,
 #                         exclude_taxonomy_level='Phylum', seed=seed)
-taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
-to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes'],
-               'Class': ['Gammaproteobacteria', 'Bacilli'],
-               'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
-               'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
-               'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
-for taxonomy in taxonomy_levels_all:
-    print(f'\nNow generating data for {taxonomy}:')
+# taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
+# to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes'],
+#                'Class': ['Gammaproteobacteria', 'Bacilli'],
+#                'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
+#                'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
+#                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
+# for taxonomy in taxonomy_levels_all:
+#     print(f'\nNow generating data for {taxonomy}:')
+#
+#     for include in to_generate[taxonomy]:
+#         print(f'\nDataset is now {include}:')
+#         output_path = f'Datasets_used/SILVA_squished_datasets_5_per_genus/Selective datasets per taxonomy/{taxonomy}_{include}'
+#         generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included', num_of_datasets=2,
+#                                 num_of_sequences=5, include_only=include,
+#                                 exclude_taxonomy_level=taxonomy, seed=seed)
+#         try:
+#             generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded', num_of_datasets=2,
+#                                     num_of_sequences=5, exclude_only=include,
+#                                     exclude_taxonomy_level=taxonomy, seed=seed)
+#         except ZeroDivisionError:
+#             print(f'Dataset {include} has too few sequences to make exclude data')
 
-    for include in to_generate[taxonomy]:
-        print(f'\nDataset is now {include}:')
-        output_path = f'Datasets_used/SILVA_squished_datasets_5_per_genus/Selective datasets per taxonomy/{taxonomy}_{include}'
-        generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included', num_of_datasets=2,
-                                num_of_sequences=5, include_only=include,
-                                exclude_taxonomy_level=taxonomy, seed=seed)
-        try:
-            generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded', num_of_datasets=2,
-                                    num_of_sequences=5, exclude_only=include,
-                                    exclude_taxonomy_level=taxonomy, seed=seed)
-        except ZeroDivisionError:
-            print(f'Dataset {include} has too few sequences to make exclude data')
+to_generate = ['Enterobacterales', 'Pseudomonadales']
+silva_by_taxonomy_path_order = [f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/{name}.fasta'
+                                for name in to_generate]
+for include, file in zip(to_generate, silva_by_taxonomy_path_order):
+        output_path = f'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_{include}'
+        generate_silva_datasets(file, output_path + '_included', num_of_datasets=2,
+                                num_of_sequences=3000, include_only=include, exclude_taxonomy_level='Order', seed=seed,
+                                pick_from_file=True)
+
 
 print('done!')
 

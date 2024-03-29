@@ -52,7 +52,7 @@ def read_fasta_file_full_name(filename, exclude=[], include=[], exclude_include_
 
 def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_of_datasets: int = 5,
                             num_of_sequences: int = 5, exclude_only: list = [], include_only: list = [],
-                            exclude_taxonomy_level: str = '', seed: int = 1):
+                            exclude_taxonomy_level: str = '', seed: int = 1, pick_from_file: bool = False):
     """
     Will generate a squished dataset given an input file that has already been made through SequencePrepper.py. Will
     return num_of_datasets datasets containing num_of_sequences in each without any repeated species.
@@ -83,8 +83,11 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
         exclude_taxonomy_level = taxonomy_choose[ini]
 
     # From the given path extract only the .fasta files
-    fasta_file_names = np.array(
-        [file_name for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
+    if not pick_from_file:
+        fasta_file_names = np.array(
+            [f'{silva_by_taxonomy_path}/{file_name}' for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
+    else:
+        fasta_file_names = [silva_by_taxonomy_path]
 
     if not os.path.exists(output_path):
         os.mkdir(output_path)
@@ -97,7 +100,7 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     with alive_bar(len(fasta_file_names), spinner='fishes') as bar:
         for i, seq_file in enumerate(fasta_file_names):
             # Pick five unique organisms per genus that are not the same species
-            target_seqs_and_names = read_fasta_file_full_name(f'{silva_by_taxonomy_path}/{seq_file}', exclude=exclude_only,
+            target_seqs_and_names = read_fasta_file_full_name(seq_file, exclude=exclude_only,
                                                               include=include_only,
                                                               exclude_include_taxonomy_level=exclude_taxonomy_level)
             if not target_seqs_and_names:
@@ -189,7 +192,10 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
                         species_of_candidate_sequences = [sequence.give_taxonomy('Species') for sequence in
                                                           candidate_sequences]
                 sequences_taken.extend(candidate_sequences)
+                if len(sequences_taken) > num_of_sequences:
+                    sequences_taken = rng.choice(sequences_taken, num_of_sequences, replace=False)
                 seqs_to_write[j] = np.append(seqs_to_write[j], sequences_taken)
+
                 j += 1
             bar()
 
@@ -198,7 +204,10 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
           f'sequences.\nNow saving in {output_path}...')
 
     # Add to FASTA file and save
-    taxonomy_level = silva_by_taxonomy_path.split('/')[-1]
+    if not pick_from_file:
+        taxonomy_level = silva_by_taxonomy_path.split('/')[-1]
+    else:
+        taxonomy_level = silva_by_taxonomy_path.split('/')[-2]
     kingdom_level = silva_by_taxonomy_path.split('/')[1].split('_')[7]
     for i, dataset in enumerate(seqs_to_write):
         file_name = f'{output_path}/{kingdom_level}_Only_by_{taxonomy_level}_{i + 1}.fasta'
