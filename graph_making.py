@@ -1722,6 +1722,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
             background_row['u_conservation_test_is_target'] = target_row['u_conservation_test']
             background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
             background_row['test_score_test_is_target'] = target_row['test_score']
+            background_row['number_of_targets_test_is_target'] = target_row['num_of_targets_test']
             background_row.index = background_row['index']
             best_design = background_row[background_row['igs_test_minus_background'] ==
                                          background_row['igs_test_minus_background'].max()]
@@ -1769,6 +1770,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     worst_universal = []
     worst_subset = []
     u1376_designs = []
+    universal_above_thresh = []
     for type, target in dset_names:
         if type != 'universal':
             continue
@@ -1808,10 +1810,16 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
                              control_y_data=u1376_equivalent['true_%_cov_test'],
                              control_loc_data=u1376_equivalent['reference_idx'], lim=u1376_dict[target][2])
 
+        # Now finally get the ones above our thresholds
+        temp_above = subset[subset['true_%_cov_test'] >= 0.7]
+        temp_above = temp_above[temp_above['u_conservation_test'] >= 0.7]
+        universal_above_thresh.append(temp_above)
+
     u1376_designs = pd.concat(u1376_designs)
     best_universal = pd.concat(best_universal)
     worst_universal = pd.concat(worst_universal)
     worst_subset = pd.concat(worst_subset)
+    universal_above_thresh = pd.concat(universal_above_thresh)
     tm_min = universal_subset['tm_nn_vs_test'].min()
     tm_max = universal_subset['tm_nn_vs_test'].max()
     make_summary_graph(subsets=u1376_dict, tm_min=tm_min, tm_max=tm_max, data_df=universal_subset_all,
@@ -1901,6 +1909,54 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     plt.savefig(fname=f'{output_folder}/{name}_delta_scores.{file_type}', format=file_type)
     plt.show()
 
+    # Plot chosen selective designs
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 11 * 0.6)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=9)
+    joint_ax = {
+        0: jointplot_fig.add_subplot(gridspec[0:3, 0:3]),
+        1: jointplot_fig.add_subplot(gridspec[0:3, 3:6]),
+        2: jointplot_fig.add_subplot(gridspec[0:3, 6:9]),
+        3: jointplot_fig.add_subplot(gridspec[3:6, 0:9])
+    }
+    # Choose designs
+    fn_clean_dataset = lambda x: x.split(' all seqs')[0].split('Order ')[-1]
+    graph = selective_above_thresh_designs[selective_above_thresh_designs['Dataset'].isin(
+        ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
+    graph['Dataset'] = graph['Dataset'].map(fn_clean_dataset)
+    pts = graph[graph['id'].isin(['GCGAC1367', 'TTGCC1410'])]
+    pts['color'] = ['#56B4E9', '#D38BB4']
+    graph = graph[~graph['id'].isin(['GCGAC1367', 'TTGCC1410'])]
+    # Prepare plots
+    plot_variable_regions(joint_ax[3], e_coli_var_regs)
+    joint_ax[3].axvline(x=1376, color='pink', linestyle='-')
+    sns.scatterplot(y='Dataset', x='u_test_minus_background', color='#000000', data=graph,
+                    ax=joint_ax[0], linestyle='', legend=False, style='Target excluded or included', s=150)
+    sns.scatterplot(y='Dataset', x='igs_test_minus_background', color='#000000', data=graph, legend=False,
+                    ax=joint_ax[1], linestyle='', style='Target excluded or included', s=150)
+    sns.scatterplot(y='Dataset', x='guide_test_minus_background', color='#000000', data=graph,
+                    ax=joint_ax[2], linestyle='', style='Target excluded or included', s=150, legend=False)
+    sns.scatterplot(y='Dataset', x='reference_idx', data=graph, ax=joint_ax[3], color='#000000',
+                    linestyle='')
+    # now plot the designs we are testing
+    sns.scatterplot(y='Dataset', x='u_test_minus_background', color=pts['color'], data=pts,
+                    ax=joint_ax[0], linestyle='', legend=False, style='Target excluded or included', s=150)
+    sns.scatterplot(y='Dataset', x='igs_test_minus_background', color=pts['color'], data=pts, legend=False,
+                    ax=joint_ax[1], linestyle='', style='Target excluded or included', s=150)
+    sns.scatterplot(y='Dataset', x='guide_test_minus_background', color=pts['color'], data=pts,
+                    ax=joint_ax[2], linestyle='', style='Target excluded or included', s=150, legend=False)
+    sns.scatterplot(y='Dataset', x='reference_idx', data=pts, ax=joint_ax[3], color=pts['color'],
+                    linestyle='')
+    jointplot_fig.suptitle('\u0394 scores for tested order-level selective ribozymes')
+    joint_ax[0].set(xlim=[0, 1.1], xlabel='\u0394 U conservation', ylabel='')
+    joint_ax[1].set(xlim=[0, 1.1], xlabel='\u0394 IGS true coverage', ylabel='', yticklabels='')
+    joint_ax[2].set(xlim=[-0.1, 1.1], xlabel='\u0394 guide score', ylabel='', yticklabels='')
+    joint_ax[3].set(xlabel='E. coli 16s rRNA indexing', ylabel='')
+    plt.tight_layout()
+    plt.savefig(fname=f'{output_folder}/{name}_chosen_designs_delta_scores.{file_type}', format=file_type)
+    plt.show()
+
     # Plot different metrics vs. other metrics
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 30 * 0.6)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
@@ -1965,7 +2021,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     # Extract designs too
     best_all_to_order = pd.concat(
         [best_selective_designs, best_universal, u1376_designs, worst_subset])
-    for d_set, type in [(best_all_to_order, ''), (selective_above_thresh_designs, '_above_thresh')]:
+    for d_set, type in [(best_all_to_order, ''), (pd.concat([selective_above_thresh_designs, universal_above_thresh]),
+                                                  '_above_thresh')]:
         igses = d_set['igs'].tolist()
         guides = d_set['guide'].tolist()
         to_order = []

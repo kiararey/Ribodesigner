@@ -611,42 +611,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
-    if selective:
-        print('please wait till selective ribozymes are re-implemented')
-        # background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
-        #
-        # print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
-        #
-        # if percent_of_background_seqs_used < 1:
-        #     background_names_and_seqs = np.random.choice(
-        #         background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
-        #         replace=False)
-        #     print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
-        #
-        # # first find the IGSes and locations of the background sequences. We do not want to hit these.
-        # # Also align these to the reference sequence
-        # with alive_bar(unknown='fish', spinner='fishes') as bar:
-        #     fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
-        #                     guide_length=guide_length, min_length=min_length)
-        #     time2 = time.perf_counter()
-        #     bar()
-        # round_convert_time(start=time1, end=time2, round_to=4,
-        #                    task_timed=f'finding catalytic sites and indexing background sequences to reference')
-        #
-        # print('Now applying designed ribozymes with background sequences and getting statistics...')
-        # optimized_seqs = ribo_checker(optimized_seqs, background_names_and_seqs, len(ref_name_and_seq[1]),
-        #                               guide_length=guide_length, flexible_igs=True, n_limit=n_limit,
-        #                               target_background=not selective, refine_selective=True, for_test=False)
-        #
-        # time2 = time.perf_counter()
-        # round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
-        #                                                                   'sequences')
-        # # Remove any .fasta
-        # pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_selective_vs_' + \
-        #                    background_sequences_folder.split('.')[0].split('/')[-1]
-    else:
-        # Remove any .fasta
-        pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
+    pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
     print('Now pickling output file...')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with open(f'{folder_to_save}/designs_{pickle_file_name}.pickle', 'wb') as handle:
@@ -1041,7 +1006,8 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
     igs_ids_counts = defaultdict(lambda: 0)
 
     # Extract all the IGS id numbers - that's the IGS sequence and the reference index number
-    with alive_bar(aligned_targets.size, spinner='fishes') as bar:
+    total_targets = aligned_targets.size
+    with alive_bar(total_targets, spinner='fishes') as bar:
         for seq in aligned_targets:
             igses = set()
             ref_ids = set()
@@ -1061,8 +1027,8 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
     if return_test_seqs:
         # IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
-        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / aligned_targets.size,
-                                       counts / counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
+        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets,
+                                       counts / counts_of_igs[igs[:igs_len]], counts / total_targets, counts]
                                  for igs, counts in igs_ids_counts.items()}
         # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location
         # of the target sequence
@@ -1083,16 +1049,16 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
         # Now organize by ref_idx:
         for ref_id, count_of_ref in counts_of_ref_idx.items():
-            output_dict[ref_id] = (output_dict[ref_id], count_of_ref / len(aligned_targets))
+            output_dict[ref_id] = (output_dict[ref_id], count_of_ref / len(aligned_targets), count_of_ref)
         return output_dict, igs_ids_counts, counts_of_ref_idx
     else:
         # this gives us a dictionary where the ID is matched to the true percent coverage
         # Measure true percent coverage of these and keep IGSes that are at least the minimum
         # true percent coverage needed
-        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / aligned_targets.size,
-                                       counts / counts_of_igs[igs[:igs_len]], counts / aligned_targets.size]
+        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets,
+                                       counts / counts_of_igs[igs[:igs_len]], counts / total_targets]
                                  for igs, counts in igs_ids_counts.items()
-                                 if counts / aligned_targets.size >= min_true_cov}
+                                 if counts / total_targets >= min_true_cov}
 
         # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the
         # target sequence in our initial aligned_targets array
@@ -1348,6 +1314,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
                 design.perc_cov_test = 0
                 design.perc_on_target_test = 0
                 design.true_perc_cov_test = 0
+                design.number_of_targets_test = 0
                 bar()
                 continue
             # Set correct u conservation
@@ -1362,10 +1329,13 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
                 design.perc_cov_test = matching_ref_idx_seqs[0][design_id][2]
                 design.perc_on_target_test = matching_ref_idx_seqs[0][design_id][3]
                 design.true_perc_cov_test = matching_ref_idx_seqs[0][design_id][4]
+                design.number_of_targets_test = matching_ref_idx_seqs[0][design_id][5]
             except KeyError:  # if there is not any matching IGSes
                 design.perc_cov_test = 0
                 design.perc_on_target_test = 0
                 design.true_perc_cov_test = 0
+                # recall that number of targets is how many targets have that IGS!
+                design.number_of_targets_test = 0
                 if not flexible_igs:
                     bar()
                     continue

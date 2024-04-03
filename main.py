@@ -834,15 +834,15 @@ if __name__ == '__main__':
     #             _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
     #                                             flexible_igs=True, file_to_save=out_path)
     #     output = run_local(output_folder=out_path, guide_len=n)
-    all_test_file_names = []
-    all_target_file_names = []
-    test_seq_path = f'Datasets_used/SILVA_squished_datasets_3000_per_order/'
-    test_seqs_to_process = [([test_seq_path + f'Order_{include}_included/Order_{include}_included_1.fasta'],
-                             save_file_path + f'Order_{include}_all_seqs')
-                            for include in ['Enterobacterales', 'Pseudomonadales']]
-    target_seqs_to_process = [([test_seq_path + f'Order_{include}_included/Order_{include}_included_2.fasta'],
-                               save_file_path + f'Order_{include}_all_seqs')
-                              for include in ['Enterobacterales', 'Pseudomonadales']]
+    # all_test_file_names = []
+    # all_target_file_names = []
+    # test_seq_path = f'Datasets_used/SILVA_squished_datasets_3000_per_order/'
+    # test_seqs_to_process = [([test_seq_path + f'Order_{include}_included/Order_{include}_included_1.fasta'],
+    #                          save_file_path + f'Order_{include}_all_seqs')
+    #                         for include in ['Enterobacterales', 'Pseudomonadales']]
+    # target_seqs_to_process = [([test_seq_path + f'Order_{include}_included/Order_{include}_included_2.fasta'],
+    #                            save_file_path + f'Order_{include}_all_seqs')
+    #                           for include in ['Enterobacterales', 'Pseudomonadales']]
     # for (test_files, out_path) in test_seqs_to_process:
     #     for file in test_files:
     #         title = file.split('.')[0].split('/')[-1]
