@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="AnalysisUIOptions">
+    <option name="ANALYZE_INJECTED_CODE" value="false" />
     <option name="SCOPE_TYPE" value="3" />
   </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely.">
-      <change afterPath="$PROJECT_DIR$/Datasets_used/Datasets_used.zip" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Making selective designs hopefully for the last time">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/generate_silva_datasets_code.py" beforeDir="false" afterPath="$PROJECT_DIR$/generate_silva_datasets_code.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph_making.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph_making.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
     </list>
@@ -31,17 +30,31 @@
     <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="main" />
+        <entry key="$PROJECT_DIR$" value="figure_making" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-    <option name="RESET_MODE" value="SOFT" />
+    <option name="RESET_MODE" value="HARD" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;kiararey&quot;
+  }
+}</component>
   <component name="GithubProjectSettings">
     <option name="branchProtectionPatterns">
       <list>
         <option value="main" />
       </list>
+    </option>
+  </component>
+  <component name="GithubPullRequestsUISettings">
+    <option name="selectedUrlAndAccountId">
+      <UrlAndAccount>
+        <option name="accountId" value="c8af0c8d-7ccf-4d38-9311-ff1f9d274d30" />
+        <option name="url" value="https://github.com/kiararey/RiboDesigner" />
+      </UrlAndAccount>
     </option>
   </component>
   <component name="MarkdownSettingsMigration">
@@ -59,31 +72,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_directory_selection": "/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All",
-    "last_opened_file_path": "/Users/kiarareyes/PycharmProjects/RiboDesigner",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "run.code.analysis.last.selected.profile": "aDefault",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
-    "two.files.diff.last.used.file": "/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_directory_selection&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;two.files.diff.last.used.file&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
-      "Python"
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings module-name="RiboDesigner" is-module-sdk="true">
@@ -192,6 +205,9 @@
       <module name="RiboDesigner" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -308,10 +324,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.generate_silva_datasets_code" />
-        <item itemvalue="Python.A5" />
-        <item itemvalue="Python.scratch (1)" />
         <item itemvalue="Python.scratch" />
         <item itemvalue="Python.ribodesigner_classes" />
+        <item itemvalue="Python.scratch (1)" />
+        <item itemvalue="Python.A5" />
       </list>
     </recent_temporary>
   </component>
@@ -410,6 +426,23 @@
       <workItem from="1697646150979" duration="46553000" />
       <workItem from="1698252784624" duration="37000" />
       <workItem from="1698257249190" duration="75448000" />
+      <workItem from="1701655114158" duration="15442000" />
+      <workItem from="1701721727910" duration="256000" />
+      <workItem from="1701722019187" duration="166132000" />
+      <workItem from="1704743965949" duration="29000" />
+      <workItem from="1704744017638" duration="102449000" />
+      <workItem from="1706209538546" duration="12024000" />
+      <workItem from="1706572885178" duration="18115000" />
+      <workItem from="1707166655055" duration="633000" />
+      <workItem from="1707240746857" duration="658000" />
+      <workItem from="1707259272371" duration="32401000" />
+      <workItem from="1708370409570" duration="16118000" />
+      <workItem from="1708396915491" duration="16493000" />
+      <workItem from="1708716762887" duration="56505000" />
+      <workItem from="1709669622922" duration="111000" />
+      <workItem from="1709675885506" duration="98746000" />
+      <workItem from="1710879001142" duration="52081000" />
+      <workItem from="1712008977063" duration="3758000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -754,15 +787,25 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="103" />
+    <option name="localTasksCounter" value="166" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
+    <option name="OPEN_GENERIC_TABS">
+      <map>
+        <entry key="22aa7ac6-3b6b-4386-9524-fcc476a36303" value="TOOL_WINDOW" />
+      </map>
+    </option>
     <option name="TAB_STATES">
       <map>
+        <entry key="22aa7ac6-3b6b-4386-9524-fcc476a36303">
+          <value>
+            <State />
+          </value>
+        </entry>
         <entry key="MAIN">
           <value>
             <State>
@@ -771,7 +814,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="random_sampling" />
+                        <option value="origin/parallelizing" />
                       </list>
                     </value>
                   </entry>
@@ -784,32 +827,32 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Next up, I'll be working on the ribochecker function" />
-    <MESSAGE value="Slowly working on ribochecker function" />
-    <MESSAGE value="Finished rewriting most of the code, just need to write graph making functions!" />
-    <MESSAGE value="Making a function to test an existing design on a set of sequences. &#10;&#10;Also made the outline for a graph making function." />
-    <MESSAGE value="Making graphs, struggled with pandas and ready to go into matplotlib hell again." />
-    <MESSAGE value="Finally have data ready with pandas for matplotlib and seaborn..." />
-    <MESSAGE value="Ok have some graphs, but I'll remake the main function to analyze the universal designs as well" />
-    <MESSAGE value="fixed a bug in ribo_checker" />
-    <MESSAGE value="Added progress bars how cute! If running in Pycharm make sure you follow the instructions here https://github.com/rsalmei/alive-progress#forcing-animations-on-pycharm-jupyter-etc" />
-    <MESSAGE value="Optimizing ribo_checker. Started with IGS conservation function, working on check_guide_stats now" />
-    <MESSAGE value="Implemented multiprocessing to ribodesigner_v2.py and started making revised graph functions!" />
-    <MESSAGE value="Made revised graph functions! This is a pretty stable version of RiboDesigner so I'll clean it up and merge this branch to main." />
-    <MESSAGE value="Cleaning up" />
-    <MESSAGE value="Initial version of random sampling. Implementing more refinement steps now" />
-    <MESSAGE value="Added random sampling function. Will look through test_design and ribochecker next" />
-    <MESSAGE value="Implementing a separate testing step with a separate dataset to evaluate design performance vs. a different dataset. Also working on redoing ribochecker. No big changes yet" />
-    <MESSAGE value="Reworked ribochecker. It's way, way faster now and it only reduces ambiguity when needed. Next up: implementing a testing step." />
-    <MESSAGE value="Updated packages and working on graphs. Need to figure out what's going on with the top score selections!" />
-    <MESSAGE value="Added a note to fix muscle5 installation if it breaks again.&#10;Also fixed graphs making, made better output .csv files, and removed some unnecessary computation when optimizing guides." />
-    <MESSAGE value="Messing with graphs." />
-    <MESSAGE value="Messing with graphs again, and modified test_design to be consistent with ribochecker" />
-    <MESSAGE value="Will rework graphs completely, pushing this to have a record of the graphs before i do this saved" />
-    <MESSAGE value="Graphs pass #1" />
-    <MESSAGE value="Found a pretty big oversight in check_igs_conservation where locations with more than one IGS (i.e. a location in a sequence where there were many gaps between the reference sequence and that target sequence) would be written over and only one IGS was conserved. Will start fixing this but it will take some major reworking of check_guide_stats" />
-    <MESSAGE value="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely." />
-    <option name="LAST_COMMIT_MESSAGE" value="Fixed oversight, but now it is taking a long, long time to run. Will need to work on optimizing again soon. In the meantime, however, I'm preparing this to be run on a remote server and finally uploading sample data! I'll be uploading this to the Stadler lab servcer to try to run this remotely." />
+    <MESSAGE value="More graph making" />
+    <MESSAGE value="also making more graphs" />
+    <MESSAGE value="finished the first draft of graphs that I'm actually somewhat happy with! Now working on getting data for varying guide lengths to run on NOTS" />
+    <MESSAGE value="Added a small improvement where ribodesigner and prepare_test_seqs will create the folder used to save data to if it does not currently exist" />
+    <MESSAGE value="Added a small improvement where ribodesigner will create the folder used to save data to if it does not currently exist" />
+    <MESSAGE value="Preparing to run this on NOTS" />
+    <MESSAGE value="Added check to write the IDs of skipped designs" />
+    <MESSAGE value="Trying to find non-ASCII characters" />
+    <MESSAGE value="Forgot to set the correct guide length when running ribochecker rip. It should be fixed now" />
+    <MESSAGE value="Ammended graphing functions to make edits Joff and Lauren wanted me to make! Tomorrow I'll try to get an ANOVA set up for the guide length graphs and check the sequence logo plots to make sure they are being correctly plotted.&#10;&#10;Will later need to fix how workers can determine work already done... right now if scavenge gives me different resources when running my code again the work done could be duplicated!" />
+    <MESSAGE value="Working on graphs." />
+    <MESSAGE value="again Working on graphs." />
+    <MESSAGE value="Adding NOTS instructions" />
+    <MESSAGE value="Working on making violin graphs for my lab meeting presentation" />
+    <MESSAGE value="documenting what the code is like before i start to implement selective designs again!" />
+    <MESSAGE value="Adding Gram positive selective ribozyme to the designs generated, and working on graphs again." />
+    <MESSAGE value="Computer is acting weird so backing up" />
+    <MESSAGE value="Finishing up making the initial batch of designs for experimental validation!!!" />
+    <MESSAGE value="Ok hopefully last round for real for experimentation still working on a few graphs for more selective designs" />
+    <MESSAGE value="Quick change: made combine_data less bad" />
+    <MESSAGE value="Working on making a few more graphs" />
+    <MESSAGE value="While making graphs for guide sequences for test seqs I realized I was not saving sequences with only one guide per batch rip&#10;&#10;Here I've fixed this oversight" />
+    <MESSAGE value="I've made a short and sweet function that can get variable regions of one sequence based on another one to get archaeal 16s variable regions based on e coli 16s variable regions" />
+    <MESSAGE value="Computer started freezing while working on graphs, saving my progress till now" />
+    <MESSAGE value="Making selective designs hopefully for the last time" />
+    <option name="LAST_COMMIT_MESSAGE" value="Making selective designs hopefully for the last time" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -821,48 +864,158 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>2107</line>
+          <line>1868</line>
           <option name="timeStamp" value="147" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>2100</line>
+          <line>1861</line>
           <option name="timeStamp" value="148" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1982</line>
-          <option name="timeStamp" value="234" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1584</line>
-          <option name="timeStamp" value="298" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1581</line>
-          <option name="timeStamp" value="299" />
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>402</line>
+          <option name="timeStamp" value="1112" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>112</line>
-          <option name="timeStamp" value="302" />
+          <line>318</line>
+          <option name="timeStamp" value="1149" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/venv/lib/python3.11/site-packages/Bio/SeqUtils/MeltingTemp.py</url>
+          <line>1070</line>
+          <option name="timeStamp" value="1182" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/venv/lib/python3.11/site-packages/Bio/SeqUtils/MeltingTemp.py</url>
+          <line>933</line>
+          <option name="timeStamp" value="1187" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/venv/lib/python3.11/site-packages/Bio/SeqUtils/MeltingTemp.py</url>
+          <line>936</line>
+          <option name="timeStamp" value="1189" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/venv/lib/python3.11/site-packages/Bio/SeqUtils/MeltingTemp.py</url>
+          <line>927</line>
+          <option name="timeStamp" value="1190" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/venv/lib/python3.11/site-packages/Bio/SeqUtils/MeltingTemp.py</url>
+          <line>763</line>
+          <option name="timeStamp" value="1193" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1318</line>
+          <option name="timeStamp" value="1278" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1211</line>
+          <option name="timeStamp" value="1284" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1233</line>
+          <option name="timeStamp" value="1285" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1198</line>
+          <option name="timeStamp" value="1286" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>423</line>
+          <option name="timeStamp" value="1287" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
+          <line>80</line>
+          <option name="timeStamp" value="1320" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
+          <line>118</line>
+          <option name="timeStamp" value="1321" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
+          <line>92</line>
+          <option name="timeStamp" value="1322" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>791</line>
+          <option name="timeStamp" value="1324" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>459</line>
+          <option name="timeStamp" value="1328" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>188</line>
+          <option name="timeStamp" value="1334" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>415</line>
+          <option name="timeStamp" value="1335" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>137</line>
-          <option name="timeStamp" value="303" />
+          <line>692</line>
+          <option name="timeStamp" value="1346" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1235</line>
-          <option name="timeStamp" value="314" />
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>639</line>
+          <option name="timeStamp" value="1350" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/ribodesigner.py</url>
-          <line>1357</line>
-          <option name="timeStamp" value="315" />
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1608</line>
+          <option name="timeStamp" value="1370" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1560</line>
+          <option name="timeStamp" value="1377" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>2039</line>
+          <option name="timeStamp" value="1394" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>768</line>
+          <option name="timeStamp" value="1481" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>1450</line>
+          <option name="timeStamp" value="1503" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>799</line>
+          <option name="timeStamp" value="1531" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>832</line>
+          <option name="timeStamp" value="1532" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/graph_making.py</url>
+          <line>43</line>
+          <option name="timeStamp" value="1576" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-defaults>
@@ -876,13 +1029,18 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
+    <watches-manager>
+      <configuration name="PythonConfigurationType">
+        <watch expression="to_optimize" />
+      </configuration>
+    </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/RiboDesigner$SILVAanalysis.coverage" NAME="SILVAanalysis Coverage Results" MODIFIED="1660677354205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$sequence_prepper.coverage" NAME="sequence_prepper Coverage Results" MODIFIED="1673467200575" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$scratch.coverage" NAME="scratch Coverage Results" MODIFIED="1691095320521" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboCheckerScript.coverage" NAME="RiboCheckerScript Coverage Results" MODIFIED="1656460158129" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$generate_silva_datasets_code.coverage" NAME="generate_silva_datasets_code Coverage Results" MODIFIED="1699471219839" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$generate_silva_datasets_code.coverage" NAME="generate_silva_datasets_code Coverage Results" MODIFIED="1711572328752" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$generate_SILVA_datasets.coverage" NAME="generate_SILVA_datasets Coverage Results" MODIFIED="1673372601578" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$A5.coverage" NAME="A5 Coverage Results" MODIFIED="1695149716841" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/My Drive/Rice/PhD classes/COMP 543/COMP_543_assignments/Assignment 5/A5 KRG" />
@@ -897,7 +1055,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$IGSchecker.coverage" NAME="IGSchecker Coverage Results" MODIFIED="1659372428534" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$figureB.coverage" NAME="figureB Coverage Results" MODIFIED="1680558179112" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/../RiboDesigner test" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner__1_.coverage" NAME="RiboDesigner (1) Coverage Results" MODIFIED="1681251351848" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1699565550235" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1712080818655" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_paper_figures.coverage" NAME="RiboDesigner_paper_figures Coverage Results" MODIFIED="1674511613405" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$findReferenceIdxScript.coverage" NAME="findReferenceIdxScript Coverage Results" MODIFIED="1660677370975" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$SequencePrepper.coverage" NAME="SequencePrepper Coverage Results" MODIFIED="1661804956011" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

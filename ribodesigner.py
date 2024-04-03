@@ -1,17 +1,17 @@
 import glob
+import json
 import multiprocessing as mp
 import os
+import pickle
 import subprocess
 import time
 from collections import defaultdict
-from math import exp
+from math import exp, log
+from graph_making import make_test_seqs_graph, import_data_to_df, make_guide_score_plot
 
-import Bio.motifs
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from Bio import AlignIO
+from Bio import AlignIO, SeqUtils
 from Bio.Align import AlignInfo, PairwiseAligner
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
@@ -64,117 +64,178 @@ class RibozymeDesign:
     'g': list[Seq]  # guides to use to later
     """
 
-    def __init__(self, id_attr: str, guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
+    def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
+                 background_tm_nn_attr: float = None,
                  background_score_attr: float = None, perc_cov_background_attr: float = None,
                  perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
                  background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
                  background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
                  u_consv_background_attr: float = None, tested_design_attr: bool = False,
                  perc_cov_test_attr: float = None,
-                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None):
-        self.id = id_attr
-        if igs_attr:
-            self.igs = igs_attr
+                 perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None,
+                 dict_initialize: dict = None):
+        if dict_initialize:
+            # First, do most data
+            self.id = dict_initialize['id']
+            self.igs = dict_initialize['igs']
+            self.ref_idx = dict_initialize['reference_idx']
+            self.optimized_to_targets = dict_initialize['optimized_to_targets']
+            self.optimized_to_background = dict_initialize['optimized_to_background']
+            self.tested = dict_initialize['tested']
+            self.tested_design = dict_initialize['tested_design']
+            self.guide = dict_initialize['guide']
+            self.number_of_targets = dict_initialize['num_of_targets']
+            self.score_type = dict_initialize['score_type']
+            self.score = dict_initialize['score']
+            self.perc_cov = dict_initialize['%_coverage']
+            self.perc_on_target = dict_initialize['%_on target']
+            self.true_perc_cov = dict_initialize['true_%_cov']
+            self.composite_score = dict_initialize['composite_score']
+            self.number_of_targets_background = dict_initialize['num_of_targets_background']
+            self.u_conservation_background = dict_initialize['u_conservation_background']
+            self.background_score = dict_initialize['background_score']
+            self.perc_cov_background = dict_initialize['%_coverage_background']
+            self.perc_on_target_background = dict_initialize['%_on target_background']
+            self.true_perc_cov_background = dict_initialize['true_%_cov_background']
+            self.composite_background_score = dict_initialize['composite_background_score']
+            self.delta_igs_vs_background = dict_initialize['delta_igs_vs_background']
+            self.delta_guide_vs_background = dict_initialize['delta_guide_vs_background']
+            self.delta_vs_background = dict_initialize['delta_vs_background']
+            self.name_of_test_dataset = dict_initialize['name_of_test_dataset']
+            self.number_of_targets_test = dict_initialize['num_of_targets_test']
+            self.u_conservation_test = dict_initialize['u_conservation_test']
+            self.test_score = dict_initialize['test_score']
+            self.test_tm_nn = dict_initialize['tm_nn_vs_test']
+            self.perc_cov_test = dict_initialize['%_coverage_test']
+            self.perc_on_target_test = dict_initialize['%_on target_test']
+            self.true_perc_cov_test = dict_initialize['true_%_cov_test']
+            self.composite_test_score = dict_initialize['composite_test_score']
+            self.delta_igs_vs_test = dict_initialize['delta_igs_vs_test']
+            self.delta_guide_vs_test = dict_initialize['delta_guide_vs_test']
+            self.delta_vs_test = dict_initialize['delta_vs_test']
+            # Then, targets will be a bit messy. Should fix this later, right now I just need it to work
+            self.targets = zip(dict_initialize['target_Domain'], dict_initialize['target_Phylum'],
+                               dict_initialize['target_Class'], dict_initialize['target_Order'],
+                               dict_initialize['target_Family'], dict_initialize['target_Genus'],
+                               dict_initialize['target_Species'], dict_initialize['target_Taxon'])
+            self.test_targets = zip(dict_initialize['target_Domain_test'], dict_initialize['target_Phylum_test'],
+                                    dict_initialize['target_Class_test'], dict_initialize['target_Order_test'],
+                                    dict_initialize['target_Family_test'], dict_initialize['target_Genus_test'],
+                                    dict_initialize['target_Species_test'], dict_initialize['target_Taxon_test'])
+            self.background_targets = zip(dict_initialize['target_Domain_background'],
+                                          dict_initialize['target_Phylum_background'],
+                                          dict_initialize['target_Class_background'],
+                                          dict_initialize['target_Order_background'],
+                                          dict_initialize['target_Family_background'],
+                                          dict_initialize['target_Genus_background'],
+                                          dict_initialize['target_Species_background'],
+                                          dict_initialize['target_Taxon_background'])
         else:
-            self.igs = id_attr[:5]
-        if ref_idx_attr:
-            self.ref_idx = ref_idx_attr
-        else:
-            self.ref_idx = int(id_attr[5:])
-        self.guide = guide_attr
-        self.guides_to_use = guides_to_use_attr
-        self.targets = targets_attr
-        if targets_attr:
-            self.number_of_targets = len(targets_attr)
-        else:
-            self.number_of_targets = None
-        self.score = score_attr
-        self.score_type = score_type_attr
+            self.id = id_attr
+            if igs_attr:
+                self.igs = igs_attr
+            else:
+                self.igs = id_attr[:5]
+            if ref_idx_attr:
+                self.ref_idx = ref_idx_attr
+            else:
+                self.ref_idx = int(id_attr[5:])
+            self.guide = guide_attr
+            self.guides_to_use = guides_to_use_attr
+            self.targets = targets_attr
+            if targets_attr:
+                self.number_of_targets = len(targets_attr)
+            else:
+                self.number_of_targets = None
+            self.score = score_attr
+            self.score_type = score_type_attr
 
-        # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
-        self.calc_percent_coverages(perc_cov_attr=perc_cov_attr, perc_on_target_attr=perc_on_target_attr,
-                                    true_perc_cov_attr=true_perc_cov_attr)
+            # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
+            self.calc_percent_coverages(perc_cov_attr=perc_cov_attr, perc_on_target_attr=perc_on_target_attr,
+                                        true_perc_cov_attr=true_perc_cov_attr)
 
-        # If we initialized using an optimized design, set these attributes now.
-        if self.score and self.true_perc_cov:
-            self.composite_score = self.true_perc_cov * self.score
-        else:
-            self.composite_score = 0
-        if self.guide and self.score and self.score_type:
-            self.optimized_to_targets = True
-        else:
-            self.optimized_to_targets = False
-        self.tested_design = tested_design_attr
+            # If we initialized using an optimized design, set these attributes now.
+            if self.score and self.true_perc_cov:
+                self.composite_score = self.true_perc_cov * self.score
+            else:
+                self.composite_score = 0
+            if self.guide and self.score and self.score_type:
+                self.optimized_to_targets = True
+            else:
+                self.optimized_to_targets = False
+            self.tested_design = tested_design_attr
 
-        # For initialized targeted ribozyme designs only:
-        self.background_score = background_score_attr
-        self.background_targets = background_targets_attr
-        if background_targets_attr:
-            self.number_of_targets_background = len(background_targets_attr)
-        else:
-            self.number_of_targets_background = None
-        self.background_guides = background_guides_attr
-        self.u_conservation_background = u_consv_background_attr
-        self.anti_guide = anti_guide_attr
-        self.anti_guide_score = anti_guide_score_attr
-        self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
-                                               perc_on_target_background_attr=perc_on_target_background_attr,
-                                               true_perc_cov_background_attr=true_perc_cov_background_attr)
+            # For initialized targeted ribozyme designs only:
+            self.background_score = background_score_attr
+            self.background_tm_nn = background_tm_nn_attr
+            self.background_targets = background_targets_attr
+            if background_targets_attr:
+                self.number_of_targets_background = len(background_targets_attr)
+            else:
+                self.number_of_targets_background = None
+            self.background_guides = background_guides_attr
+            self.u_conservation_background = u_consv_background_attr
+            self.anti_guide = anti_guide_attr
+            self.anti_guide_score = anti_guide_score_attr
+            self.calc_background_percent_coverages(perc_cov_background_attr=perc_cov_background_attr,
+                                                   perc_on_target_background_attr=perc_on_target_background_attr,
+                                                   true_perc_cov_background_attr=true_perc_cov_background_attr)
 
-        if self.true_perc_cov_background and background_score_attr:
-            self.composite_background_score = self.true_perc_cov_background * background_score_attr
-        else:
-            self.composite_background_score = None
+            if self.true_perc_cov_background and background_score_attr:
+                self.composite_background_score = self.true_perc_cov_background * background_score_attr
+            else:
+                self.composite_background_score = None
 
-        if self.composite_score and self.composite_background_score:
-            self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
-            self.delta_guide_vs_background = self.score - self.background_score
-            self.delta_vs_background = self.composite_score - self.composite_background_score
-        elif self.composite_score:
-            self.delta_igs_vs_background = self.true_perc_cov
-            self.delta_guide_vs_background = self.score
-            self.delta_vs_background = self.composite_score
-        else:
-            self.delta_igs_vs_background = 0
-            self.delta_guide_vs_background = 0
-            self.delta_vs_background = 0
+            if self.composite_score and self.composite_background_score:
+                self.delta_igs_vs_background = self.true_perc_cov - self.true_perc_cov_background
+                self.delta_guide_vs_background = self.score - self.background_score
+                self.delta_vs_background = self.composite_score - self.composite_background_score
+            elif self.composite_score:
+                self.delta_igs_vs_background = self.true_perc_cov
+                self.delta_guide_vs_background = self.score
+                self.delta_vs_background = self.composite_score
+            else:
+                self.delta_igs_vs_background = 0
+                self.delta_guide_vs_background = 0
+                self.delta_vs_background = 0
 
-        if self.composite_background_score:
-            self.optimized_to_background = True
-        else:
-            self.optimized_to_background = False
-        self.guide_batches = None
-        self.test_targets = None
-        self.u_conservation_test = None
-        self.perc_cov_test = perc_cov_test_attr
-        self.perc_on_target_test = perc_on_target_test_attr
-        self.true_perc_cov_test = true_perc_cov_test_attr
-        self.test_score = None
-        self.composite_test_score = None
+            if self.composite_background_score:
+                self.optimized_to_background = True
+            else:
+                self.optimized_to_background = False
+            self.guide_batches = None
+            self.test_targets = None
+            self.u_conservation_test = None
+            self.perc_cov_test = perc_cov_test_attr
+            self.perc_on_target_test = perc_on_target_test_attr
+            self.true_perc_cov_test = true_perc_cov_test_attr
+            self.test_score = None
+            self.test_tm_nn = None
+            self.composite_test_score = None
 
-        if self.composite_score and self.composite_test_score:
-            self.delta_igs_vs_test = self.true_perc_cov - self.true_perc_cov_test
-            self.delta_guide_vs_test = self.score - self.test_score
-            self.delta_vs_test = self.composite_score - self.composite_test_score
-        elif self.composite_score:
-            self.delta_igs_vs_test = self.true_perc_cov
-            self.delta_guide_vs_test = self.score
-            self.delta_vs_test = self.composite_score
-        else:
-            self.delta_igs_vs_test = None
-            self.delta_guide_vs_test = None
-            self.delta_vs_test = None
-        self.tested = False
-        self.number_of_targets_test = None
-        self.name_of_test_dataset = None
+            if self.composite_score and self.composite_test_score:
+                self.delta_igs_vs_test = self.true_perc_cov - self.true_perc_cov_test
+                self.delta_guide_vs_test = self.score - self.test_score
+                self.delta_vs_test = self.composite_score - self.composite_test_score
+            elif self.composite_score:
+                self.delta_igs_vs_test = self.true_perc_cov
+                self.delta_guide_vs_test = self.score
+                self.delta_vs_test = self.composite_score
+            else:
+                self.delta_igs_vs_test = None
+                self.delta_guide_vs_test = None
+                self.delta_vs_test = None
+            self.tested = False
+            self.number_of_targets_test = None
+            self.name_of_test_dataset = None
 
     def to_dict(self, taxonomy: str | list = '', all_data: bool = False):
         inputs = {}
         if not taxonomy:
             taxonomy = ['Domain', 'Phylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Taxon']
-        if type(taxonomy) == list:
+        if type(taxonomy) is list:
             for target in taxonomy:
                 if self.targets:
                     target_input = (str(give_taxonomy(str(self.targets), level=target))
@@ -244,6 +305,7 @@ class RibozymeDesign:
             'num_of_targets_background': self.number_of_targets_background,
             'u_conservation_background': self.u_conservation_background,
             'background_score': self.background_score,
+            # 'tm_nn_vs_background': self.background_tm_nn,
             '%_coverage_background': self.perc_cov_background,
             '%_on target_background': self.perc_on_target_background,
             'true_%_cov_background': self.true_perc_cov_background,
@@ -255,6 +317,7 @@ class RibozymeDesign:
             'num_of_targets_test': self.number_of_targets_test,
             'u_conservation_test': self.u_conservation_test,
             'test_score': self.test_score,
+            'tm_nn_vs_test': self.test_tm_nn,
             '%_coverage_test': self.perc_cov_test,
             '%_on target_test': self.perc_on_target_test,
             'true_%_cov_test': self.true_perc_cov_test,
@@ -316,16 +379,18 @@ class RibozymeDesign:
         self.perc_cov = perc_cov_attr
         self.true_perc_cov = true_perc_cov_attr
         self.perc_on_target = perc_on_target_attr
+
         if perc_cov_attr is not None and true_perc_cov_attr is not None and perc_on_target_attr is not None:
-            # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
-            if not self.perc_cov and true_perc_cov_attr and perc_on_target_attr:
-                self.perc_cov = true_perc_cov_attr / perc_on_target_attr
+            return
+        if not perc_cov_attr and true_perc_cov_attr and perc_on_target_attr:
+            self.perc_cov = true_perc_cov_attr / perc_on_target_attr
 
-            if not self.perc_on_target and true_perc_cov_attr and perc_cov_attr:
-                self.perc_on_target = true_perc_cov_attr / perc_cov_attr
+        if not perc_on_target_attr and true_perc_cov_attr and perc_cov_attr:
+            self.perc_on_target = true_perc_cov_attr / perc_cov_attr
 
-            if not self.true_perc_cov and perc_on_target_attr and perc_cov_attr:
-                self.true_perc_cov = perc_on_target_attr * perc_cov_attr
+        if not true_perc_cov_attr and perc_on_target_attr and perc_cov_attr:
+            self.true_perc_cov = perc_on_target_attr * perc_cov_attr
+        return
 
     def calc_background_percent_coverages(self, perc_cov_background_attr: float = None,
                                           true_perc_cov_background_attr: float = None,
@@ -334,17 +399,14 @@ class RibozymeDesign:
         self.true_perc_cov_background = true_perc_cov_background_attr
         self.perc_on_target_background = perc_on_target_background_attr
 
-        if perc_on_target_background_attr is not None and true_perc_cov_background_attr is not None and \
-                perc_on_target_background_attr is not None:
-            # calculate percent coverage, percent on target, or true percent coverage if needed and possible.
-            if not self.perc_cov_background and true_perc_cov_background_attr and perc_on_target_background_attr:
-                self.perc_cov_background = true_perc_cov_background_attr / perc_on_target_background_attr
+        if not perc_on_target_background_attr and true_perc_cov_background_attr and perc_on_target_background_attr:
+            self.perc_cov_background = true_perc_cov_background_attr / perc_on_target_background_attr
 
-            if not self.perc_on_target_background and true_perc_cov_background_attr and perc_cov_background_attr:
-                self.perc_on_target_background = true_perc_cov_background_attr / perc_cov_background_attr
+        if not perc_on_target_background_attr and true_perc_cov_background_attr and perc_cov_background_attr:
+            self.perc_on_target_background = true_perc_cov_background_attr / perc_cov_background_attr
 
-            if not self.true_perc_cov_background and perc_on_target_background_attr and perc_cov_background_attr:
-                self.true_perc_cov_background = perc_on_target_background_attr * perc_cov_background_attr
+        if not true_perc_cov_background_attr and perc_on_target_background_attr and perc_cov_background_attr:
+            self.true_perc_cov_background = perc_on_target_background_attr * perc_cov_background_attr
 
     def update_after_optimizing(self, score_attr, guide_attr, score_type_attr, reset_guides: bool = False):
         self.score = score_attr
@@ -357,10 +419,11 @@ class RibozymeDesign:
         self.composite_score = self.true_perc_cov * score_attr
 
     def update_to_background(self, background_score_attr: float, new_guide: Seq, new_score: float,
-                             reset_guides: bool = False):
+                             reset_guides: bool = False, tm_nn_attr: float = None):
         self.optimized_to_background = True
         self.background_score = background_score_attr
         self.score = new_score
+        self.background_tm_nn = tm_nn_attr
         if self.background_targets:
             self.number_of_targets_background = len(self.background_targets)
         elif self.background_guides:
@@ -375,10 +438,11 @@ class RibozymeDesign:
         self.delta_guide_vs_background = self.score - self.background_score
         self.delta_vs_background = self.composite_score - self.composite_background_score
 
-    def update_to_test(self, test_score_attr: float, name_of_test_dataset_attr: str):
+    def update_to_test(self, test_score_attr: float, name_of_test_dataset_attr: str, test_tm_nn_attr: float = None):
         self.tested = True
         self.name_of_test_dataset = name_of_test_dataset_attr
         self.test_score = test_score_attr
+        self.test_tm_nn = test_tm_nn_attr
         if self.test_targets:
             self.number_of_targets_test = len(self.test_targets)
         else:
@@ -426,7 +490,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                  fileout: bool = False, folder_to_save: str = '', n_limit: float = 0.0,
                  score_type: str = 'weighted', msa_fast: bool = False, gaps_allowed: bool = True,
                  percent_of_target_seqs_used: float = 1.0, percent_of_background_seqs_used: float = 1,
-                 random_guide_sample_size: int = 10, test_folders: list[str] = None, store_batch_results: bool = False):
+                 random_guide_sample_size: int = 10, store_batch_results: bool = False):
     """Generates ribozyme designs to target a set of sequences.
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
     sequences used without replacement
@@ -547,77 +611,143 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
-    if selective:
-        background_names_and_seqs = read_silva_fasta(in_file=background_sequences_folder)
-
-        print(f'Found {background_names_and_seqs.size} total background sequences to analyze.')
-
-        if percent_of_background_seqs_used < 1:
-            background_names_and_seqs = np.random.choice(
-                background_names_and_seqs, size=round(background_names_and_seqs.size * percent_of_target_seqs_used),
-                replace=False)
-            print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
-
-        # first find the IGSes and locations of the background sequences. We do not want to hit these.
-        # Also align these to the reference sequence
-        with alive_bar(unknown='fish', spinner='fishes') as bar:
-            fn_align_to_ref(background_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
-                            guide_length=guide_length, min_length=min_length)
-            time2 = time.perf_counter()
+    pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
+    print('Now pickling output file...')
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        with open(f'{folder_to_save}/designs_{pickle_file_name}.pickle', 'wb') as handle:
+            pickle.dump(optimized_seqs, handle)
             bar()
-        round_convert_time(start=time1, end=time2, round_to=4,
-                           task_timed=f'finding catalytic sites and indexing background sequences to reference')
 
-        print('Now applying designed ribozymes with background sequences and getting statistics...')
-        optimized_seqs = ribo_checker(optimized_seqs, background_names_and_seqs, len(ref_name_and_seq[1]),
-                                      guide_length=guide_length, flexible_igs=True, n_limit=n_limit,
-                                      target_background=not selective, refine_selective=True, for_test=False)
-
-        time2 = time.perf_counter()
-        round_convert_time(start=time1, end=time2, round_to=4, task_timed='comparing designs against background '
-                                                                          'sequences')
-
-    if test_folders:
-        all_designs = []
-        for test_folder in test_folders:
-            time1 = time.perf_counter()
-            # Finally, test sequences against a test dataset
-            test_names_and_seqs = read_silva_fasta(in_file=test_folder)
-
-            print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
-
-            # first find the IGSes and locations of the background sequences. We do not want to hit these.
-            # Also align these to the reference sequence
-            with alive_bar(unknown='fish', spinner='fishes') as bar:
-                fn_align_to_ref(test_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
-                                guide_length=guide_length, min_length=min_length)
-                time2 = time.perf_counter()
-                bar()
-            round_convert_time(start=time1, end=time2, round_to=4,
-                               task_timed=f'finding catalytic sites and indexing background sequences to reference')
-            time1 = time.perf_counter()
-            print('Now applying designed ribozymes with background sequences and getting statistics...')
-            tested_seqs = ribo_checker(optimized_seqs.copy(), test_names_and_seqs, len(ref_name_and_seq[1]),
-                                       guide_length=guide_length, flexible_igs=True, n_limit=1, refine_selective=False,
-                                       for_test=True, test_dataset_name=test_folder)
-
-            time2 = time.perf_counter()
-            round_convert_time(start=time1, end=time2, round_to=4,
-                               task_timed=f'testing designs')
-            all_designs.extend(tested_seqs.copy())
-        if fileout:
-            write_output_file(designs=all_designs, folder_path=folder_to_save, all_data=store_batch_results)
-        end = time.perf_counter()
-        round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-        print('########################################################\n')
-        return all_designs
-    elif fileout:
-        write_output_file(designs=optimized_seqs, folder_path=folder_to_save, all_data=store_batch_results)
+    if fileout:
+        if not os.path.exists(folder_to_save):
+            os.mkdir(folder_to_save)
+        out_file = folder_to_save + '/designs_' + pickle_file_name
+        write_output_file(designs=optimized_seqs, folder_path=out_file, all_data=store_batch_results)
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
     print('########################################################\n')
-    return optimized_seqs
+    return f'{folder_to_save}/designs_{pickle_file_name}.pickle'
+
+
+def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
+                      graph_results, var_regs, graph_file_type, get_consensus_batches, batch_num, score_type, msa_fast,
+                      remove_x_dupes_in_graph, lim):
+    start = time.perf_counter()
+    test_names_and_seqs = read_silva_fasta(in_file=test_folder)
+    print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
+
+    if not ref_sequence_file:
+        # If we do not have a reference sequence, just choose one randomly
+        print('No reference sequence provided. Picking a random sequence as reference...')
+        ref_name_and_seq = np.random.choice(test_names_and_seqs)
+    else:
+        ref_name_and_seq = read_fasta(ref_sequence_file)[0]
+
+    fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
+                                   excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
+
+    # first find the IGSes and locations and also align these to the reference sequence
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        fn_align_to_ref(test_names_and_seqs, ref_name_and_seq=ref_name_and_seq, igs_length=igs_length,
+                        guide_length=guide_length, min_length=min_length)
+        time2 = time.perf_counter()
+        bar()
+    round_convert_time(start=start, end=time2, round_to=4,
+                       task_timed=f'finding catalytic sites and indexing background sequences to reference')
+
+    time1 = time.perf_counter()
+    test_seqs_dict, igs_ids_counts, counts_of_ref_idx = filter_igs_candidates(aligned_targets=test_names_and_seqs,
+                                                                              min_true_cov=0, igs_len=igs_length,
+                                                                              return_test_seqs=True)
+    time2 = time.perf_counter()
+    round_convert_time(start=time1, end=time2, round_to=4, task_timed='finding putative ribozyme sites')
+
+    time1 = time.perf_counter()
+    guide_scores = {}
+
+    if get_consensus_batches:
+        print('Getting consensus sequences for test locations...')
+        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[str, float], excluded=['muscle_exe_name', 'msa_fast',
+                                                                                         'score_type', 'guide_len'])
+        with alive_bar(len(test_seqs_dict), spinner='fishes') as bar:
+            for idx, loc_data in test_seqs_dict.items():
+                for idx_id, idx_id_data in loc_data[0].items():
+                    # divide number of guide sequences into batches of around batch_num guides
+                    guides_to_use = idx_id_data[0]
+                    # If there is only one guide, just keep it and continue
+                    if len(guides_to_use) == 1:
+                        guides = guides_to_use
+                        score = 1
+                    elif (len(guides_to_use) / batch_num) >= 2:
+                        random_indices = np.random.permutation(np.arange(len(guides_to_use)))
+
+                        batch_indices = np.array_split(random_indices, len(guides_to_use) / batch_num)
+                        batches = np.array([(guides_to_use[index] for index in indices) for indices in batch_indices])
+
+                        # Prepare to run msa
+                        names = np.array([f'{idx_id}_{i}' for i in range(len(batches))])
+                        # Should return an array of tuples - (truncated_seq, score)
+                        seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast,
+                                                    score_type=score_type, guide_len=guide_length)
+                        guides = [*seqs_and_scores[0]]
+                        # Get the average score
+                        score = sum(seqs_and_scores[1])/ len(seqs_and_scores[1])
+
+                    else:
+                        best_guide, best_score = muscle_msa_routine(sequences_to_align=guides_to_use, name_of_file=idx_id,
+                                                           muscle_exe_name='muscle5', msa_fast=msa_fast,
+                                                           score_type=score_type, guide_len=guide_length)
+                        guides = [best_guide]
+                        score = best_score
+                    test_seqs_dict[idx][0][idx_id][0] = guides
+                    # test_seqs_dict[idx][0][idx_id].append(score)
+                    guide_scores[idx_id] = score
+                    if len(test_seqs_dict[idx][0][idx_id]) > 6:
+                        print('uh oh')
+                bar()
+        time2 = time.perf_counter()
+        round_convert_time(start=time1, end=time2, round_to=4, task_timed='getting consensus sequences')
+
+    # prepare data for graphing
+    if not os.path.exists(folder_to_save):
+        os.mkdir(folder_to_save)
+
+    title = test_folder.split('.')[0].split('/')[-1]
+    save_file_name = f'{folder_to_save}/test_sequences_{title}'
+    if graph_results:
+        # Graph IGS data
+        num_of_seqs = len(test_names_and_seqs)
+        u_conservation_list = []
+        igs_true_perc_cov_list = []
+        ref_idxes_list = []
+        guide_scores_list = []
+        for igs_id, igs_id_count in igs_ids_counts.items():
+            ref_idx = int(igs_id[igs_length:])
+            ref_idxes_list.append(ref_idx)
+            u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
+            igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
+            guide_scores_list.append(guide_scores[igs_id])
+        make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U coverage',
+                             y_data=igs_true_perc_cov_list, ylabel='IGS true coverage', loc_data=ref_idxes_list,
+                             var_regs=var_regs, save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
+                             dataset_len=num_of_seqs)
+        # Graph guide score data
+        make_guide_score_plot(xdata=igs_true_perc_cov_list, xlabel='IGS true coverage', ydata=guide_scores_list,
+                              ylabel='Average guide score', loc_data=ref_idxes_list, var_regs=var_regs, lim=lim,
+                              save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True)
+
+
+    if os.path.exists(f'{save_file_name}.pickle'):
+        os.remove(f'{save_file_name}.pickle')
+    # remove .fasta from any files for pickle naming
+    with open(f'{save_file_name}.pickle', 'wb') as handle:
+        pickle.dump(test_seqs_dict, handle)
+
+    end = time.perf_counter()
+    round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
+    print('########################################################\n')
+    return f'{save_file_name}.pickle'
 
 
 def back_transcribe_seq_file(seq_file: str) -> Seq:
@@ -722,11 +852,11 @@ def round_convert_time(start: float, end: float, round_to: int = 4, task_timed: 
     return
 
 
-def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length: int = 50,
-                   min_length: int = 35):
+def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length: int = 50, min_length: int = 35):
     """
     Finds all instances of a U or T in a set of sequences and creates ribozyme designs for these sites.
 
+    :param target_sequence:
     :param igs_length: desired IGS sequence length.
     :param guide_length: desired guide binding sequence length.
     :param min_length: minimum guide sequence length from 3' end. Must be smaller than guide_length.
@@ -770,6 +900,44 @@ def find_cat_sites(target_sequence: TargetSeq, igs_length: int = 5, guide_length
         data = fn_get_data(idx, target_sequence_data=target_sequence)
         target_sequence.cat_sites = data
     return
+
+
+def adjust_var_regs(known_seq_file: str, known_var_regs: list | int, unknown_seq_file: str):
+    known_seq = read_fasta(known_seq_file)[0][1]
+    unknown_seq = read_fasta(unknown_seq_file)[0][1]
+    aligner = PairwiseAligner(mode='global')
+    alignments = aligner.align(unknown_seq, known_seq)[0]
+
+    # seq_a is the test sequence, seq_b is the reference sequence
+    unknown_seq_aligned, known_seq_aligned = alignments
+
+    if type(known_var_regs) == list:
+        unknown_var_regs = []
+        for idxs in known_var_regs:
+            temp_idx_for_var_reg = []
+            for unaligned_current_idx in idxs:
+                # extract the position that is known
+                current_spot = unaligned_current_idx
+                known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
+                while known_current_idx != unaligned_current_idx:
+                    current_spot += 1
+                    known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
+
+                # now use this info to find what the corresponding unknown sequence index is
+                unknown_current_idx = len(unknown_seq_aligned[:current_spot].replace('-', ''))
+                temp_idx_for_var_reg.append(unknown_current_idx)
+            unknown_var_regs.append((temp_idx_for_var_reg[0], temp_idx_for_var_reg[1]))
+        return unknown_var_regs
+    else:
+        current_spot = known_var_regs
+        known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
+        while known_current_idx != known_var_regs:
+            current_spot += 1
+            known_current_idx = len(known_seq_aligned[:current_spot].replace('-', ''))
+
+        # now use this info to find what the corresponding unknown sequence index is
+        unknown_current_idx = len(unknown_seq_aligned[:current_spot].replace('-', ''))
+        return unknown_current_idx
 
 
 def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int = 5, guide_length: int = 50,
@@ -817,8 +985,8 @@ def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int =
     return target_sequence
 
 
-def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0, igs_len: float = 5) -> \
-        np.ndarray[RibozymeDesign]:
+def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: float = 0, igs_len: float = 5,
+                          return_test_seqs: bool = False) -> np.ndarray[RibozymeDesign]:
     """
     returns a dictionary of possible designs that meet our needs: checks each target sequence and filters the IGSes that
     work for the most targets. Returns a dictionary for each IGSid with the list of guides it needs to optimize, as
@@ -833,55 +1001,87 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
     print('Finding IGS sequences...')
 
-    all_igs_ids = []
-    counts_of_igs = defaultdict(int)
+    counts_of_igs = defaultdict(lambda: 0)
+    counts_of_ref_idx = defaultdict(lambda: 0)
+    igs_ids_counts = defaultdict(lambda: 0)
 
     # Extract all the IGS id numbers - that's the IGS sequence and the reference index number
-    with alive_bar(aligned_targets.size, spinner='fishes') as bar:
+    total_targets = aligned_targets.size
+    with alive_bar(total_targets, spinner='fishes') as bar:
         for seq in aligned_targets:
             igses = set()
+            ref_ids = set()
+            igs_ids = set()
             for item in seq.cat_sites:
-                all_igs_ids.append(f'{item[2]}{item[1]}')
                 igses.add(f'{item[2]}')
+                ref_ids.add(item[1])
+                igs_ids.add(f'{item[2]}{item[1]}')
 
             for igs in igses:
-                if counts_of_igs[igs]:
-                    counts_of_igs[igs] += 1
-                else:
-                    counts_of_igs[igs] = 1
+                counts_of_igs[igs] += 1
+            for ref_id in ref_ids:
+                counts_of_ref_idx[ref_id] += 1
+            for igs_id in igs_ids:
+                igs_ids_counts[igs_id] += 1
             bar()
 
-    # Measure true percent coverage of these and keep IGSes that are at least the minimum true percent coverage needed
-    igs_ids_counted, igs_ids_counts = np.unique(all_igs_ids, return_counts=True)
+    if return_test_seqs:
+        # IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
+        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets,
+                                       counts / counts_of_igs[igs[:igs_len]], counts / total_targets, counts]
+                                 for igs, counts in igs_ids_counts.items()}
+        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location
+        # of the target sequence
+        # in our initial aligned_targets array
+        igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
+                       seq.cat_sites]
+        print('Getting stats for putative target locations...')
+        output_dict = defaultdict(dict)
+        with alive_bar(len(igs_subsets), spinner='fishes') as bar:
+            for igs_id, guide, target_num in igs_subsets:
+                if igs_id in igs_over_min_true_cov:
+                    # Add guide to list
+                    igs_over_min_true_cov[igs_id][0].append(guide)
+                    # Add organism number to set. We can calculate the percent coverage with this number later on.
+                    igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].full_name)
+                    output_dict[int(igs_id[igs_len:])][igs_id] = igs_over_min_true_cov[igs_id]
+                bar()
 
-    # this gives us a dictionary where the ID is matched to the true percent coverage
-    igs_over_min_true_cov = {igs: [[], set(), counts / aligned_targets.size] for igs, counts
-                             in zip(igs_ids_counted, igs_ids_counts)
-                             if counts / aligned_targets.size >= min_true_cov}
+        # Now organize by ref_idx:
+        for ref_id, count_of_ref in counts_of_ref_idx.items():
+            output_dict[ref_id] = (output_dict[ref_id], count_of_ref / len(aligned_targets), count_of_ref)
+        return output_dict, igs_ids_counts, counts_of_ref_idx
+    else:
+        # this gives us a dictionary where the ID is matched to the true percent coverage
+        # Measure true percent coverage of these and keep IGSes that are at least the minimum
+        # true percent coverage needed
+        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets,
+                                       counts / counts_of_igs[igs[:igs_len]], counts / total_targets]
+                                 for igs, counts in igs_ids_counts.items()
+                                 if counts / total_targets >= min_true_cov}
 
-    # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the target sequence
-    # in our initial aligned_targets array
-    igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
-                   seq.cat_sites]
+        # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the
+        # target sequence in our initial aligned_targets array
+        igs_subsets = [(f'{item[2]}{item[1]}', item[3], i) for i, seq in enumerate(aligned_targets) for item in
+                       seq.cat_sites]
 
-    # get all the guides that have good IGSes
-    print('Filtering IGSes that meet our min true % coverage...')
-    with alive_bar(len(igs_subsets), spinner='fishes') as bar:
-        for igs_id, guide, target_num in igs_subsets:
-            if igs_id in igs_over_min_true_cov:
-                # Add guide to list
-                igs_over_min_true_cov[igs_id][0].append(guide)
-                # Add organism number to set. We can calculate the percent coverage with this number later on.
-                igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].full_name)
-            bar()
+        print(f'{len(igs_over_min_true_cov)} putative designs found.')
 
-    print(f'{len(igs_over_min_true_cov)} putative designs found.')
-    # Now make an array of all of the putative designs for later use.
-    to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
-                                           true_perc_cov_attr=item[2],
-                                           perc_cov_attr=counts_of_igs[igs_id[:igs_len]] / aligned_targets.size)
-                            for igs_id, item in igs_over_min_true_cov.items()])
-    return to_optimize
+        print('Filtering IGSes that meet our min true % coverage...')
+        with alive_bar(len(igs_subsets), spinner='fishes') as bar:
+            for igs_id, guide, target_num in igs_subsets:
+                if igs_id in igs_over_min_true_cov:
+                    # Add guide to list
+                    igs_over_min_true_cov[igs_id][0].append(guide)
+                    # Add organism number to set. We can calculate the percent coverage with this number later on.
+                    igs_over_min_true_cov[igs_id][1].add(aligned_targets[target_num].full_name)
+                bar()
+        # Now make an array of all of the putative designs for later use.
+        to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
+                                               perc_cov_attr=item[2], perc_on_target_attr=item[3],
+                                               true_perc_cov_attr=item[4])
+                                for igs_id, item in igs_over_min_true_cov.items()])
+        return to_optimize
 
 
 def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: int = 50,
@@ -953,8 +1153,8 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
                 break
 
             to_optimize.anti_guide = other_guide
-            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=to_optimize, target_background=True, n_limit=1,
-                                                       update_score=False)
+            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=to_optimize, target_background=True,
+                                                       opti_len=guide_len, n_limit=1, update_score=False)
 
             if new_seq_score > best_score:
                 best_guide = new_seq
@@ -971,13 +1171,14 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
     return to_optimize
 
 
-def get_naive_score(opti_seq):
-    score = 1 - str(opti_seq).count('N') / len(opti_seq)
+def get_naive_score(opti_seq, opti_len):
+    # This version penalizes sequences that are too short
+    score = 1 - str(opti_seq).count('N') / opti_len
     return score
 
 
 def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = None, count_gaps: bool = True,
-                           penalize_trailing_gaps: bool = False):
+                           penalize_trailing_gaps: bool = False, priori=None):
     """
     :param alignments:
     :param left_seq:
@@ -989,6 +1190,8 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
     # a modified version of BioPython'string_to_analyze PSSM function that counts gaps by default and also gives us
     # the quantitative score. This quantitative score is as follows:
 
+    if priori is None:
+        priori = [0.25, 0.25, 0.25, 0.25]
     if chars_to_ignore is None:
         chars_to_ignore = []
     if not isinstance(chars_to_ignore, list):
@@ -1023,386 +1226,400 @@ def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = No
         sum_probabilities += pos_prob / seq_num
 
     # Replace gaps with N since we can't order gaps when ordering oligos
-    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
-                                                                                                                  'N')
+    mat = words2countmatrix(alignments, priori=priori)
+    opti_seq = consensus(mat, priori=priori)
+    # opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
+    #                                                                                                               'N')
     score = sum_probabilities / len(left_seq)
 
     return score, opti_seq
 
 
 # noinspection DuplicatedCode
-def get_weighted_score(opti_seq):
+def get_weighted_score(opti_seq, opti_len):
+    # This version penalizes sequences that are too short
     # prepare scoring matrix a(x)
-    a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-         'H': 1 / 3, 'B': 1 / 3, 'D': 1 / 3, 'V': 1 / 3, 'N': 0, '-': 0}
-    n = len(opti_seq)
+    a = give_scoring_dict()
 
     prelim_score = 0
     for i, x in enumerate(str(opti_seq)):
         prelim_score += a[x]
-    score = prelim_score / n
+    score = prelim_score / opti_len
 
     return score
 
 
 # noinspection DuplicatedCode
-def get_directional_score(opti_seq):
+def get_directional_score(opti_seq, opti_len):
+    # This version penalizes sequences that are too short
     # prepare scoring matrix a(x)
-    a = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
-         'H': 1 / 3, 'B': 1 / 3, 'D': 1 / 3, 'V': 1 / 3, 'N': 0, '-': 0}
-    n = len(opti_seq)
+    print('CAREFUL: Directional score calculation has not been fixed yet!!!')
+    a = give_scoring_dict()
+
     # This is broken, have not fixed yet
     # score based on extended identity and position of the bases
     weight_sum = 0
     weight_score_sum = 0
 
     for i, x in enumerate(str(opti_seq)):
-        w = exp(n - i)  # Calculate weight based on proximity to IGS
+        w = exp(opti_len - i)  # Calculate weight based on proximity to IGS
         weight_sum += w
         weight_score_sum += w * a[x]
-        i += 1  # move downstream
+        i += 1  # move downstream (closer to igs)
     score = weight_score_sum / weight_sum
     return score
 
 
-def ribo_checker(designs: np.ndarray[RibozymeDesign], aligned_target_sequences: np.ndarray[TargetSeq], ref_seq_len: int,
-                 guide_length: int, flexible_igs: bool = False, target_background: bool = False, n_limit: float = 0.0,
-                 refine_selective: bool = True, process_num: int = mp.cpu_count(), for_test: bool = False,
-                 test_dataset_name: str = ''):
+def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_to_save: str = '',
+                                flexible_igs: bool = False, igs_len: int = 5, ref_idx_u_loc: int = 0,
+                                score_type: str = 'weighted'):
+    # For now, you must tell the program the location of the U for random sequences to analyze.
+    # First, make a results folder, checkpoint, and coupled folder if they do not exist
+    subfile = file_to_save + '/coupled'
+    if not os.path.exists(subfile):
+        os.mkdir(subfile)
+
+    # Check if we've pre_processed designs correctly
+    if (designs_input[-7:] != '.pickle') | (test_seqs_input[-7:] != '.pickle'):
+        if designs_input[-igs_len - 1] not in ['G', 'g']:
+            print('Sequence does not seem to have a U in the indicated igs length. Please adjust.')
+            return
+        igs = str(Seq(designs_input[-igs_len:]).upper().back_transcribe())
+        guide = Seq(designs_input[:-igs_len - 1]).upper().back_transcribe()
+        igs_id = igs + str(ref_idx_u_loc)
+        designs = [RibozymeDesign(id_attr=igs_id, guide_attr=guide, igs_attr=igs, ref_idx_attr=ref_idx_u_loc,
+                                  score_type_attr=score_type)]
+
+        # Rename designs_input to correctly name file later on
+        designs_input = subfile + '/' + igs_id + '.pickle'
+    else:
+        # Extract design sequence data
+        with open(designs_input, 'rb') as handle:
+            designs = pickle.load(handle)
+    # Extract test sequences data
+    with open(test_seqs_input, 'rb') as handle:
+        test_seqs = pickle.load(handle)
+
+    # Prepare data for check_guide_stats:
+    # Need the design, the aligned target sequences to test against for each design
+    coupled_datasets_name = designs_input.split('.')[0].split('/')[-1] + '_vs_' + \
+                            test_seqs_input.split('.')[0].split('/')[-1]
+    print(f'Coupling designs for {coupled_datasets_name}')
+    with alive_bar(len(designs), spinner='fishes') as bar:
+        for design in designs:
+            matching_ref_idx_seqs = test_seqs[design.ref_idx]
+            # If there are no test sequences with that index, set stats to zero and check the next one
+            if len(matching_ref_idx_seqs) == 0:
+                design.u_conservation_test = 0
+                design.perc_cov_test = 0
+                design.perc_on_target_test = 0
+                design.true_perc_cov_test = 0
+                design.number_of_targets_test = 0
+                bar()
+                continue
+            # Set correct u conservation
+            design.u_conservation_test = matching_ref_idx_seqs[1]
+
+            # Set what targets have this IGS id
+            # Recall each inner dictionary is of form IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
+            design_id = design.igs + str(design.ref_idx)
+            try:
+                design.test_targets = matching_ref_idx_seqs[0][design_id][1]
+                # Set igs stats
+                design.perc_cov_test = matching_ref_idx_seqs[0][design_id][2]
+                design.perc_on_target_test = matching_ref_idx_seqs[0][design_id][3]
+                design.true_perc_cov_test = matching_ref_idx_seqs[0][design_id][4]
+                design.number_of_targets_test = matching_ref_idx_seqs[0][design_id][5]
+            except KeyError:  # if there is not any matching IGSes
+                design.perc_cov_test = 0
+                design.perc_on_target_test = 0
+                design.true_perc_cov_test = 0
+                # recall that number of targets is how many targets have that IGS!
+                design.number_of_targets_test = 0
+                if not flexible_igs:
+                    bar()
+                    continue
+            # Extract the relevant guide sequences
+            # (same ref_idx, and either guides with same IGS OR all guides if IGS is flexible)
+            if not flexible_igs:
+                igses_to_test = design.igs + str(design.ref_idx)
+            else:
+                igses_to_test = matching_ref_idx_seqs[0].keys()
+
+            guides = []
+            for igs_id in igses_to_test:
+                guides.extend(matching_ref_idx_seqs[0][igs_id][0])
+            design.guides_to_use = guides
+            bar()
+
+    # save into a separate folder. Each pickle file will have 50 designs in it
+    print('Now saving...')
+    pickle_file_name = subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled'
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        with open(pickle_file_name, 'wb') as handle:
+            pickle.dump(designs, handle)
+        bar()
+
+    print('Updating big checkpoint file...')
+    if not os.path.exists(subfile + '/big_checkpoint.txt'):
+        with open(subfile + '/big_checkpoint.txt', 'a') as d:
+            for i in range(len(designs)):
+                d.write(f'{i}\t{pickle_file_name}\t{i}\n')
+    else:
+        with open(subfile + '/big_checkpoint.txt', 'r') as d:
+            last_idx = int(d.readlines()[-1].split('\t')[0])
+        with open(subfile + '/big_checkpoint.txt', 'a') as d:
+            for i in range(len(designs)):
+                d.write(f'{i + last_idx + 1}\t{pickle_file_name}\t{i}\n')
+    print('Done!')
+    return pickle_file_name
+
+
+def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int, n_limit: int = 0,
+                 display_bar: bool = True, opti_len: int = 50, get_tm_nn: bool = False):
     """
-    Checks generated designs against a set of sequences to either find how well they align to a given dataset.
-    Will return a set of sequences that match for each design as well as a score showing how well they matched.
-    :param target_background:
-    :param designs:
-    :param aligned_target_sequences:
-    :param ref_seq_len:
-    :param identity_thresh:
-    :param guide_length:
-    :param score_type:
-    :param gaps_allowed:
-    :param flexible_igs:
-    :param msa_fast:
-    :param n_limit: what percentage of Ns are acceptable?
+    This is the parallelization script I need to work on.
+    """
+    worker_number = int(worker_number)
+    number_of_workers = int(number_of_workers)
+
+    work_done_file = f'{coupled_folder}/work_done_{worker_number}.txt'
+    designs_skipped = f'{coupled_folder}/skipped_designs{worker_number}.txt'
+    results_folder = f'{coupled_folder}/results'
+
+    # Check if we have anything to test
+    analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
+
+    if len(analysis_files) == 0:
+        print('Please make sure to couple designs with the appropriate test sequences')
+        return
+
+    # Generate input results folder if it does not exist yet
+    if not os.path.exists(results_folder):
+        os.mkdir(results_folder)
+        # try:
+        #     os.mkdir(results_folder)
+        # except FileExistsError:
+        #     h = 0
+
+    # check the amount of work by summing the number of designs on each file in the coupled folder
+    lengths = [int(name.split('/')[-1].split('_')[0]) for name in analysis_files]
+    total_work = sum(lengths)
+
+    # read each line as a tuple of three values - big index, file name, small index
+    with open(coupled_folder + '/big_checkpoint.txt', 'r') as handle:
+        work_to_do_list = handle.read().splitlines()
+
+    # Check the big work done checkpoint file and remove any indexes that are already there
+    work_done_files = [f'{coupled_folder}/{f}' for f in os.listdir(coupled_folder) if f.startswith('work_done_')]
+    work_done = []
+    for work_done_file in work_done_files:
+        with open(work_done_file) as handle:
+            work_done.extend(handle.read().splitlines())
+
+    work_done = set(work_done)
+    #  Basically remove make an array that contains all lines NOT in big work done
+    work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if
+                       item.split('\t')[0] not in work_done]
+    work_to_do = len(work_to_do_list)
+    work_completed = len(work_done)
+
+    # Decide then how much work is allocated to each worker by dividing these evenly
+    # Dictionary {file_name: [(big index, small index)]}
+    this_worker_worklist = np.array_split(np.array(work_to_do_list, dtype=tuple), number_of_workers)[worker_number]
+
+    files_to_open_dict = defaultdict(lambda: [])
+    for big_idx, file_name, small_idx in this_worker_worklist:
+        files_to_open_dict[file_name].append((int(big_idx), int(small_idx)))
+
+    # test = [file for file in files_to_open_dict.keys() if 'Bacteria' in file]
+    # if len(test) == 0:
+    #     return
+
+    if total_work != work_to_do + work_completed:
+        print(f'big_checkpoint.txt corrupted. Please delete and couple datasets again.')
+        return -1
+
+    # Print how much work is left to do
+    print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed: {work_completed} '
+          f'({round(work_completed / total_work * 100, 2)}% done)\n'
+          f'Work for worker {worker_number}: {this_worker_worklist.shape[0]}\n')
+
+    print('Opening files and extracting designs...')
+    designs_to_test = []
+    # Now only open the files relevant to this current worker and only extract the designs needed
+    if display_bar:
+        with alive_bar(len(files_to_open_dict.keys()), spinner='fishes') as bar:
+            for file_name in files_to_open_dict.keys():
+                with open(file_name, 'rb') as handle:
+                    to_test_temp = pickle.load(handle)
+                for big_idx, small_idx in files_to_open_dict[file_name]:
+                    # Extract designs matching small index, save as (design, big index, file_name, small index)
+                    designs_to_test.append((to_test_temp[small_idx], big_idx, file_name))
+                bar()
+    else:
+        for file_name in files_to_open_dict.keys():
+            with open(file_name, 'rb') as handle:
+                to_test_temp = pickle.load(handle)
+            for big_idx, small_idx in files_to_open_dict[file_name]:
+                # Extract designs matching small index, save as (design, big index, file_name, small index)
+                designs_to_test.append((to_test_temp[small_idx], big_idx, file_name))
+
+    # Analyze designs
+    print('Now analyzing designs...')
+    if display_bar:
+        with alive_bar(len(designs_to_test), spinner='fishes') as bar:
+            for (design_to_test, big_idx, file_name) in designs_to_test:
+                result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name,
+                                         guide_len=opti_len, get_tm_nn=get_tm_nn)
+                naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
+
+                # If our result does not meet n_limit requirements, skip it
+                if not result:
+                    with open(work_done_file, 'a') as d:
+                        d.write(str(big_idx) + '\n')
+                    with open(designs_skipped, 'a') as d:
+                        d.write(str(result.id) + '\n')
+                    bar()
+                    continue
+
+                result_dict = result.to_dict(all_data=False)
+                with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
+                    d.write(json.dumps(result_dict) + '\n')
+
+                with open(work_done_file, 'a') as d:
+                    d.write(str(big_idx) + '\n')
+                bar()
+    else:
+        for (design_to_test, big_idx, file_name) in designs_to_test:
+            result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name, guide_len=opti_len,
+                                     get_tm_nn=get_tm_nn)
+            naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
+
+            # If our result does not meet n_limit requirements, skip it
+            if not result:
+                with open(work_done_file, 'a') as d:
+                    d.write(str(big_idx) + '\n')
+                with open(designs_skipped, 'a') as d:
+                    d.write(str(result.id) + '\n')
+                continue
+
+            result_dict = result.to_dict(all_data=False)
+            with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
+                d.write(json.dumps(result_dict) + '\n')
+
+            with open(work_done_file, 'a') as d:
+                d.write(str(big_idx) + '\n')
+    return
+
+
+def select_designs(tested_to_targets_path: list[str], designs_required: int, results_folder: str,
+                   design_type: str = 'universal', igs_min: float = 0.7, guide_min: float = 0.7,
+                   choose_var_reg_site: bool = False, start_idx: int = 1295, end_idx: int = 1435,
+                   save_pickle: bool = True, file_extra_text: str = '', add_overhangs: bool = False,
+                   igs_overhang: str = 'GGTCTCttttt', guide_overhang: str = 'gtcgtGAGACC'):
+    """
+    By default find things in E. coli conserved region between V8-V9.default is E. coli from:
+    Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
+    segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
     :return:
     """
 
-    # This should update designs and return uracil_sites_targets
-    uracil_sites_targets = check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, for_test)
+    if design_type not in ['universal', 'selective']:
+        print('Please indicate whether the designs are either universal or selective')
+        return -1
 
-    print('Done! Checking IGS conservation...')
-    igs_seqs_to_locs, conserved_u_sites = check_igs_conservation(uracil_sites_targets, aligned_target_sequences)
-
-    print('Done! Now checking finding guide stats for all U sites...')
-
-    # prepare data for starmap
-    with alive_bar(unknown='fish', spinner='fishes') as bar:
-        in_data = [(design, igs_seqs_to_locs, aligned_target_sequences, flexible_igs, conserved_u_sites, guide_length,
-                    n_limit, refine_selective, target_background, for_test, test_dataset_name)
-                   for design in designs]
-
-        # multithread
-        with mp.Pool(processes=process_num) as pool:
-            designs_below_n_limit = pool.starmap(check_guide_stats, in_data)
+    # Import tested designs
+    # This function is being repurposed from the graph making functions pay no mind to how many nested lists there are
+    with alive_bar(spinner='fishes') as bar:
+        target_seqs_df = import_data_to_df(tested_to_targets_path, None)
         bar()
 
-    if refine_selective:
-        print(
-            f'Out of {len(designs)} designs, {len(designs_below_n_limit)} '
-            f'have scores with < {n_limit * 100}% N content.')
+    # Sort by highest IGS difference then by highest guide difference
+    if design_type == 'universal':
+        igs_var = 'true_%_cov_test'
+        guide_var = 'test_score'
+    else:
+        igs_var = 'delta_igs_vs_test'
+        guide_var = 'delta_guide_vs_test'
 
-    filered_designs = list(filter(lambda item: item is not None, designs_below_n_limit))
+    # Remove anything with an igs true coverage below the minimum asked
+    filtered_df = target_seqs_df[target_seqs_df[igs_var] >= igs_min]
 
-    return filered_designs
+    # Remove anything with a guide score below the minimum asked
+    filtered_df = filtered_df[filtered_df[guide_var] >= guide_min]
 
+    # Remove those not in included variable regions if asked
+    if choose_var_reg_site:
+        filtered_df = filtered_df[(filtered_df['reference_idx'] <= end_idx) &
+                                  (filtered_df['reference_idx'] >= start_idx)]
+    # sort to select
+    filtered_df.sort_values(by=[igs_var, guide_var], ascending=False)
 
-def test_ribo_design(design: str, test_folders: list[str], ref_seq_folder: str, igs_len: int = 5,
-                     score_type: str = 'naive', file_out: bool = False, folder_to_save: str = '', taxonomy=''):
-    print('Testing ribozyme design!')
-    start = time.perf_counter()
-    # first, read in all our sequences
-    targets_to_test_list = []
-    for file in test_folders:
-        targets_to_test_list.append(read_silva_fasta(in_file=file))
-    ref_name_and_seq = read_fasta(ref_seq_folder)[0]
-    igs = design[-igs_len:]
-    design_guide = Seq(design[:-igs_len - 1]).upper().back_transcribe()  # recall there's a G between the igs and guide
+    # Save designs into file
+    print(f'{filtered_df.shape[0]} out of {target_seqs_df.shape[0]} designs meet given parameters! '
+          f'Selecting top {designs_required}...\n')
+    file_name = f'{results_folder}/{design_type}_top_{designs_required}_designs{file_extra_text}.csv'
+    if os.path.exists(file_name):
+        os.remove(file_name)
+    filtered_df.head(designs_required).to_csv(file_name, index=False)
+    # Go ahead and save all the designs above parameters if asked
+    if save_pickle:
+        file_name_pickle = file_name.split('.')[0] + '.pickle'
+        filtered_df.to_pickle(file_name_pickle)
+    print('File saved!')
 
-    time1 = time.perf_counter()
-    print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq[0].replace("_", " ")}...')
-    # Align the targets to test to our reference sequence
-    names_guides_etc = []
-    for i, targets_to_test in enumerate(targets_to_test_list):
-        print(f'Pre-processing dataset {i} with {len(targets_to_test)} sequences to test')
-        with alive_bar(unknown='fish', spinner='fishes') as bar:
-            fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
-                                           excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
-            fn_align_to_ref(targets_to_test, ref_name_and_seq=ref_name_and_seq, igs_length=igs_len,
-                            guide_length=len(design_guide), min_length=len(design_guide))
-            bar()
-        time2 = time.perf_counter()
-        round_convert_time(start=time1, end=time2, round_to=4,
-                           task_timed=f'finding catalytic sites and indexing target sequences to reference')
-
-        # get all guides and the name of their targets that have the correct igs: (og_idx, ref_idx, igs, guide)
-        time1 = time.perf_counter()
-        print('Finding matching IGSes and corresponding guides...')
-        names_temp = defaultdict(set)
-        guides_temp = defaultdict(list)
-        all_names_temp = set()
-        with alive_bar(len(targets_to_test), spinner='fishes') as bar:
-            for target in targets_to_test:
-                for putative_guide in target.cat_sites:
-                    if putative_guide[2] == igs:
-                        names_temp[putative_guide[1]].add(target.full_name)
-                        guides_temp[putative_guide[1]].append(putative_guide[3])
-                        all_names_temp.add(target.full_name)
-                bar()
-        names_guides_etc.append((names_temp, guides_temp, all_names_temp))
-
-    num_of_seqs_with_igs_list = [len(names) for _, _, names in names_guides_etc]
-    time2 = time.perf_counter()
-    round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'matching IGSes and guides.')
-
-    # Calculate coverage for each and make a ribozyme design for each
-    time1 = time.perf_counter()
-    print('Calculating coverage for putative locations targeted by guide...')
-
-    locations_and_scores_list = []
-    for (names, guides, all_names), num_of_seqs_with_igs, targets_to_test, test_folder in (
-            zip(names_guides_etc, num_of_seqs_with_igs_list, targets_to_test_list, test_folders)):
-        locations_and_scores = np.array([], dtype=RibozymeDesign)
-        with alive_bar(len(guides.items()), spinner='fishes') as bar:
-            for index, guide_list in guides.items():
-                perc_cov = num_of_seqs_with_igs / targets_to_test.size
-                true_perc_cov = len(guide_list) / targets_to_test.size
-                per_on_target = perc_cov / perc_cov
-                score = return_score_from_type(sequence_to_test=design_guide, score_type=score_type)
-                locations_and_scores = np.append(locations_and_scores,
-                                                 RibozymeDesign(id_attr=f'{igs}{index}', guide_attr=Seq(design_guide),
-                                                                score_attr=score,
-                                                                score_type_attr=score_type,
-                                                                perc_cov_test_attr=perc_cov,
-                                                                perc_on_target_test_attr=per_on_target,
-                                                                true_perc_cov_test_attr=true_perc_cov))
-                bar()
-        locations_and_scores = ribo_checker(locations_and_scores, targets_to_test, len(ref_name_and_seq[1]),
-                                            guide_length=len(design_guide), flexible_igs=True, n_limit=1,
-                                            refine_selective=False, for_test=True, test_dataset_name=test_folder)
-        locations_and_scores_list.extend(locations_and_scores)
-
-    time2 = time.perf_counter()
-    round_convert_time(start=time1, end=time2, round_to=4,
-                       task_timed=f'scoring design against test sequences')
-
-    if file_out:
-        write_output_file(designs=locations_and_scores_list, folder_path=folder_to_save, taxonomy=taxonomy)
-
-    end = time.perf_counter()
-    round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
-    print('########################################################\n')
-    return locations_and_scores
+    # Now get designs to order them easily
+    igses = filtered_df.head(designs_required)['igs'].tolist()
+    guides = filtered_df.head(designs_required)['guide'].tolist()
+    to_order = []
+    for igs, guide in zip(igses, guides):
+        design = igs + 'g' + guide
+        if add_overhangs:
+            design = igs_overhang + design + guide_overhang
+        to_order.append(design)
+    return to_order, filtered_df.head(designs_required)
 
 
-def check_cat_site_conservation(designs, aligned_target_sequences, ref_seq_len, for_test: bool = False):
-    designed_idxs = np.array(list(set(ribodesign.ref_idx - 1 for ribodesign in designs)))  # convert to base 0 indexing
-    # Adding to maximum size because sometimes the alignment for the very end of a sequence does strange things
-    max_len = max(designed_idxs.max(), ref_seq_len)
-    uracil_sites_targets = np.zeros((aligned_target_sequences.size, max_len), dtype=int)
-    uracil_sites_targets[:, designed_idxs] = 1
-
-    print('Finding U sites...')
-    with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
-        for i, target_sequence in enumerate(aligned_target_sequences):  # base 1 indexing
-            # convert to base 0 indexing to match array indexing locations. Clip any weird indexes - larger indexes
-            # than max_len do not appear in our designs and should be ignored to increase speed
-            temp_uracil_indexes = np.array([cat_site[1] - 1 for cat_site in
-                                            target_sequence.cat_sites if cat_site[1] <= max_len])
-            # everything that is a 2 is a U that appears in both the designs and the target sequence,
-            # a 1 is a U in the design
-            uracil_sites_targets[i, temp_uracil_indexes] = uracil_sites_targets[
-                                                               i, temp_uracil_indexes] * 2  # base 0 index
-            bar()
-
-    num_of_targets = aligned_target_sequences.size
-    print('Found U sites. Checking how many are conserved...')
-    # Update designs
-    with alive_bar(len(designed_idxs), spinner='fishes') as bar:
-        for ribodesign_num, i in enumerate(designed_idxs):
-            u_values, u_counts = np.unique(uracil_sites_targets[:, i], return_counts=True)
-            try:
-                percentage_of_cat_sites_conserved = u_counts[np.where(u_values == 2)[0][0]] / num_of_targets
-                if percentage_of_cat_sites_conserved is None:
-                    percentage_of_cat_sites_conserved = 0
-            except IndexError:
-                percentage_of_cat_sites_conserved = 0
-            if not for_test:
-                designs[ribodesign_num].u_conservation_background = percentage_of_cat_sites_conserved
-            else:
-                designs[ribodesign_num].u_conservation_test = percentage_of_cat_sites_conserved
-            bar()
-    return uracil_sites_targets
-
-
-def check_igs_conservation(uracil_sites_targets, aligned_target_sequences):
-    # What is the conservation of IGSes at a particular position for each design? # base 0 indexing
-    # Keeps the indexes of where Us are conserved, so base 0 indexing
-    conserved_u_sites = np.argwhere(uracil_sites_targets == 2)
-
-    # replace with this
-    igs_seqs_to_locs = defaultdict(lambda: [])
-    with alive_bar(len(aligned_target_sequences), spinner='fishes') as bar:
-        for i, design in enumerate(aligned_target_sequences):
-            for cat_site in design.cat_sites:
-                igs_seqs_to_locs[cat_site[2]].append([i, cat_site[1] - 1])  # base 0 indexing
-            bar()
-    # igs_sites_targets is now a dict of (row, col) keys and a list of all IGSes at that location as values.
-    # Convert back to dict for proper pickling later on
-    return dict(igs_seqs_to_locs), conserved_u_sites
-
-
-def check_guide_stats(ribo_design: RibozymeDesign, igs_seqs_to_locs: dict,
-                      aligned_target_sequences: np.ndarray[TargetSeq], flexible_igs: bool,
-                      conserved_u_sites: np.ndarray[np.ndarray[int]], guide_length: int, n_limit: int,
-                      refine_selective: bool = False, target_background: bool = False, for_test: bool = True,
-                      test_dataset_name: str = ''):
-    def set_no_targets(for_test_attr, ribo_design_attr, guide_len_attr, n_limit_attr, test_dataset_name_attr):
+def compare_to_test(coupled_design: RibozymeDesign, n_limit, test_dataset_name, guide_len, get_tm_nn):
+    def set_no_targets(ribo_design_attr: RibozymeDesign, n_limit_attr: int, test_dataset_name_attr: str,
+                       guide_len_attr: int):
         # No hits in the background! filter out those that have too many Ns
-        # Scores are set at 0 based on the assumption that if there is no catalytic U there is no splicing
-        # activity
+        # Score is set at 0 based if there is no u conservation or guide sequences
 
         # remove designs with too many Ns
         if ribo_design_attr.guide.count('N') / guide_len_attr <= n_limit_attr:
             # Follow the same naming as the outputs of replace_ambiguity.
-            if not for_test_attr:
-                ribo_design_attr.true_perc_cov_background = 0
-                ribo_design_attr.perc_cov_background = 0
-                ribo_design_attr.perc_on_target_background = 0
-                ribo_design_attr.update_to_background(background_score_attr=0, new_guide=ribo_design_attr.guide,
-                                                      new_score=ribo_design_attr.score, reset_guides=True)
-            else:
-                ribo_design_attr.true_perc_cov_test = 0
-                ribo_design_attr.perc_cov_test = 0
-                ribo_design_attr.perc_on_target_test = 0
-                ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
+            ribo_design_attr.update_to_test(test_score_attr=0, name_of_test_dataset_attr=test_dataset_name_attr)
             return ribo_design_attr
         else:
-            # # free up memory
-            # del ribo_design_attr
             return None
 
-    # Now find how many conserved IGSes there are
-    # ref_idx is in base 1 indexing, indexes for arrays are base 0
-
     # See if we can skip computation all together because if no conserved u, no conserved IGS
-    if for_test:
-        if not ribo_design.u_conservation_test:
-            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
-            return out
-    else:
-        if not ribo_design.u_conservation_background:
-            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
-            return out
-    try:
-        matching_igses = np.array(igs_seqs_to_locs[ribo_design.igs])  # base 0 indexing
-        orgs_with_igs = np.unique(matching_igses[:, 0])
-        # Convert to base 0 indexing
-        orgs_with_igs_on_target = matching_igses[np.argwhere(matching_igses[:, 1] == ribo_design.ref_idx - 1)][:, 0, 0]
-        on_target_count = orgs_with_igs_on_target.size
-        true_perc_cov = on_target_count / aligned_target_sequences.size
-        perc_cov = orgs_with_igs.size / aligned_target_sequences.size
-        perc_on_target = true_perc_cov / perc_cov
-        # Fill this with empty TargetSeq objects to later make finding taxonomy easier
-        background_names = set(back_seq.full_name for back_seq in aligned_target_sequences[matching_igses[:, 0]])
-    except KeyError:
-        # If there are no IGSes on target, and we don't want to consider other matching catalytic sites, set no targets
-        if not flexible_igs:
-            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
-            return out
-        true_perc_cov = 0
-        perc_cov = 0
-        perc_on_target = 0
-        background_names = None
+    if coupled_design.u_conservation_test == 0 or len(coupled_design.guides_to_use) == 0:
+        out = set_no_targets(coupled_design, n_limit, test_dataset_name, guide_len)
+        return out
 
-    # If the igs is not flexible, only check those that have a perfect igs upstream of the cat_site
-    if not flexible_igs:
-        # Fill this with empty TargetSeq objects to later make finding taxonomy more easy
-        # comparing two base 1 indexes, no conversion needed, but this will hold base 0
-        all_indexes_of_target_data = [np.argwhere(
-            np.array([cat_site[1] for cat_site
-                      in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
-                                      for target_number in orgs_with_igs_on_target]
-
-        guides_to_optimize = [str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
-                              target, index_of_target_data in
-                              zip(orgs_with_igs_on_target, all_indexes_of_target_data)]
-    # Otherwise, extract all info in conserved cat_sites regardless of igs. As long at the catalytic U is on
-    # target, we'll extract those data
-    else:
-        # Convert to base 0 indexing
-        orgs_with_u_on_target = conserved_u_sites[
-                                    np.where(conserved_u_sites[:, 1] == ribo_design.ref_idx - 1)][:, 0]
-        if not orgs_with_u_on_target.any():
-            out = set_no_targets(for_test, ribo_design, guide_length, n_limit, test_dataset_name)
-            return out
-        # if we want to keep only u targets
-        # background_names = set(back_seq.full_name for back_seq in aligned_target_sequences[orgs_with_u_on_target])
-        # comparing two base 1 indexes, no conversion needed, but this will hold base 0
-        # I'm not sure why the following line won't work if I don't convert the list in np.argwhere into an array
-        try:
-            all_indexes_of_target_data = [np.argwhere(
-                np.array([cat_site[1] for cat_site
-                          in aligned_target_sequences[target_number].cat_sites]) == ribo_design.ref_idx)[0, 0]
-                                          for target_number in orgs_with_u_on_target]
-        except:
-            print('uh oh')
-        guides_to_optimize = np.array([str(aligned_target_sequences[target].cat_sites[index_of_target_data][3]) for
-                                       target, index_of_target_data in
-                                       zip(orgs_with_u_on_target, all_indexes_of_target_data)])
-
-    # If necessary, optimize further:
-    if ribo_design.score < 1 and refine_selective and not for_test:
-        best_score = ribo_design.score
-
-        # Do a pairwise analysis: keep decreasing the ambiguity of our sequence
-        for other_guide in guides_to_optimize:
-            if best_score == 1:
-                break
-
-            ribo_design.anti_guide = other_guide
-            new_seq_score, new_seq = replace_ambiguity(sequence_to_fix=ribo_design, update_score=False,
-                                                       target_background=target_background, n_limit=1)
-
-            if new_seq_score > best_score:
-                best_guide = new_seq
-                best_score = new_seq_score
-                ribo_design.guide = best_guide
-                ribo_design.score = best_score
     # Find average guide score
+    guides_to_optimize = np.array([str(guide) for guide in coupled_design.guides_to_use])
     fn_pairwise = np.vectorize(pairwise_comparison, otypes=[RibozymeDesign],
-                               excluded=['seq_b', 'score_type', 'only_consensus'])
+                               excluded=['seq_b', 'score_type', 'only_consensus', 'opti_len', 'get_tm_nn'])
 
-    scores = fn_pairwise(guides_to_optimize, seq_b=ribo_design.guide, score_type=ribo_design.score_type,
-                         only_consensus=True)
-    if not for_test:
-        ribo_design.true_perc_cov_background = true_perc_cov
-        ribo_design.perc_cov_background = perc_cov
-        ribo_design.perc_on_target_background = perc_on_target
-        ribo_design.background_targets = background_names
-        ribo_design.update_to_background(background_score_attr=scores.mean(), new_guide=ribo_design.guide,
-                                         new_score=ribo_design.score, reset_guides=True)
+    scores = fn_pairwise(guides_to_optimize, seq_b=coupled_design.guide, score_type=coupled_design.score_type,
+                         only_consensus=True, opti_len=guide_len, get_tm_nn=get_tm_nn)
+    if get_tm_nn:
+        score = np.array([val[0] for val in scores]).mean()
+        tm = np.array([val[1] for val in scores]).mean()
+        coupled_design.update_to_test(test_score_attr=score, name_of_test_dataset_attr=test_dataset_name,
+                                      test_tm_nn_attr=tm)
     else:
-        ribo_design.true_perc_cov_test = true_perc_cov
-        ribo_design.perc_cov_test = perc_cov
-        ribo_design.perc_on_target_test = perc_on_target
-        ribo_design.test_targets = background_names
-        ribo_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
+        coupled_design.update_to_test(test_score_attr=scores.mean(), name_of_test_dataset_attr=test_dataset_name)
 
-    return ribo_design
+    return coupled_design
 
 
-def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool = False,
-                      n_limit: float = 1, update_score: bool = True):
+def replace_ambiguity(sequence_to_fix: RibozymeDesign, opti_len: int, target_background: bool = False,
+                      n_limit: float = 1, update_score: bool = True, get_tm_nn: bool = False):
     # Here is a dictionary with all the antinucleotides for each IUPAC ambiguity code
     anti_iupac_nucleotides = {'A': 'B', 'C': 'D', 'G': 'H', 'T': 'V', 'M': 'K', 'R': 'Y', 'W': 'S', 'S': 'W', 'Y': 'R',
                               'K': 'M', 'V': 'T', 'H': 'G', 'D': 'C', 'B': 'A', 'N': 'N', '-': 'N'}
@@ -1461,17 +1678,31 @@ def replace_ambiguity(sequence_to_fix: RibozymeDesign, target_background: bool =
 
     if update_score:
         # Now do a pairwise sequence with the target sequence to see the delta score:
-        new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
-                                                            score_type=sequence_to_fix.score_type)
-        sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
-                                             new_score=new_seq_score, reset_guides=True)
+        if get_tm_nn:
+            new_seq_score, pairwise_score, tm = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
+                                                                    score_type=sequence_to_fix.score_type,
+                                                                    opti_len=opti_len, get_tm_nn=get_tm_nn)
+            sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
+                                                 new_score=new_seq_score, reset_guides=True, tm_nn_attr=tm)
+        else:
+            new_seq_score, pairwise_score = pairwise_comparison(seq_a=new_seq, seq_b=sequence_to_fix.anti_guide,
+                                                                score_type=sequence_to_fix.score_type,
+                                                                opti_len=opti_len)
+            sequence_to_fix.update_to_background(background_score_attr=pairwise_score, new_guide=Seq(new_seq),
+                                                 new_score=new_seq_score, reset_guides=True)
         return
     else:
-        new_seq_score = return_score_from_type(sequence_to_test=new_seq, score_type=sequence_to_fix.score_type)
+        new_seq_score = return_score_from_type(sequence_to_test=new_seq, score_type=sequence_to_fix.score_type,
+                                               opti_len=opti_len)
         return new_seq_score, new_seq
 
 
-def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False):
+def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'naive', only_consensus: bool = False,
+                        opti_len: int = None, priori: list = None, get_tm_nn: bool = False):
+    # If optilen is not given, then will assume the optimum length is the length of the longest sequence
+
+    if priori is None:
+        priori = [0.25, 0.25, 0.25, 0.25]
     if len(seq_a) != len(seq_b):
         pad = '-' * abs(len(seq_a) - len(seq_b))
         if len(seq_a) > len(seq_b):
@@ -1479,507 +1710,38 @@ def pairwise_comparison(seq_a: Seq | str, seq_b: Seq | str, score_type: str = 'n
         else:
             seq_a += pad
 
-    pairwise_comparison_consensus = Bio.motifs.create([seq_a, seq_b],
-                                                      alphabet='GATCRYWSMKHBVDN-').degenerate_consensus
-    pairwise_score = return_score_from_type(sequence_to_test=pairwise_comparison_consensus, score_type=score_type)
+    mat = words2countmatrix([seq_a, seq_b], priori=priori)
+    pairwise_comparison_consensus = consensus(mat, priori=priori)
+
+    if get_tm_nn:
+        # Getting an estimated Tm for the consensus sequence
+        tm = get_tm_gc(pairwise_comparison_consensus, strict=False, mismatch=True, mismatch_base='-')
+
+    if not opti_len:
+        opti_len = len(pairwise_comparison_consensus)
+
+    pairwise_score = return_score_from_type(sequence_to_test=pairwise_comparison_consensus, score_type=score_type,
+                                            opti_len=opti_len)
 
     if only_consensus:
-        return pairwise_score
+        if get_tm_nn:
+            return pairwise_score, tm
+        else:
+            return pairwise_score
     else:
-        seq_a_score = return_score_from_type(sequence_to_test=seq_a, score_type=score_type)
-        return seq_a_score, pairwise_score
+        seq_a_score = return_score_from_type(sequence_to_test=seq_a, score_type=score_type, opti_len=opti_len)
+        if get_tm_nn:
+            return seq_a_score, pairwise_score, tm
+        else:
+            return seq_a_score, pairwise_score
 
 
 def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign], folder_path: str, taxonomy='',
                       all_data: bool = False):
     designs_df = pd.DataFrame.from_records([item.to_dict(taxonomy=taxonomy, all_data=all_data) for item in designs])
-    if os.path.exists(f'{folder_path}/Targeted designs against background above threshold.csv'):
-        os.remove(f'{folder_path}/Targeted designs against background above threshold.csv')
-    designs_df.to_csv(f'{folder_path}/Targeted designs against background above threshold.csv', index=False)
-    return
-
-
-def make_graphs(control_designs: np.ndarray[RibozymeDesign] | list | str,
-                universal_designs: list[np.ndarray[RibozymeDesign]] | list[str],
-                selective_designs: list[np.ndarray[RibozymeDesign]] | list[str],
-                ref_seq_designs: np.ndarray[RibozymeDesign] | list | str,
-                var_regs: list[tuple[int, int]], save_fig: bool = False, file_loc: str = None, file_type: str = 'png',
-                taxonomy: str = '', data_file: str = '', save_file_loc: str = '', test_folders: [str] = None):
-    if not test_folders:
-        print('Please provide test data')
-        return
-    # Make data into a pandas dataframe
-    if not data_file:
-        if type(control_designs) is str:
-            all_data_df = pd.read_csv(control_designs)
-            all_data_df.index = ['control'] * len(all_data_df.values)
-        else:
-            all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in control_designs],
-                                                    index='control' * len(control_designs))
-
-        if type(ref_seq_designs) is str:
-            ref_seq_designs_df = pd.read_csv(ref_seq_designs)
-            ref_seq_designs_df.index = ['reference_seq'] * len(ref_seq_designs_df.values)
-        else:
-            ref_seq_designs_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in ref_seq_designs],
-                                                           index='reference_seq' * len(ref_seq_designs))
-        all_data_df = pd.concat([all_data_df, ref_seq_designs_df])
-
-        for i, sub_list in enumerate(universal_designs):
-            if type(sub_list) is str:
-                sub_list_df = pd.read_csv(sub_list)
-                sub_list_df.index = [f'universal_{i}'] * len(sub_list_df)
-            else:
-                sub_list_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in sub_list],
-                                                        index=f'universal_{i}' * len(sub_list))
-            all_data_df = pd.concat([all_data_df, sub_list_df])
-
-        for i, sub_list in enumerate(selective_designs):
-            if type(sub_list) is str:
-                sub_list_df = pd.read_csv(sub_list)
-                sub_list_df.index = [f'selective_{i}'] * len(sub_list_df)
-            else:
-                sub_list_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in sub_list],
-                                                        index=f'selective_{i}' * len(sub_list))
-            all_data_df = pd.concat([all_data_df, sub_list_df])
-        #
-        #
-        # all_data_array = np.hstack([control_designs] + universal_designs + selective_designs + [ref_seq_designs])
-        # index_names = ['control'] * len(control_designs) + \
-        #               [f'universal_{i}' for i, data in enumerate(universal_designs) for _ in data] + \
-        #               [f'selective_{i}' for i, data in enumerate(selective_designs) for _ in data] + \
-        #               ['reference_seq'] * len(ref_seq_designs)
-        #
-        # all_data_df = pd.DataFrame.from_records([item.to_dict(taxonomy='') for item in all_data_array],
-        #                                         index=index_names)
-        if os.path.exists(file_loc):
-            os.remove(file_loc)
-        all_data_df.to_csv(file_loc)
-    else:
-        all_data_df = pd.read_csv(data_file)
-        
-
-    # Extract top scores for each category - this way it will count for us!
-    all_data_df.rename(columns={'Unnamed: 0': 'tested_targets'}, inplace=True )
-    all_data_df.index.name = 'Index'
-    labels = list(set(all_data_df['tested_targets']))
-    labels = [label for label in labels if type(label) is str]
-    universal_labels = [name for name in labels if name[0] == 'u']
-    selective_labels = [name for name in labels if name[0] == 's']
-    labels.sort()
-    control_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'control']
-    universal_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(universal_labels)]
-    num_universal = len(universal_labels)
-    selective_designs_df = all_data_df.loc[all_data_df['tested_targets'].isin(selective_labels)]
-    num_selective = len(selective_labels)
-    ref_seq_designs_df = all_data_df.loc[all_data_df['tested_targets'] == 'reference_seq']
-
-    target_names = ['reference', 'bacterial', 'archaeal', 'eukaryotic', 'all kingdoms']
-
-    # get top scores in each: 1 control, one of each group of selective and universal
-    top_score_control = control_designs_df[control_designs_df[
-        'name_of_test_dataset'].str.contains('Bac')].nlargest(1, 'composite_test_score')
-    for name in target_names[1:]:
-        top_score_temp = control_designs_df[control_designs_df[
-            'tested_targets' == name]].nlargest(1, 'composite_test_score')
-        top_score_control = pd.concat([top_score_control, top_score_temp])
-
-    top_scores_universal = universal_designs_df.loc[universal_designs_df['tested_targets'] ==
-                                                    universal_labels[0]].nlargest(1, 'composite_test_score')
-    for label in universal_labels[1:]:
-        score_temp = universal_designs_df[universal_designs_df['tested_targets'] ==
-                                          label].nlargest(1, 'composite_test_score')
-        top_scores_universal = pd.concat([top_scores_universal, score_temp])
-
-    top_scores_selective = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
-                                                    selective_labels[0]].nlargest(1, 'composite_test_score')
-    for label in selective_labels[1:]:
-        score_temp = selective_designs_df.loc[selective_designs_df['tested_targets'] ==
-                                              label].nlargest(1, 'composite_test_score')
-        top_scores_selective = pd.concat([top_scores_selective, score_temp])
-
-    # top_test_scores = pd.concat([top_score_control, top_scores_universal, top_scores_selective])
-
-    # Set plot parameters
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30*0.8, 16*0.8)}
-    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    # colors = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']  # viridis
-    colors = ['#0D365E', '#3F6D54', '#9B892D', '#F9A281', '#FACDFB']  # batlow
-    to_analyze = ['reference_seq', 'universal_0', 'universal_1', 'universal_2', 'universal_3']
-
-    max_vals = all_data_df.max(numeric_only=True)
-
-    # Fig 1: MG1655
-    reference_subset = ref_seq_designs_df[ref_seq_designs_df['name_of_test_dataset'].str.contains('Bac')]
-    bacterial_subset = universal_designs_df[universal_designs_df['name_of_test_dataset'].str.contains('Bac')]
-    bacterial_subset = bacterial_subset.loc[bacterial_subset['tested_targets'] == 'universal_0']
-    top_score_control_subset = top_score_control[top_score_control['name_of_test_dataset'].str.contains('Bacteria')]
-    # Only going to plot bacteria test dataset
-    # First, plot x = u conservation, y = igs conservation, hue = guide score
-
-    # Prepare axes
-    for graph, name in zip([reference_subset, bacterial_subset], ['reference seq', 'bacterial']):
-        # Prepare axes
-        jointplot_fig = plt.figure()
-        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
-        joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
-            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
-            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
-            3: jointplot_fig.add_subplot(gridspec[0:2, 0:6]),
-            4: jointplot_fig.add_subplot(gridspec[2:4, 0:6]),
-            5: jointplot_fig.add_subplot(gridspec[4:6, 0:6])
-        }
-        xvar = 'u_conservation_test'
-        yvar = 'true_%_cov_test'
-        hue_var = 'test_score'
-        # Plot scatter and kde plots
-        sns.scatterplot(x=xvar, y=yvar, hue=hue_var, data=graph, ax=joint_ax[0], alpha=0.5, legend=False)
-        jointplot_fig.axes[0].scatter(x=top_score_control_subset[xvar], y=top_score_control_subset[yvar],
-                                      alpha=1, c='#fde725', label='Control')
-        sns.kdeplot(x=xvar, data=graph, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False)
-        sns.kdeplot(y=yvar, data=graph, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False)
-        jointplot_fig.axes[0].legend(bbox_to_anchor=(1.6, -0.15), title='Guide score')
-        jointplot_fig.axes[0].set_xlabel('U conservation')
-        jointplot_fig.axes[0].set_ylabel('IGS true percent coverage')
-        # Set variable regions for location plots
-        plot_variable_regions(joint_ax[3], var_regs)
-        plot_variable_regions(joint_ax[4], var_regs)
-        plot_variable_regions(joint_ax[5], var_regs)
-        # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y='u_conservation_test', data=graph, ax=joint_ax[3], alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y='true_%_cov_test', data=graph, ax=joint_ax[4], alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y='test_score', data=graph, ax=joint_ax[5], alpha=0.5)
-        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
-        # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'],
-                                      y=top_score_control_subset['u_conservation_test'],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[3].set_ylabel('U site conservation')
-        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'],
-                                      y=top_score_control_subset['u_conservation_test'],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
-        jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'],
-                                      y=top_score_control_subset[yvar], alpha=1,
-                                      c='#fde725', label='control')
-        jointplot_fig.axes[5].set_ylabel('Guide score')
-        # Set graph settings for pretti graphing
-        jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
-        jointplot_fig.axes[1].set(xlabel=None)
-        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
-        jointplot_fig.axes[2].set(ylabel=None)
-        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
-        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
-        jointplot_fig.axes[5].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].set(xlabel=None)
-        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
-        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
-        jointplot_fig.axes[5].set(xlabel='Reference 16s rRNA index')
-        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
-        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
-        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
-        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
-        jointplot_fig.axes[3].tick_params(labelbottom=False)
-        jointplot_fig.axes[4].tick_params(labelbottom=False)
-        jointplot_fig.suptitle(f'Designs from {name} target sequences against bacterial test datasets')
-
-        if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_1_{name}.{file_type}', format=file_type)
-        plt.show()
-
-    # Fig 2: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
-    # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
-    # E. coli MG1655 16s rRNA sequence.
-    for i, target_name in enumerate(target_names):
-        universal_subset = all_data_df.loc[all_data_df['tested_targets'] == to_analyze[i]]
-
-        # Prepare axes
-        jointplot_fig = plt.figure()
-        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
-        joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[1:7, 7:13]),
-            1: jointplot_fig.add_subplot(gridspec[0:1, 7:13]),
-            2: jointplot_fig.add_subplot(gridspec[1:7, 13:14]),
-            3: jointplot_fig.add_subplot(gridspec[0:2, 0:6]),
-            4: jointplot_fig.add_subplot(gridspec[2:4, 0:6]),
-            5: jointplot_fig.add_subplot(gridspec[4:6, 0:6])
-        }
-        xvar = 'true_%_cov_test'
-        yvar = 'test_score'
-        legend_names = ['Bacteria only', 'Archaea only', 'Eukaryota only', 'All kingdoms', 'Control']
-        # Plot scatter and kde plots
-        sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[0], alpha=0.5,
-                        legend=False)
-        jointplot_fig.axes[0].scatter(x=top_score_control[xvar], y=top_score_control[yvar],
-                                      alpha=1, c='#fde725', label='Control')
-        sns.kdeplot(x=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[1], fill=True,
-                    common_norm=True, alpha=.3, legend=False)
-        sns.kdeplot(y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[2], fill=True,
-                    common_norm=True, alpha=.3, legend=False)
-        jointplot_fig.axes[0].set_xlabel('IGS true percent coverage')
-        jointplot_fig.axes[0].set_ylabel('Guide score')
-        # Set variable regions for location plots
-        plot_variable_regions(joint_ax[3], var_regs)
-        plot_variable_regions(joint_ax[4], var_regs)
-        plot_variable_regions(joint_ax[5], var_regs)
-        # Plot test data for each testing condition
-        sns.scatterplot(x='reference_idx', y='u_conservation_test', hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[3],
-                        alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y=xvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[4],
-                        alpha=0.5, legend=False)
-        sns.scatterplot(x='reference_idx', y=yvar, hue='name_of_test_dataset', data=universal_subset, ax=joint_ax[5],
-                        alpha=0.5)
-        jointplot_fig.axes[4].set_xlabel('16s rRNA sequence position on reference sequence')
-        # Plot control data
-        jointplot_fig.axes[3].scatter(x=top_score_control['reference_idx'], y=top_score_control['u_conservation_test'],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[3].set_ylabel('U site conservation')
-        jointplot_fig.axes[4].scatter(x=top_score_control['reference_idx'], y=top_score_control[xvar],
-                                      alpha=1, c='#fde725', label='control')
-        jointplot_fig.axes[4].set_ylabel('IGS true percent coverage')
-        jointplot_fig.axes[5].scatter(x=top_score_control['reference_idx'], y=top_score_control[yvar], alpha=1,
-                                      c='#fde725', label='control')
-        jointplot_fig.axes[5].set_ylabel('Guide score')
-        # Set graph settings for pretti graphing
-        jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[0].set(ylim=[-0.1, 1.1])
-        jointplot_fig.axes[1].set(xlabel=None)
-        # jointplot_fig.axes[1].set_title('D', loc='left', fontsize=30)
-        jointplot_fig.axes[2].set(ylabel=None)
-        # jointplot_fig.axes[3].set_title('A', loc='left', fontsize=30)
-        jointplot_fig.axes[3].set(xlabel=None, xlim=[-0.1, max_vals['reference_idx'] + 20], ylim=[-0.1, 1.1])
-        jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].sharey(jointplot_fig.axes[3])
-        jointplot_fig.axes[5].sharex(jointplot_fig.axes[3])
-        jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
-        jointplot_fig.axes[4].set(xlabel=None)
-        # jointplot_fig.axes[4].set_title('B', loc='left', fontsize=30)
-        # jointplot_fig.axes[5].set_title('C', loc='left', fontsize=30)
-        jointplot_fig.axes[5].set(xlabel='Reference 16s rRNA index')
-        jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
-        jointplot_fig.axes[1].tick_params(labelbottom=False, labelleft=False, left=False)
-        jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
-        jointplot_fig.axes[2].tick_params(labelbottom=False, labelleft=False, bottom=False)
-        jointplot_fig.axes[3].tick_params(labelbottom=False)
-        jointplot_fig.axes[4].tick_params(labelbottom=False)
-        legend = plt.legend(bbox_to_anchor=(1.4, -0.15), ncols=5, title='Test dataset')
-        for label in legend.get_texts():
-            txt = label.get_text().split('/')[-1][0:3]
-            new_label = [name for name in legend_names if txt.casefold() in name.casefold()]
-            label.set_text(new_label[0])
-        jointplot_fig.suptitle(f'Designs from {target_name} target sequences against test datasets')
-
-        if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_2_{target_name}.{file_type}', format=file_type)
-        plt.show()
-
-    # # Graph 1a:
-    # # Find max y label:
-    # y_max = all_data_df.max(numeric_only=True)
-    # fig1a, ax1a = plt.subplots(nrows=1, ncols=2, layout='constrained',
-    #                            sharex='all')
-    # fig1a.suptitle('Number of targets vs. delta composite scores')
-    # sns.scatterplot(x='delta_vs_test', y='num_of_targets_test', data=universal_designs_df,
-    #                 ax=ax1a[0], alpha=0.7, hue=universal_designs_df.index.name)
-    # ax1a[0].set_title('Universal vs. Test Dataset')
-    # ax1a[0].set_ylim(bottom=0, top=max(y_max['num_of_targets_test'], y_max['num_of_targets_background']))
-    # ax1a[0].set_xlabel('Delta composite score vs. test dataset')
-    # ax1a[0].set_ylabel('Number of targets in test dataset')
-    # sns.scatterplot(x='delta_vs_background', y='num_of_targets_background', data=selective_designs_df,
-    #                 ax=ax1a[1], alpha=0.7, hue=selective_designs_df.index.name)
-    # ax1a[1].set_title('Selective vs. Background Dataset')
-    # ax1a[1].set_ylim(bottom=0, top=max(y_max['num_of_targets_test'], y_max['num_of_targets_background']))
-    # ax1a[1].set_xlabel('Delta composite score vs. backpround dataset')
-    # ax1a[1].set_ylabel('Number of targets in backpround dataset')
-    #
-    # plt.tight_layout()
-    # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig1a.{file_type}', format=file_type)
-    # plt.show()
-    #
-    # def make_jointplot(x_var, y_var, name):
-    #     jointplot_fig = plt.figure()
-    #     gridspec = jointplot_fig.add_gridspec(nrows=4, ncols=9)
-    #     joint_ax = {
-    #         0: jointplot_fig.add_subplot(gridspec[1:4, 0:3]),
-    #         1: jointplot_fig.add_subplot(gridspec[0:1, 0:3]),
-    #         2: jointplot_fig.add_subplot(gridspec[1:4, 3:4]),
-    #         3: jointplot_fig.add_subplot(gridspec[1:4, 5:8]),
-    #         4: jointplot_fig.add_subplot(gridspec[0:1, 5:8]),
-    #         5: jointplot_fig.add_subplot(gridspec[1:4, 8:9])
-    #     }
-    #     for i, dset, labels in zip([0, 3], [universal_designs_df, selective_designs_df],
-    #                                [universal_labels, selective_labels]):
-    #         slope, intercept, r, p, sterr = scipy.stats.linregress(x=dset[x_var],
-    #                                                                y=dset[y_var])
-    #         sns.scatterplot(x=x_var, y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i],
-    #                         alpha=0.7)
-    #         sns.kdeplot(x=x_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 1],
-    #                     fill=True, common_norm=True, alpha=.3, legend=False)
-    #         sns.kdeplot(y=y_var, hue=dset.index.name, data=dset, ax=joint_ax[i + 2],
-    #                     fill=True, common_norm=True, alpha=.3, legend=False)
-    #
-    #         joint_ax[i].annotate(f'$r^2$={round(r, 3)}', xy=(0.1, 0.9), xycoords='axes fraction')
-    #
-    #     jointplot_fig.axes[0].set(xlim=[-0.1, 1.1], ylim=[-0.1, 1.1])
-    #     jointplot_fig.axes[3].sharex(jointplot_fig.axes[0])
-    #     jointplot_fig.axes[3].sharey(jointplot_fig.axes[0])
-    #     jointplot_fig.axes[1].set(xlabel=None)
-    #     jointplot_fig.axes[2].set(ylabel=None)
-    #     jointplot_fig.axes[4].set(xlabel=None)
-    #     jointplot_fig.axes[5].set(ylabel=None)
-    #     jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
-    #     jointplot_fig.axes[1].tick_params(labelbottom=False)
-    #     jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
-    #     jointplot_fig.axes[2].tick_params(labelleft=False)
-    #     jointplot_fig.axes[4].sharex(jointplot_fig.axes[3])
-    #     jointplot_fig.axes[4].tick_params(labelbottom=False)
-    #     jointplot_fig.axes[5].sharey(jointplot_fig.axes[3])
-    #     jointplot_fig.axes[5].tick_params(labelleft=False)
-    #
-    #     if save_fig:
-    #         plt.savefig(fname=f'{save_file_loc}/{name}.{file_type}', format=file_type)
-    #     plt.show()
-    #     return
-    #
-    # make_jointplot('true_%_cov_test', 'test_score', name='/fig1b')
-    # make_jointplot('delta_igs_vs_test', 'delta_guide_vs_test', name='/fig1c')
-    #
-    # # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
-    # # selective for all designs in different panels (same data as above but order along gene)
-    # fig2a, ax2a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
-    #                            sharex='all')
-    # fig2a.suptitle('Scores along 16s rRNA sequences in test datasets: universal/ selective')
-    # fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
-    # fig_2a_columns = ['u_conservation_test', 'true_%_cov_test', 'test_score']
-    # ax2a[0, 0].set_title('Universal designs')
-    # for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
-    #     plot_variable_regions(ax2a[i, 0], var_regs)
-    #     ax2a[i, 0].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
-    #                        label='control')
-    #     for j, dataset in enumerate(universal_labels):
-    #         ax2a[i, 0].scatter(x=universal_designs_df.loc[dataset, 'reference_idx'],
-    #                            y=universal_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
-    #     ax2a[i, 0].set_ylabel(name)
-    #     ax2a[i, 0].legend()
-    #     ax2a[i, 0].set_xlabel('Position in reference sequence')
-    # ax2a[0, 1].set_title('Selective designs')
-    # for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
-    #     plot_variable_regions(ax2a[i, 1], var_regs)
-    #     ax2a[i, 1].scatter(x=top_score_control['reference_idx'], y=top_score_control[col], alpha=0.7, c='#fde725',
-    #                        label='control')
-    #     for j, dataset in enumerate(selective_labels):
-    #         ax2a[i, 1].scatter(x=selective_designs_df.loc[dataset, 'reference_idx'],
-    #                            y=selective_designs_df.loc[dataset, col], alpha=0.5, c=colors[j], label=dataset)
-    #     ax2a[i, 1].legend()
-    # ax2a[i, 0].set_xlabel('Position in reference sequence')
-    # plt.tight_layout()
-    # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig2a.{file_type}', format=file_type)
-    # plt.show()
-    #
-    # fig2b, ax2b = plt.subplots(nrows=2, ncols=1, sharex='all')
-    # fig2b.suptitle('Composite score along test 16s sequences')
-    #
-    # for i, (dset, name) in enumerate(zip([universal_designs_df, selective_designs_df], ['Universal', 'Selective'])):
-    #     plot_variable_regions(ax2b[i], var_regs)
-    #     ax2b[i].scatter(x=top_score_control['reference_idx'], y=top_score_control['composite_test_score'],
-    #                     alpha=0.7, c='#fde725', label='control')
-    #     for j, dataset in enumerate(list(set(dset.index))):
-    #         ax2b[i].scatter(x=dset.loc[dataset, 'reference_idx'],
-    #                         y=dset.loc[dataset, 'composite_test_score'], alpha=0.5, c=colors[j], label=dataset)
-    #     ax2b[i].set_title(name)
-    #     ax2b[i].set_ylabel('Composite test score')
-    # ax2b[1].set_xlabel('16s rRNA sequence position on reference sequence')
-    # plt.tight_layout()
-    # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig2b.{file_type}', format=file_type)
-    # plt.show()
-    #
-    # # Graph 3: violin plot, showing composite score distribution in all designs of a given category
-    # back_score_data = all_data_df.loc[:, ['id', 'test_score']]
-    # back_score_data['score_type'] = 'Guide score on test data'
-    # back_score_data.rename(columns={'test_score': 'Score'}, inplace=True)
-    # back_true_cov_data = all_data_df.loc[:, ['id', 'true_%_cov_test']]
-    # back_true_cov_data['score_type'] = 'True % coverage on test data'
-    # back_true_cov_data.rename(columns={'true_%_cov_test': 'Score'}, inplace=True)
-    # fig_3_data = pd.concat([back_score_data, back_true_cov_data])
-    # plt.title('Guide and IGS scores distribution on test dataset')
-    # # sns.violinplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, inner='point', cut=0, split=True)
-    # sns.boxplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, notch=True, boxprops={'alpha': 0.7})
-    # sns.stripplot(x=fig_3_data.index, y='Score', hue='score_type', data=fig_3_data, dodge=True)
-    #
-    # plt.tight_layout()
-    # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig3.{file_type}', format=file_type)
-    # plt.show()
-    #
-    # # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
-    # fig4, ax4 = plt.subplots(nrows=2, ncols=1, sharex='all')
-    # for i, dset in enumerate([universal_designs_df, selective_designs_df]):
-    #     plot_variable_regions(ax4[i], var_regs)
-    #     ax4[i].scatter(x=top_score_control['reference_idx'], y=top_score_control['delta_vs_test'],
-    #                    alpha=0.7, c='#fde725', label='control')
-    #     for j, dataset in enumerate(list(set(dset.index))):
-    #         ax4[i].scatter(x=dset.loc[dataset, 'reference_idx'], y=dset.loc[dataset, 'delta_vs_test'],
-    #                        alpha=0.5, c=colors[j], label=dataset)
-    #     ax4[i].set_ylabel('Delta composite score vs. test dataset')
-    # ax4[0].set_title('Universal')
-    # ax4[1].set_title('Selective')
-    # ax4[1].set_xlabel('16s rRNA sequence position on reference sequence')
-    #
-    # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig4.{file_type}', format=file_type)
-    # plt.show()
-    #
-    # # Extract taxonomy levels from test dataset too
-    # for i, test_folder in enumerate(test_folders):
-    #     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
-    #     fn_align_to_ref = np.vectorize(give_taxonomy, otypes=[TargetSeq], excluded=['level'])
-    #     test_dataset_taxonomies = fn_align_to_ref(test_names_and_seqs, level=taxonomy)
-    #
-    #     test_counts_and_names = dict(np.asarray(np.unique(test_dataset_taxonomies, return_counts=True)).T)
-    #     # Extract possible taxonomy labels
-    #     test_target_col_name = f'target_{taxonomy}_test'
-    #     all_targets_set = set()
-    #     all_targets_raw = dict(top_test_scores[test_target_col_name])
-    #
-    #     all_targets_dict = {f'Test data {i}': test_counts_and_names}
-    #     for key, val in all_targets_raw.items():
-    #         val = val.replace(';', ',')
-    #         all_targets_dict[key] = eval(val)
-    #         all_targets_set.update(set(all_targets_dict[key].keys()))
-    #
-    # fig_5_data = pd.DataFrame(all_targets_dict).T
-    #
-    # filter_nans = fig_5_data.groupby(fig_5_data.index).sum()
-    #
-    # fig5, ax5 = plt.subplots(ncols=2, nrows=1, sharey='all', layout='constrained')
-    # # Figure 5a:
-    # # Get 100%
-    # totals = filter_nans.sum(axis=1)
-    # # Calculate fractions
-    # fractions = filter_nans.div(totals, axis=0)
-    # fractions.plot.barh(stacked=True, ax=ax5[0], legend=0)
-    # ax5[0].set_xlabel('Fraction')
-    # # Figure 5b
-    # filter_nans.plot.barh(stacked=True, ax=ax5[1], legend=0)
-    # ax5[1].set_xlabel('Counts')
-    # fig5.suptitle(f'{taxonomy} targeted of dataset')
-    # leg_handles, leg_labels = ax5[0].get_legend_handles_labels()
-    # fig5.legend(leg_handles, leg_labels, ncols=math.ceil(len(leg_labels) / 14), loc='lower center', fancybox=True,
-    #             fontsize='x-small')
-    # # show the graph
-    # plt.tight_layout()
-    # plt.subplots_adjust(bottom=0.27)
-    # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig5.{file_type}', format=file_type)
-    # plt.show()
+    if os.path.exists(f'{folder_path}.csv'):
+        os.remove(f'{folder_path}.csv')
+    designs_df.to_csv(f'{folder_path}.csv', index=False)
     return
 
 
@@ -2011,18 +1773,15 @@ def give_taxonomy(silva_name: str | TargetSeq, level: str):
         return None
 
 
-def plot_variable_regions(ax, var_regs):
-    for V in var_regs:
-        ax.axvspan(V[0], V[1], facecolor='g', alpha=0.2)
-    return
-
-
 def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: str, msa_fast: bool,
-                       score_type: str, guide_len: int):
+                       score_type: str, guide_len: int, priori=None):
     # First create a dummy file with all the guides we want to optimize
+    if priori is None:
+        priori = [0.25, 0.25, 0.25, 0.25]
     with open(f'to_align_{name_of_file}.fasta', 'w') as f:
         for i, line in enumerate(sequences_to_align):
             f.write('>seq' + str(i) + '\n' + str(line) + '\n')
+
     if msa_fast:
         subprocess.check_output([muscle_exe_name, '-super5', f'to_align_{name_of_file}.fasta', '-output',
                                  f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
@@ -2042,29 +1801,31 @@ def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: s
     summary_align = AlignInfo.SummaryInfo(msa)
     alignments = [record.seq for record in summary_align.alignment]
 
-    opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-')
+    mat = words2countmatrix(alignments, priori=priori)
+    opti_seq = consensus(mat, priori=priori)
+
     # Make sure our sequence is our desired length
     truncated_seq = opti_seq[-guide_len:]
 
-    score = return_score_from_type(sequence_to_test=truncated_seq, score_type=score_type)
+    score = return_score_from_type(sequence_to_test=truncated_seq, score_type=score_type, opti_len=guide_len)
 
     return truncated_seq, score
 
 
-def return_score_from_type(sequence_to_test: Seq | str, score_type: str):
+def return_score_from_type(sequence_to_test: Seq | str, score_type: str, opti_len: int):
     if score_type == 'naive':
         # Naively tell me what the percent identity is: 1- ambiguity codons/ length
-        score = get_naive_score(sequence_to_test)
+        score = get_naive_score(sequence_to_test, opti_len)
 
     elif score_type == 'weighted':
-        score = get_weighted_score(sequence_to_test)
+        score = get_weighted_score(sequence_to_test, opti_len)
 
     elif score_type == 'directional':
-        score = get_directional_score(sequence_to_test)
+        score = get_directional_score(sequence_to_test, opti_len)
 
     else:
         print('Score type not recognized. Defaulting to naive scoring')
-        score = get_naive_score(sequence_to_test)
+        score = get_naive_score(sequence_to_test, opti_len)
     return score
 
 
@@ -2106,3 +1867,230 @@ def compare_batches(input_designs: np.ndarray[RibozymeDesign]):
     # plot sequence map of final guide per id
 
     return
+
+
+def give_scoring_dict():
+    score_dict = {'A': 1, 'T': 1, 'G': 1, 'C': 1, 'U': 1, 'R': 0.5, 'Y': 0.5, 'M': 0.5, 'K': 0.5, 'S': 0.5, 'W': 0.5,
+                  'H': 1 / 3, 'B': 1 / 3, 'D': 1 / 3, 'V': 1 / 3, 'N': 0, '-': 0}
+    return score_dict
+
+
+def combine_data(folder_path):
+    # Get all files in the folder that end in .txt
+    files = [f'{folder_path}/{f}'.replace('//', '/') for f in os.listdir(folder_path)
+             if f.endswith('.txt')]
+    worker_file_names = defaultdict(lambda: [])
+
+    for file_temp in files:
+        file_name = file_temp.split('/')[-1].split('_worker')[0]
+        worker_file_names[f'{folder_path}/combined/{file_name}.txt'].append(file_temp)
+
+    # Append the data from each file in a batch to combined name file
+    if not os.path.exists(f'{folder_path}/combined'):
+        os.mkdir(f'{folder_path}/combined')
+    else:
+        for file in os.listdir(f'{folder_path}/combined'):
+            os.remove(f'{folder_path}/combined/{file}')
+
+    for new_file_name, items_to_write in worker_file_names.items():
+        for item in items_to_write:
+            with open(item, 'r') as r:
+                designs = r.readlines()
+            with open(new_file_name, 'a') as d:
+                for line in designs:
+                    d.write(line)
+    return
+
+
+"""
+The functions below are from
+    https://github.com/rsa-tools/rsat-code/blob/68048c6135224d5007abb388e2f64837ff57bc72/python-scripts/lib/matrix.py
+Thank you so so so much for making this! For my reference here is the citation: 
+https://github.com/rsa-tools/rsat-code/blob/master/CITATION.cff
+"""
+
+
+# Changed some variable names
+def words2countmatrix(words, priori: list = None):
+    """
+    Convert a list of words to a simple count matrix.
+    """
+    if not priori:
+        priori = [0.25, 0.25, 0.25, 0.25]
+    w = len(words[0])
+    m = [[0.0] * 4 for i in range(w)]
+    n = len(words)
+    for i in range(w):
+        for s in range(n):
+            try:
+                letter = words[s][i]
+            except IndexError:
+                letter = 'N'
+            if letter == 'A':
+                m[i][0] = m[i][0] + 1.0
+            elif letter == 'C':
+                m[i][1] = m[i][1] + 1.0
+            elif letter == 'G':
+                m[i][2] = m[i][2] + 1.0
+            elif letter == 'T':
+                m[i][3] = m[i][3] + 1.0
+            elif letter == 'N':
+                m[i][0] = m[i][0] + priori[0]
+                m[i][1] = m[i][1] + priori[1]
+                m[i][2] = m[i][2] + priori[2]
+                m[i][3] = m[i][3] + priori[3]
+    return m
+
+
+'''
+A                       (Adenine) 
+C                       (Cytosine)
+G                       (Guanine)
+T                       (Thymine)
+R       = A or G        (puRines)
+Y       = C or T        (pYrimidines)
+W       = A or T        (Weak hydrogen bonding)
+S       = G or C        (Strong hydrogen bonding)
+M       = A or C        (aMino group at common position)
+K       = G or T        (Keto group at common position)
+H       = A, C or T     (not G)
+B       = G, C or T     (not A)
+V       = G, A, C       (not T)
+D       = G, A or T     (not C)
+N       = G, A, C or T  (aNy)
+'''
+
+# Modified to include a gap
+CONSENSUS = {'A': 'A',
+             'C': 'C',
+             'G': 'G',
+             'T': 'T',
+             'AG': 'R',
+             'CT': 'Y',
+             'AT': 'W',
+             'CG': 'S',
+             'AC': 'M',
+             'GT': 'K',
+             'ACT': 'H',
+             'CGT': 'B',
+             'ACG': 'V',
+             'AGT': 'D',
+             'ACGT': 'N',
+             '': '-'
+             }
+
+
+# Changed some variable names
+def consensus(matrix, priori: list = None, mask=False):
+    w = len(matrix)
+
+    if not priori:
+        priori = [0.25, 0.25, 0.25, 0.25]
+
+    str_list = []
+    for i in range(w):
+        letter = ''
+        for b in range(4):
+            if matrix[i][b] != 0.0 and log(matrix[i][b] / priori[b]) >= 0:
+                letter = letter + 'ACGT'[b]
+        if mask and (len(letter) == 4 or len(letter) == 3 or len(letter) == 2 or len(letter) == 0):
+            letter = 'N'
+        else:
+            letter = CONSENSUS[letter]
+
+        # if len(letter) != 1:
+        #    letter = '[' + letter + ']'
+
+        str_list.append(letter)
+    return ''.join(str_list)
+
+
+"""
+The functions below is from biopython, modified to fit my needs!
+"""
+
+
+def get_tm_gc(seq, strict=True, valueset=7, userset=None, mismatch=True, mismatch_base='X'):
+    """Return the Tm using empirical formulas based on GC content.
+
+    General format: Tm = A + B(%GC) - C/N + salt correction - D(%mismatch)
+
+    A, B, C, D: empirical constants, N: primer length
+    D (amount of decrease in Tm per % mismatch) is often 1, but sometimes other
+    values have been used (0.6-1.5). Use 'X' to indicate the mismatch position
+    in the sequence. Note that this mismatch correction is a rough estimate.
+
+    Arguments:
+     - valueset: A few often cited variants are included:
+
+        1. Tm = 69.3 + 0.41(%GC) - 650/N
+           (Marmur & Doty 1962, J Mol Biol 5: 109-118; Chester & Marshak 1993),
+           Anal Biochem 209: 284-290)
+        2. Tm = 81.5 + 0.41(%GC) - 675/N - %mismatch
+           'QuikChange' formula. Recommended (by the manufacturer) for the
+           design of primers for QuikChange mutagenesis.
+        3. Tm = 81.5 + 0.41(%GC) - 675/N + 16.6 x log[Na+]
+           (Marmur & Doty 1962, J Mol Biol 5: 109-118; Schildkraut & Lifson
+           1965, Biopolymers 3: 195-208)
+        4. Tm = 81.5 + 0.41(%GC) - 500/N + 16.6 x log([Na+]/(1.0 + 0.7 x
+           [Na+])) - %mismatch
+           (Wetmur 1991, Crit Rev Biochem Mol Biol 126: 227-259). This is the
+           standard formula in approximative mode of MELTING 4.3.
+        5. Tm = 78 + 0.7(%GC) - 500/N + 16.6 x log([Na+]/(1.0 + 0.7 x [Na+]))
+           - %mismatch
+           (Wetmur 1991, Crit Rev Biochem Mol Biol 126: 227-259). For RNA.
+        6. Tm = 67 + 0.8(%GC) - 500/N + 16.6 x log([Na+]/(1.0 + 0.7 x [Na+]))
+           - %mismatch
+           (Wetmur 1991, Crit Rev Biochem Mol Biol 126: 227-259). For RNA/DNA
+           hybrids.
+        7. Tm = 81.5 + 0.41(%GC) - 600/N + 16.6 x log[Na+]
+           Used by Primer3Plus to calculate the product Tm. Default set.
+        8. Tm = 77.1 + 0.41(%GC) - 528/N + 11.7 x log[Na+]
+           (von Ahsen et al. 2001, Clin Chem 47: 1956-1961). Recommended 'as a
+           tradeoff between accuracy and ease of use'.
+
+     - userset: Tuple of four values for A, B, C, and D. Usersets override
+       valuesets.
+     - mismatch: If 'True' (default) every 'X' in the sequence is counted as
+       mismatch.
+
+    """
+    if strict and any(x in seq for x in "KMNRYBVDH"):
+        raise ValueError(
+            "ambiguous bases B, D, H, K, M, N, R, V, Y not allowed when 'strict=True'"
+        )
+
+    # Ambiguous bases: add 0.5, 0.67 or 0.33% depending on G+C probability:
+    percent_gc = SeqUtils.gc_fraction(seq, "weighted") * 100
+
+    # gc_fraction counts X as 0.5
+    if mismatch:
+        percent_gc -= seq.count(mismatch_base) * 50.0 / len(seq)
+
+    if userset:
+        a, b, c, d = userset
+    else:
+        if valueset == 1:
+            a, b, c, d = (69.3, 0.41, 650, 1)
+        if valueset == 2:
+            a, b, c, d = (81.5, 0.41, 675, 1)
+        if valueset == 3:
+            a, b, c, d = (81.5, 0.41, 675, 1)
+        if valueset == 4:
+            a, b, c, d = (81.5, 0.41, 500, 1)
+        if valueset == 5:
+            a, b, c, d = (78.0, 0.7, 500, 1)
+        if valueset == 6:
+            a, b, c, d = (67.0, 0.8, 500, 1)
+        if valueset == 7:
+            a, b, c, d = (81.5, 0.41, 600, 1)
+        if valueset == 8:
+            a, b, c, d = (77.1, 0.41, 528, 1)
+    if valueset > 8:
+        raise ValueError("allowed values for parameter 'valueset' are 0-8.")
+
+    melting_temp = a + b * percent_gc - c / len(seq)
+
+    if mismatch:
+        melting_temp -= d * (seq.count(mismatch_base) * 100.0 / len(seq))
+    return melting_temp

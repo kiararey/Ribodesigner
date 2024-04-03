@@ -33,7 +33,7 @@ def main(testfilename,comparisonfilename,worker_number,rules_file,number_of_work
 	#load the completed work, which we'll store as a tsv rather than as a json file
 	checkpointfiles=[f for f in os.listdir('checkpoints/') if f.startswith('checkpoint')]
 	completed_work=[]
-	for checkpointfile in checkpointfile:
+	for checkpointfile in checkpointfiles:
 		d=open(comparisonfilename,'r')
 		t=d.read()
 		d.close()
