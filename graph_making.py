@@ -1596,7 +1596,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     guides = best_all_to_order['guide'].tolist()
     to_order = []
     for igs, guide in zip(igses, guides):
-        design = igs + 'g' + guide
+        design = guide + 'g' + igs
         if add_overhangs:
             design = igs_overhang + design + guide_overhang
         to_order.append(design)
@@ -2027,7 +2027,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
         guides = d_set['guide'].tolist()
         to_order = []
         for igs, guide in zip(igses, guides):
-            design = igs + 'g' + guide
+            # MAKE SURE THIS IS THE CORRECT DIRECTION!!! SHOULD BE GUIDE + G + IGS!!!
+            design = guide + 'g' + igs
             if add_overhangs:
                 design = igs_overhang + design + guide_overhang
             to_order.append(design)

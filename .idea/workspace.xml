@@ -8,11 +8,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Making selective designs hopefully for the last time">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="CHOSE SOME DESIGNS!!!! Finishing up this version of ribodesigner yayyyyyy">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/graph_making.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph_making.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -442,7 +440,7 @@
       <workItem from="1709669622922" duration="111000" />
       <workItem from="1709675885506" duration="98746000" />
       <workItem from="1710879001142" duration="52081000" />
-      <workItem from="1712008977063" duration="3758000" />
+      <workItem from="1712008977063" duration="5511000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -787,7 +785,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="166" />
+    <option name="localTasksCounter" value="167" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -827,7 +825,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="More graph making" />
     <MESSAGE value="also making more graphs" />
     <MESSAGE value="finished the first draft of graphs that I'm actually somewhat happy with! Now working on getting data for varying guide lengths to run on NOTS" />
     <MESSAGE value="Added a small improvement where ribodesigner and prepare_test_seqs will create the folder used to save data to if it does not currently exist" />
@@ -852,7 +849,8 @@
     <MESSAGE value="I've made a short and sweet function that can get variable regions of one sequence based on another one to get archaeal 16s variable regions based on e coli 16s variable regions" />
     <MESSAGE value="Computer started freezing while working on graphs, saving my progress till now" />
     <MESSAGE value="Making selective designs hopefully for the last time" />
-    <option name="LAST_COMMIT_MESSAGE" value="Making selective designs hopefully for the last time" />
+    <MESSAGE value="CHOSE SOME DESIGNS!!!! Finishing up this version of ribodesigner yayyyyyy" />
+    <option name="LAST_COMMIT_MESSAGE" value="CHOSE SOME DESIGNS!!!! Finishing up this version of ribodesigner yayyyyyy" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -989,7 +987,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/graph_making.py</url>
-          <line>2039</line>
+          <line>2040</line>
           <option name="timeStamp" value="1394" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">

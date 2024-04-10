@@ -1574,7 +1574,7 @@ def select_designs(tested_to_targets_path: list[str], designs_required: int, res
     guides = filtered_df.head(designs_required)['guide'].tolist()
     to_order = []
     for igs, guide in zip(igses, guides):
-        design = igs + 'g' + guide
+        design = guide + 'g' + igs
         if add_overhangs:
             design = igs_overhang + design + guide_overhang
         to_order.append(design)
