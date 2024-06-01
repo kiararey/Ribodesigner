@@ -29,6 +29,7 @@ class SilvaSequence:
             print('Taxonomic level not found')
         # gives us the name at a certain taxonomic level
         all_levels = self.id.split(';')
+        all_levels[0] = all_levels[0].split(' ')[-1]
         if 'Eukaryota' not in all_levels[0]:
             try:
                 here_is_taxonomy = all_levels[level_names[level]]
@@ -42,36 +43,44 @@ class SilvaSequence:
         return here_is_taxonomy
 
 
-def read_fasta_file_full_name(filename, exclude=None, include=None, exclude_include_taxonomy_level=''):
+def selection_routine(target_seqs, putative_sequence, exclude, include, exclude_include_taxonomy_level):
+    if exclude_include_taxonomy_level == 'any':
+        the_level_to_check_name = putative_sequence.id
+    else:
+        the_level_to_check_name = putative_sequence.give_taxonomy(level=exclude_include_taxonomy_level)
+    # First check if we should exclude
+    for check in exclude:
+        if check in the_level_to_check_name:
+            continue
+    # If not excluded, check if we should include
+    if include:
+        for check in include:
+            if check in the_level_to_check_name:
+                target_seqs.append(putative_sequence)
+                continue
+    else:
+        target_seqs.append(putative_sequence)
+def read_fasta_file_full_name(filename, exclude=None, include=None, exclude_include_taxonomy_level='any'):
     # Include and exclude are mutually exclusive, and will take into account exclude first if both are given.
     if include is None:
         include = []
     if exclude is None:
         exclude = []
     target_seqs = []
+    started_seq = False
     with open(filename) as f:
         for line in f:  # read each line
             if line[0] == '>':  # when we reach the ID of a line
+                if started_seq:
+                    putative_sequence = SilvaSequence(name, sequ)
+                    selection_routine(target_seqs, putative_sequence, exclude, include, exclude_include_taxonomy_level)
                 name = line
+                sequ = ''
+                started_seq = True
             else:  # if we are not at an ID line we must be in the next sequ
-                putative_sequence = SilvaSequence(name, line)
-                if exclude_include_taxonomy_level == 'any':
-                    the_level_to_check_name = name
-                else:
-                    the_level_to_check_name = putative_sequence.give_taxonomy(level=exclude_include_taxonomy_level)
-                # First check if we should exclude
-                for check in exclude:
-                    if check in the_level_to_check_name:
-                        continue
-                # If not excluded, check if we should include
-                if include:
-                    for check in include:
-                        if check in the_level_to_check_name:
-                            target_seqs.append(putative_sequence)
-                            continue
-                else:
-                    target_seqs.append(putative_sequence)
-
+                sequ += line.strip('\n')
+        putative_sequence = SilvaSequence(name, sequ)
+        selection_routine(target_seqs, putative_sequence, exclude, include, exclude_include_taxonomy_level)
     return target_seqs
 
 
@@ -84,8 +93,8 @@ def get_unique_members(list_of_sequences, set_of_species_represented, level):
                 break
     return list_of_sequences
 def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_of_sequences: int = 5, divide_by='Order',
-                            unique_at='Species', exclude_only: list = None, include_only: list = None,
-                            exclude_taxonomy_level: str = '', seed: int = 1, pick_from_file: bool = False,
+                            unique_at='Genus', exclude_only: list = None, include_only: list = None,
+                            exclude_taxonomy_level: str = 'any', seed: int = 1, pick_from_file: bool = False,
                             repeat_species=False, only_test = False):
     """
     Will generate a squished dataset given an input file that has already been made through SequencePrepper.py. Will
@@ -112,7 +121,9 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
         exclude_only = [exclude_only]
 
     # From the given path extract only the .fasta files
-    if not pick_from_file:
+    if silva_by_taxonomy_path.endswith('.fasta'):
+        fasta_file_names = [silva_by_taxonomy_path]
+    elif not pick_from_file:
         fasta_file_names = np.array(
             [f'{silva_by_taxonomy_path}/{file_name}' for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta'
              in file_name])
@@ -128,9 +139,8 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     with alive_bar(len(fasta_file_names), spinner='fishes') as bar:
         for i, seq_file in enumerate(fasta_file_names):
             # Pick five unique organisms per genus that are not the same species
-            target_seqs_and_names.extend(read_fasta_file_full_name(seq_file, exclude=exclude_only,
-                                                              include=include_only,
-                                                              exclude_include_taxonomy_level=exclude_taxonomy_level))
+            target_seqs_and_names.extend(read_fasta_file_full_name(seq_file, exclude=exclude_only, include=include_only,
+                                                                   exclude_include_taxonomy_level=exclude_taxonomy_level))
             bar()
 
     print('Making datasets...')
@@ -171,36 +181,32 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
                     testing_sets_meeting_criteria += 1
                     orders_in_targeting_set += 1
                     orders_in_testing_set += 1
-                elif len(items) > 1:
+                else:
                     sequences_to_take_target = rng.choice(to_pick, len(items), replace=False)
                     sequences_to_take_test = rng.choice(to_pick, len(items), replace=False)
                     orders_in_targeting_set += 1
                     orders_in_testing_set += 1
-                else:
-                    if only_test:
-                        orders_in_testing_set += 1
-                        test_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
-                    else:
-                        orders_in_targeting_set += 1
-                        target_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
-                    continue
                 for col in range(len(sequences_to_take_target)):
                     if not only_test:
                         target_seqs.extend(rng.choice(items[sequences_to_take_target[col]], 1, replace=False))
                     test_seqs.extend(rng.choice(items[sequences_to_take_test[col]], 1, replace=False))
+    # get plural:
+    plural_dict = {'Domain': 'domains', 'Phylum': 'phyla', 'Class': 'classes', 'Order': 'orders', 'Family': 'families',
+                   'Genus': 'genera', 'Species': 'species', 'Taxon': 'taxa', 'Kingdom': 'kingdoms',
+                   'Subkingdom': 'subkingdoms', 'Subphylum': 'subphyla'}
     if not repeat_species:
         if not only_test:
             print(f'\n{targeting_sets_meeting_criteria} out of {len(species_represented_dict)} '
-                  f'{divide_by}s had at least {num_of_sequences} unique {unique_at}s available.'
-                  f'\nThere are {orders_in_targeting_set} {divide_by}s in targeting set and {orders_in_testing_set} '
-                  f'{divide_by}s in testing set represented.'
+                  f'{plural_dict[divide_by]} had at least {num_of_sequences} unique {plural_dict[unique_at]} available.'
+                  f'\nThere are {orders_in_targeting_set} {plural_dict[divide_by]} in targeting set and '
+                  f'{orders_in_testing_set} {plural_dict[divide_by]} in testing set represented.'
                   f'\nTarget dataset has {len(target_seqs)} sequences and test dataset has {len(test_seqs)} sequences '
-                  f'of unique {unique_at}s.\nNow saving in {output_path}...')
+                  f'of unique {plural_dict[unique_at]}.\nNow saving in {output_path}...')
         else:
             print(f'\n{testing_sets_meeting_criteria} out of {len(species_represented_dict)} '
-                  f'{divide_by}s had at least {num_of_sequences} unique {unique_at}s available.\nThere are '
-                  f'{orders_in_testing_set} {divide_by}s in test set represented.'
-                  f'\nTest dataset has {len(test_seqs)} sequences of unique {unique_at}s.'
+                  f'{plural_dict[divide_by]} had at least {num_of_sequences} unique {plural_dict[unique_at]} available.'
+                  f'\nThere are {orders_in_testing_set} {plural_dict[divide_by]} in test set represented.'
+                  f'\nTest dataset has {len(test_seqs)} sequences of unique {plural_dict[unique_at]}.'
                   f'\nNow saving in {output_path}...')
     else:
         if not only_test:
@@ -214,9 +220,9 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     if include_only:
         kingdom_level = '_'.join(include_only) + '_Only'
     elif exclude_only:
-        kingdom_level = 'All_but_' + '_'.join(include_only)
+        kingdom_level = 'All_but_' + '_'.join(exclude_only)
     else:
-        kingdom_level = silva_by_taxonomy_path.split('/')[1].split('_')[7]
+        kingdom_level = 'All'
     if only_test:
         save_this = [('test', test_seqs)]
     else:
