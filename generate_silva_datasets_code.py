@@ -127,16 +127,25 @@ include_only_gram_pos = ['Actinobacteriota', 'Firmicutes']
 #                                     exclude_taxonomy_level=taxonomy, seed=seed)
 #         except ZeroDivisionError:
 #             print(f'Dataset {include} has too few sequences to make exclude data')
+#
+# to_generate = ['Enterobacterales', 'Pseudomonadales']
+# silva_by_taxonomy_path_order = [f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/{name}.fasta'
+#                                 for name in to_generate]
+# for include, file in zip(to_generate, silva_by_taxonomy_path_order):
+#         output_path = f'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_{include}'
+#         generate_silva_datasets(file, output_path + '_included', num_of_sequences=3000, include_only=include,
+#         exclude_taxonomy_level='Order', seed=seed, pick_from_file=True)
 
-to_generate = ['Enterobacterales', 'Pseudomonadales']
-silva_by_taxonomy_path_order = [f'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Bacteria_Only/Order/{name}.fasta'
-                                for name in to_generate]
-for include, file in zip(to_generate, silva_by_taxonomy_path_order):
-        output_path = f'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_{include}'
-        generate_silva_datasets(file, output_path + '_included', num_of_datasets=2,
-                                num_of_sequences=3000, include_only=include, exclude_taxonomy_level='Order', seed=seed,
-                                pick_from_file=True)
+print('Now time for fungi hell yeahhhhh ')
+file = 'Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_Eukaryota_Only/Genus/Fungi.fasta'
+output_path = f'Datasets_used/SILVA_squished_datasets_fungi'
+# generate_silva_datasets(file, output_path, num_of_sequences=39, include_only=['Saccharomyces cerevisiae'],
+#                         exclude_taxonomy_level='Species', divide_by='Species', seed=seed, pick_from_file=True,
+#                         repeat_species=True, only_train=True)
 
+generate_silva_datasets(file, output_path, num_of_sequences=650, divide_by='Family', unique_at='Species',
+                        include_only=['Ascomycota', 'Basidiomycota'], exclude_taxonomy_level='Family', seed=seed,
+                        pick_from_file=True)
 
 print('done!')
 

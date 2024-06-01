@@ -2,6 +2,8 @@ import os
 import numpy as np
 from numpy.random import default_rng
 from alive_progress import alive_bar
+from collections import defaultdict
+import math
 
 
 class SilvaSequence:
@@ -18,48 +20,79 @@ class SilvaSequence:
     def give_taxonomy(self, level):
         level_names = {'Domain': 0, 'Phylum': 1, 'Class': 2, 'Order': 3,
                        'Family': 4, 'Genus': 5, 'Species': 6, 'Taxon': 7}
-        if level not in level_names:
+        # Eukaryotic levels:
+        level_names_euk = {'Domain': 0, 'Kingdom': 1, 'Subkingdom': 2, 'Phylum': 3, 'Subphylum': 4, 'Class': 5,
+                           'Order': 6, 'Family': 7, 'Genus': 8, 'Species': -1}
+        if level == 'any':
+            return self.id[1:]
+        if level not in level_names or level not in level_names_euk:
             print('Taxonomic level not found')
         # gives us the name at a certain taxonomic level
         all_levels = self.id.split(';')
-        try:
-            here_is_taxonomy = all_levels[level_names[level]]
-        except IndexError:
-            here_is_taxonomy = ''
+        if 'Eukaryota' not in all_levels[0]:
+            try:
+                here_is_taxonomy = all_levels[level_names[level]]
+            except IndexError:
+                here_is_taxonomy = ''
+        else:
+            try:
+                here_is_taxonomy = all_levels[level_names_euk[level]]
+            except IndexError:
+                here_is_taxonomy = ''
         return here_is_taxonomy
 
 
-def read_fasta_file_full_name(filename, exclude=[], include=[], exclude_include_taxonomy_level=''):
+def read_fasta_file_full_name(filename, exclude=None, include=None, exclude_include_taxonomy_level=''):
     # Include and exclude are mutually exclusive, and will take into account exclude first if both are given.
+    if include is None:
+        include = []
+    if exclude is None:
+        exclude = []
     target_seqs = []
     with open(filename) as f:
         for line in f:  # read each line
             if line[0] == '>':  # when we reach the ID of a line
                 name = line
             else:  # if we are not at an ID line we must be in the next sequ
-                if exclude and exclude_include_taxonomy_level:
-                    putative_sequence = SilvaSequence(name, line)
-                    if putative_sequence.give_taxonomy(level=exclude_include_taxonomy_level) not in exclude:
-                        target_seqs.append(putative_sequence)
-                elif include and exclude_include_taxonomy_level:
-                    putative_sequence = SilvaSequence(name, line)
-                    if putative_sequence.give_taxonomy(level=exclude_include_taxonomy_level) in include:
-                        target_seqs.append(putative_sequence)
+                putative_sequence = SilvaSequence(name, line)
+                if exclude_include_taxonomy_level == 'any':
+                    the_level_to_check_name = name
                 else:
-                    target_seqs.append(SilvaSequence(name, line))
+                    the_level_to_check_name = putative_sequence.give_taxonomy(level=exclude_include_taxonomy_level)
+                # First check if we should exclude
+                for check in exclude:
+                    if check in the_level_to_check_name:
+                        continue
+                # If not excluded, check if we should include
+                if include:
+                    for check in include:
+                        if check in the_level_to_check_name:
+                            target_seqs.append(putative_sequence)
+                            continue
+                else:
+                    target_seqs.append(putative_sequence)
+
     return target_seqs
 
 
-def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_of_datasets: int = 5,
-                            num_of_sequences: int = 5, exclude_only: list = [], include_only: list = [],
-                            exclude_taxonomy_level: str = '', seed: int = 1, pick_from_file: bool = False):
+def get_unique_members(list_of_sequences, set_of_species_represented, level):
+    for current_spot, sequence in enumerate(list_of_sequences):
+        sequences_found = sequence.give_taxonomy(level)
+        if len(sequences_found) != len(set(sequences_found)):
+            list_of_sequences = [seq for spot, seq in enumerate(list_of_sequences) if spot != current_spot]
+            if len(list_of_sequences) == len(set_of_species_represented):
+                break
+    return list_of_sequences
+def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_of_sequences: int = 5, divide_by='Order',
+                            unique_at='Species', exclude_only: list = None, include_only: list = None,
+                            exclude_taxonomy_level: str = '', seed: int = 1, pick_from_file: bool = False,
+                            repeat_species=False, only_train = False):
     """
     Will generate a squished dataset given an input file that has already been made through SequencePrepper.py. Will
-    return num_of_datasets datasets containing num_of_sequences in each without any repeated species.
+    return test and train datasets containing ideally num_of_sequences in each without any repeated species.
     :param silva_by_taxonomy_path:  Here is the file where the dataset to squish is. To make this, run
     SequencePrepper.py on the Silva database file or similarly structured data to separate it by levels of taxonomy.
     :param output_path: Here is the file where we want to save the dataset
-    :param num_of_datasets: This is how many total squished datasets we want
     :param num_of_sequences: This is the maximum of how many sequences per taxonomy file we want to keep
     :param exclude_only: this is a list for sequences we want to exclude at the taxonomic level given by
     exclude_taxonomy_level. Mutually exclusive with include_only. Note that if both exclude_only and include_only are
@@ -72,20 +105,20 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     :param seed: random seed, for consistency across runs to debug.
     :return:
     """
-
-    if (exclude_only or include_only) and exclude_taxonomy_level not in ['Domain', 'Phylum', 'Class', 'Order', 'Family',
-                                                                         'Genus', 'Species', 'Taxon']:
-        taxonomy_choose = {0: 'Domain', 1: 'Phylum', 2: 'Class', 3: 'Order',
-                           4: 'Family', 5: 'Genus', 6: 'Species', 7: 'Taxon'}
-        ini = -1
-        while ini < 0 or ini > 7:
-            ini = int(input(f'Taxonomy level not recognized. Please choose a number to assign:\n{taxonomy_choose}'))
-        exclude_taxonomy_level = taxonomy_choose[ini]
+    if only_train:
+        num_of_datasets = 1
+    else:
+        num_of_datasets = 2
+    if type(include_only) == str:
+        include_only = [include_only]
+    if type(exclude_only) == str:
+        exclude_only = [exclude_only]
 
     # From the given path extract only the .fasta files
     if not pick_from_file:
         fasta_file_names = np.array(
-            [f'{silva_by_taxonomy_path}/{file_name}' for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta' in file_name])
+            [f'{silva_by_taxonomy_path}/{file_name}' for file_name in os.listdir(silva_by_taxonomy_path) if '.fasta'
+             in file_name])
     else:
         fasta_file_names = [silva_by_taxonomy_path]
 
@@ -93,130 +126,130 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
         os.mkdir(output_path)
 
     # Prepare list to store data in:
-    seqs_to_write = [np.empty(0)] * num_of_datasets
-
-    perc_under_seq_num = 0
-    seqs_kept = 0
+    target_seqs_and_names = []
+    print('Importing sequences...')
     with alive_bar(len(fasta_file_names), spinner='fishes') as bar:
         for i, seq_file in enumerate(fasta_file_names):
             # Pick five unique organisms per genus that are not the same species
-            target_seqs_and_names = read_fasta_file_full_name(seq_file, exclude=exclude_only,
+            target_seqs_and_names.extend(read_fasta_file_full_name(seq_file, exclude=exclude_only,
                                                               include=include_only,
-                                                              exclude_include_taxonomy_level=exclude_taxonomy_level)
-            if not target_seqs_and_names:
-                bar()
-                continue
-            seqs_kept += 1
-            if len(target_seqs_and_names) <= num_of_sequences:
-                # if there are only num_of_sequences or less sequences, all of the sequences will be in all datasets.
-                for row in range(len(seqs_to_write)):
-                    seqs_to_write[row] = np.append(seqs_to_write[row], target_seqs_and_names)
-                perc_under_seq_num += 1
-                bar()
-                continue
-            # Now pick num_of_sequences unique organisms per taxonomy level num_of_datasets times
-            j = 0
-            while j < num_of_datasets:
-                # take num_of_sequences sequences randomly
-                array = np.array(target_seqs_and_names, dtype=tuple)
-                rng = default_rng(seed=seed)
-                sequences_taken = rng.choice(array, num_of_sequences, replace=False)
-
-                # check that all sequences are of unique species
-                species_of_sequences_taken_set = set(sequence.give_taxonomy('Species') for sequence in sequences_taken)
-
-                if len(species_of_sequences_taken_set) == num_of_sequences:
-                    seqs_to_write[j] = np.append(seqs_to_write[j], sequences_taken)
-                    j += 1
-                    continue
-                else:
-                    total_species_set = set(sequence.give_taxonomy('Species') for sequence in target_seqs_and_names)
-                    if len(total_species_set) < num_of_sequences:
-                        # if there is no way to get num_of_sequences unique species, just take the L:
-                        seqs_to_write[j] = np.append(seqs_to_write[j], sequences_taken)
-                        j += 1
-                        continue
-                # Make a list containing species names that are not represented in the current pool
-                species_not_represented = [species_name for species_name in total_species_set
-                                           if species_name not in species_of_sequences_taken_set]
-
-                sequences_of_species_not_represented = [sequence for sequence in target_seqs_and_names
-                                                        if sequence.give_taxonomy('Species') in species_not_represented]
-
-                # Find repeated species, remove one until we have enough unique members:
-                def get_unique_members(list_of_sequences, set_of_species_represented, level):
-                    for current_spot, sequence in enumerate(list_of_sequences):
-                        sequences_found = sequence.give_taxonomy(level)
-                        if len(sequences_found) != len(set(sequences_found)):
-                            list_of_sequences = [seq for spot, seq in enumerate(list_of_sequences) if spot != current_spot]
-                            if len(list_of_sequences) == len(set_of_species_represented):
-                                break
-                    return list_of_sequences
-
-                sequences_taken = get_unique_members(sequences_taken.copy(), species_of_sequences_taken_set, 'Species')
-
-                # Finally, find enough sequences that are not the same species to fill out our current dataset
-                num_needed = num_of_sequences - len(sequences_taken)
-                new_lines_to_take = np.random.randint(0, len(sequences_of_species_not_represented), num_needed)
-                candidate_sequences = [sequences_of_species_not_represented[num] for num in new_lines_to_take]
-                remaining_candidates = [sequences_of_species_not_represented[num] for num in range(len(candidate_sequences))
-                                        if num not in new_lines_to_take]
-                species_of_candidate_sequences = [sequence.give_taxonomy('Species') for sequence in candidate_sequences]
-                # If we only need one species or there is no way to get all unique species just take as many needed
-                if not num_needed == 1 | len(set(species_not_represented)) < num_needed:
-                    # first check if the sequences we got randomly are not the same species
-                    tries = 0
-                    while len(species_of_candidate_sequences) > len(set(species_of_candidate_sequences)):
-                        tries += 1
-                        candidate_sequences = get_unique_members(candidate_sequences.copy(),
-                                                                 set(species_of_candidate_sequences), 'Species')
-                        species_of_candidate_sequences = set([sequence.give_taxonomy('Species')
-                                                              for sequence in candidate_sequences])
-                        all_species_represented = species_of_sequences_taken_set.union(species_of_candidate_sequences)
-                        species_not_represented = [species.give_taxonomy('Species') for species in remaining_candidates
-                                                   if species.give_taxonomy('Species') not in all_species_represented]
-                        sequences_of_species_not_represented = [sequence for sequence in remaining_candidates
-                                                                if sequence.give_taxonomy(
-                                'Species') in species_not_represented]
-                        if len(sequences_of_species_not_represented) <= num_needed:
-                            candidate_sequences.extend(sequences_of_species_not_represented)
-                            break
-                        new_num_needed = num_of_sequences - len(sequences_taken) - len(candidate_sequences)
-                        new_lines_to_take = np.random.randint(0, len(sequences_of_species_not_represented), new_num_needed)
-
-                        candidate_sequences.extend([sequences_of_species_not_represented[num] for num in new_lines_to_take])
-
-                        remaining_candidates = [sequences_of_species_not_represented[num] for num in
-                                                range(len(candidate_sequences)) if num not in new_lines_to_take]
-
-                        species_of_candidate_sequences = [sequence.give_taxonomy('Species') for sequence in
-                                                          candidate_sequences]
-                sequences_taken.extend(candidate_sequences)
-                if len(sequences_taken) > num_of_sequences:
-                    sequences_taken = rng.choice(sequences_taken, num_of_sequences, replace=False)
-                seqs_to_write[j] = np.append(seqs_to_write[j], sequences_taken)
-
-                j += 1
+                                                              exclude_include_taxonomy_level=exclude_taxonomy_level))
             bar()
 
-    print(f'\n{seqs_kept} datasets met inclusion criteria. '
-          f'{round(perc_under_seq_num/seqs_kept*100, 2)}% of kept datasets had less than the requested number of '
-          f'sequences.\nNow saving in {output_path}...')
+    print('Making datasets...')
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        if repeat_species:
+            array = np.array(target_seqs_and_names, dtype=tuple)
+            rng = default_rng(seed=seed)
+            while num_of_datasets*num_of_sequences > len(target_seqs_and_names):
+                num_of_sequences = int(input(f'There are not enough sequences available for two unique datasets. '
+                                             f'Please choose a number up to '
+                                             f'{math.floor(len(target_seqs_and_names)/num_of_datasets)}'))
+            if num_of_datasets*num_of_sequences <= len(target_seqs_and_names):
+                seqs_to_write = rng.choice(array, [num_of_datasets, num_of_sequences], replace=False)
+                train_seqs = seqs_to_write[0, :]
+                if not only_train:
+                    test_seqs = seqs_to_write[1, :]
+        else:
+            # Get the species of everyone so that we can make sure we can have all species represented
+            species_represented_dict = defaultdict(lambda: defaultdict(lambda: []))
+            species_per_order = defaultdict(lambda: set())
+            for seq in target_seqs_and_names:
+                species_represented_dict[seq.give_taxonomy(divide_by)][seq.give_taxonomy(unique_at)].append(seq)
+                species_per_order[seq.give_taxonomy(divide_by)].add(seq.give_taxonomy(unique_at))
+
+            # Sort by species, see if there is enough for both test and train. If there is not enough then add all but
+            # one into train. If there is only one sequence add to test
+            test_seqs = []
+            train_seqs = []
+            rng = default_rng(seed=seed)
+            training_sets_meeting_criteria = 0
+            testing_sets_meeting_criteria = 0
+            orders_in_training_set = 0
+            orders_in_testing_set = 0
+            for key, items in species_represented_dict.items():
+                to_pick = list(species_per_order[key])
+                if len(items) >= num_of_sequences*num_of_datasets:
+                    sequences_to_take = rng.choice(to_pick, [num_of_datasets, num_of_sequences], replace=False)
+                    training_sets_meeting_criteria += 1
+                    testing_sets_meeting_criteria += 1
+                    orders_in_training_set += 1
+                    orders_in_testing_set += 1
+                    for col in range(num_of_sequences):
+                        if not only_train:
+                            test_seqs.extend(rng.choice(items[sequences_to_take[1, col]], 1, replace=False))
+                        train_seqs.extend(rng.choice(items[sequences_to_take[0, col]], 1, replace=False))
+                elif len(items) > num_of_sequences:
+                    training_sets_meeting_criteria += 1
+                    sequences_to_take = rng.choice(to_pick, len(items), replace=False)
+                    orders_in_training_set += 1
+                    orders_in_testing_set += 1
+                    for col in range(0, num_of_sequences):
+                        train_seqs.extend(rng.choice(items[sequences_to_take[col]], 1, replace=False))
+                    if not only_train:
+                        for col in range(num_of_sequences, len(items)):
+                            test_seqs.extend(rng.choice(items[sequences_to_take[col]], 1, replace=False))
+                elif len(items) > 1:
+                    orders_in_training_set += 1
+                    orders_in_testing_set += 1
+                    sequences_to_take = rng.choice(to_pick, len(items), replace=False)
+                    if not only_train:
+                        test_seqs.extend(rng.choice(items[sequences_to_take[-1]], 1, replace=False))
+                    for col in range(0, len(items)-1):
+                        train_seqs.extend(rng.choice(items[sequences_to_take[col]], 1, replace=False))
+                elif len(items) == 1:
+                    if not only_train:
+                        orders_in_testing_set += 1
+                        test_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
+                    else:
+                        orders_in_training_set += 1
+                        train_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
+    if not repeat_species:
+        if not only_train:
+            print(f'\n{training_sets_meeting_criteria} {divide_by}s in training set and {testing_sets_meeting_criteria}'
+                  f' {divide_by}s in testing set out of {len(species_represented_dict)} {divide_by}s had at least '
+                  f'{num_of_sequences} unique {unique_at}s available.\nThere are {orders_in_training_set} {divide_by}s '
+                  f'in training set and {orders_in_testing_set} {divide_by}s in testing set represented.'
+                  f'\nTrain dataset has {len(train_seqs)} sequences and test dataset has {len(test_seqs)} sequences '
+                  f'of unique {unique_at}s.\nNow saving in {output_path}...')
+        else:
+            print(f'\n{training_sets_meeting_criteria} {divide_by}s in training set out of '
+                  f'{len(species_represented_dict)} {divide_by}s had at least {num_of_sequences} unique {unique_at}s '
+                  f'available.\nThere are {orders_in_training_set} {divide_by}s in training set represented.'
+                  f'\nTrain dataset has {len(train_seqs)} sequences of unique {unique_at}s.'
+                  f'\nNow saving in {output_path}...')
+    else:
+        if not only_train:
+            print(f'Train dataset has {len(train_seqs)} sequences and test dataset has {len(test_seqs)} sequences. '
+                  f'\nNow saving in {output_path}...')
+        else:
+            print(f'Train dataset has {len(train_seqs)} sequences.\nNow saving in {output_path}...')
 
     # Add to FASTA file and save
+    print('Generating dataset files...')
     if not pick_from_file:
         taxonomy_level = silva_by_taxonomy_path.split('/')[-1]
     else:
         taxonomy_level = silva_by_taxonomy_path.split('/')[-2]
-    kingdom_level = silva_by_taxonomy_path.split('/')[1].split('_')[7]
-    for i, dataset in enumerate(seqs_to_write):
-        file_name = f'{output_path}/{kingdom_level}_Only_by_{taxonomy_level}_{i + 1}.fasta'
+    if include_only:
+        kingdom_level = '_'.join(include_only) + '_Only'
+    elif exclude_only:
+        kingdom_level = 'All_but_' + '_'.join(include_only)
+    else:
+        kingdom_level = silva_by_taxonomy_path.split('/')[1].split('_')[7]
+    if only_train:
+        save_this = [('train', train_seqs)]
+    else:
+        save_this = [('test', test_seqs), ('train', train_seqs)]
+    for name, dataset in save_this:
+        if repeat_species:
+            file_name = f'{output_path}/{kingdom_level}_by_{divide_by}_{name}.fasta'
+        else:
+            file_name = f'{output_path}/{kingdom_level}_by_{divide_by}_unique_{unique_at}_{name}.fasta'
         with open(file_name, 'w') as f:
             for sequence in set(dataset):
                 f.writelines([sequence.id, sequence.seq, '\n'])
-    print(f'{kingdom_level} dataset lengths: {[len(sub_seq) for sub_seq in seqs_to_write]}')
-    print(f'{seqs_kept} genera')
 
-    print('########################################################\n')
+    print('Files saved!\n#######################################################\n')
     return
 

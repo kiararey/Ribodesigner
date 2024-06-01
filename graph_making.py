@@ -299,7 +299,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                                                          norm=LogNorm(vmin=1, vmax=min_max[f'{xvar}_vs_{yvar}'][-1]))
                 jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
                 jointplot_fig.axes[0].scatter(x=top_control[xvar], marker='^', y=top_control[yvar], alpha=1,
-                                              c='#FCC2DC', label='Control', edgecolors='black', linewidth=0.8,
+                                              c='#43a2ca', label='Control', edgecolors='black', linewidth=0.8,
                                               sizes=[150] * len(top_control[yvar]))
                 regstats = scipy.stats.linregress(x=graph[xvar], y=graph[yvar])
                 jointplot_fig.axes[0].annotate(f'$r^2$={round(regstats.rvalue ** 2, 3)}', xy=(0.1, 0.9),
@@ -316,11 +316,11 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                                 linewidth=0, size=0.5, color='#000000')
                 jointplot_fig.axes[2].set_xlabel('16s rRNA sequence position on reference sequence')
                 # Plot control data
-                jointplot_fig.axes[1].scatter(x=top_control['reference_idx'], y=top_control[xvar], alpha=1, c='#FCC2DC',
+                jointplot_fig.axes[1].scatter(x=top_control['reference_idx'], y=top_control[xvar], alpha=1, c='#43a2ca',
                                               label='control', marker='^', edgecolors='black', linewidth=0.8,
                                               sizes=[150] * len(top_control[yvar]))
                 jointplot_fig.axes[1].set_ylabel(xlabel)
-                jointplot_fig.axes[2].scatter(x=top_control['reference_idx'], y=top_control[yvar], alpha=1, c='#FCC2DC',
+                jointplot_fig.axes[2].scatter(x=top_control['reference_idx'], y=top_control[yvar], alpha=1, c='#43a2ca',
                                               label='control', marker='^', edgecolors='black', linewidth=0.8,
                                               sizes=[150] * len(top_control[yvar]))
                 jointplot_fig.axes[2].set_ylabel(ylabel)
@@ -382,7 +382,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
             sns.scatterplot(x='reference_idx', y=yvar, linewidth=0, size=0.5, data=graph,
                             ax=joint_ax[current_graph + i], alpha=0.3, legend=False, color='#000000')
             jointplot_fig.axes[current_graph + i].scatter(x=top_control['reference_idx'], y=top_control[yvar],
-                                                          alpha=1, c='#FCC2DC', edgecolors='black', linewidth=0.8,
+                                                          alpha=1, c='#43a2ca', edgecolors='black', linewidth=0.8,
                                                           marker='^', sizes=[100] * len(top_control[yvar]))
             jointplot_fig.axes[current_graph + i].set(xlabel=None, ylabel=None, ylim=lims,
                                                       xlim=[-0.1, max_vals['reference_idx'] + 20])
@@ -439,7 +439,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                                                      norm=LogNorm(vmin=1, vmax=vmax))
             # Plot control datapoints
             top_control = all_subsets['control'][test_name]
-            jointplot_fig.axes[i].scatter(x=top_control[xvar], y=top_control[yvar], alpha=1, c='#FCC2DC',
+            jointplot_fig.axes[i].scatter(x=top_control[xvar], y=top_control[yvar], alpha=1, c='#43a2ca',
                                           label='Control', marker='^', edgecolors='black', linewidth=0.8,
                                           sizes=[150] * len(top_control[yvar]))
             jointplot_fig.axes[i].set(xlabel=None, ylabel=None, xlim=[0, 1], ylim=[0, 1])
@@ -846,9 +846,9 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
                 palette=yes_no_palette, cut=0, clip=[0.1, 1])
     if add_control:
-        jointplot_fig.axes[0].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#FCC2DC', edgecolors='black',
+        jointplot_fig.axes[0].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
-        jointplot_fig.axes[2].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#FCC2DC', edgecolors='black',
+        jointplot_fig.axes[2].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
     # sns.kdeplot(y=y_data, ax=joint_ax[5], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
     #             palette=yes_no_palette, cut=0)
@@ -923,9 +923,9 @@ def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, yl
     sns.scatterplot(x=loc_data, y=y_data, linewidth=0, size=0.5, color='#000000',
                     ax=jointplot_fig.axes[2], alpha=alpha / 2, legend=False)
     if add_control:
-        jointplot_fig.axes[0].scatter(x=control_loc_data, y=control_x_data, alpha=1, c='#FCC2DC', edgecolors='black',
+        jointplot_fig.axes[0].scatter(x=control_loc_data, y=control_x_data, alpha=1, c='#43a2ca', edgecolors='black',
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
-        jointplot_fig.axes[2].scatter(x=control_loc_data, y=control_y_data, alpha=1, c='#FCC2DC', edgecolors='black',
+        jointplot_fig.axes[2].scatter(x=control_loc_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
     jointplot_fig.axes[2].set_title(f'{len(loc_data)} unique U-IGS sites', loc='left')
     # Set graph settings for pretti graphing
@@ -2170,9 +2170,9 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
                     color='#000000')
 
     if add_control:
-        sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#FCC2DC',
+        sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#43a2ca',
                         edgecolors = 'black', linewidth = 0.8, marker = '^', sizes = [150] * len(control_loc_data))
-        sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#FCC2DC',
+        sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
                         edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
 
     jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
@@ -2239,7 +2239,7 @@ def make_summary_graph(subsets, tm_min, tm_max, data_df, control_df, save_fig, s
             sns.scatterplot(x='reference_idx', y=yvar, linewidth=0, size=0.5, data=graph,
                             ax=joint_ax[current_graph + i], alpha=0.3, legend=False, color='#000000')
             jointplot_fig.axes[current_graph + i].scatter(x=top_control['reference_idx'], y=top_control[yvar],
-                                                          alpha=1, c='#FCC2DC', edgecolors='black', linewidth=0.8,
+                                                          alpha=1, c='#43a2ca', edgecolors='black', linewidth=0.8,
                                                           marker='^', sizes=[150] * len(top_control[yvar]))
             jointplot_fig.axes[current_graph + i].set(xlabel=None, ylabel=None, ylim=lims,
                                                       xlim=[-0.1, lim])

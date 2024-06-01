@@ -8,7 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="lmao I added the igs and guide in the wrong order when selecting designs. This version has fixed that.">
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Fixed the selective design calculation - turns out i was subtracting the wrong columns lmao.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/graph_making.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph_making.py" afterDir="false" />
     </list>
@@ -113,6 +113,7 @@
   <component name="RunManager" selected="Python.main">
     <configuration name="A5" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -135,6 +136,7 @@
     </configuration>
     <configuration name="RiboDesigner" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -157,6 +159,7 @@
     </configuration>
     <configuration name="SequencePrepper" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -179,6 +182,7 @@
     </configuration>
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -201,6 +205,7 @@
     </configuration>
     <configuration name="generate_silva_datasets_code" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -223,6 +228,7 @@
     </configuration>
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -245,6 +251,7 @@
     </configuration>
     <configuration name="ribodesigner_classes" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -267,6 +274,7 @@
     </configuration>
     <configuration name="scratch (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -289,6 +297,7 @@
     </configuration>
     <configuration name="scratch" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="RiboDesigner" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -310,14 +319,14 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.main" />
+      <item itemvalue="Python.A5" />
       <item itemvalue="Python.RiboDesigner" />
       <item itemvalue="Python.SequencePrepper" />
-      <item itemvalue="Python.A5" />
-      <item itemvalue="Python.scratch (1)" />
-      <item itemvalue="Python.ribodesigner_classes" />
-      <item itemvalue="Python.scratch" />
       <item itemvalue="Python.generate_silva_datasets_code" />
+      <item itemvalue="Python.main" />
+      <item itemvalue="Python.ribodesigner_classes" />
+      <item itemvalue="Python.scratch (1)" />
+      <item itemvalue="Python.scratch" />
     </list>
     <recent_temporary>
       <list>
@@ -441,6 +450,8 @@
       <workItem from="1709675885506" duration="98746000" />
       <workItem from="1710879001142" duration="52081000" />
       <workItem from="1712008977063" duration="32273000" />
+      <workItem from="1713305789319" duration="2486000" />
+      <workItem from="1717105597544" duration="1357000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -785,7 +796,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="168" />
+    <option name="localTasksCounter" value="169" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -825,7 +836,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="finished the first draft of graphs that I'm actually somewhat happy with! Now working on getting data for varying guide lengths to run on NOTS" />
     <MESSAGE value="Added a small improvement where ribodesigner and prepare_test_seqs will create the folder used to save data to if it does not currently exist" />
     <MESSAGE value="Added a small improvement where ribodesigner will create the folder used to save data to if it does not currently exist" />
     <MESSAGE value="Preparing to run this on NOTS" />
@@ -850,7 +860,8 @@
     <MESSAGE value="Making selective designs hopefully for the last time" />
     <MESSAGE value="CHOSE SOME DESIGNS!!!! Finishing up this version of ribodesigner yayyyyyy" />
     <MESSAGE value="lmao I added the igs and guide in the wrong order when selecting designs. This version has fixed that." />
-    <option name="LAST_COMMIT_MESSAGE" value="lmao I added the igs and guide in the wrong order when selecting designs. This version has fixed that." />
+    <MESSAGE value="Fixed the selective design calculation - turns out i was subtracting the wrong columns lmao." />
+    <option name="LAST_COMMIT_MESSAGE" value="Fixed the selective design calculation - turns out i was subtracting the wrong columns lmao." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
