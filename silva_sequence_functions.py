@@ -86,10 +86,10 @@ def get_unique_members(list_of_sequences, set_of_species_represented, level):
 def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_of_sequences: int = 5, divide_by='Order',
                             unique_at='Species', exclude_only: list = None, include_only: list = None,
                             exclude_taxonomy_level: str = '', seed: int = 1, pick_from_file: bool = False,
-                            repeat_species=False, only_train = False):
+                            repeat_species=False, only_test = False):
     """
     Will generate a squished dataset given an input file that has already been made through SequencePrepper.py. Will
-    return test and train datasets containing ideally num_of_sequences in each without any repeated species.
+    return test and target datasets containing ideally num_of_sequences in each without any repeated species.
     :param silva_by_taxonomy_path:  Here is the file where the dataset to squish is. To make this, run
     SequencePrepper.py on the Silva database file or similarly structured data to separate it by levels of taxonomy.
     :param output_path: Here is the file where we want to save the dataset
@@ -105,10 +105,7 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
     :param seed: random seed, for consistency across runs to debug.
     :return:
     """
-    if only_train:
-        num_of_datasets = 1
-    else:
-        num_of_datasets = 2
+
     if type(include_only) == str:
         include_only = [include_only]
     if type(exclude_only) == str:
@@ -141,15 +138,12 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
         if repeat_species:
             array = np.array(target_seqs_and_names, dtype=tuple)
             rng = default_rng(seed=seed)
-            while num_of_datasets*num_of_sequences > len(target_seqs_and_names):
-                num_of_sequences = int(input(f'There are not enough sequences available for two unique datasets. '
-                                             f'Please choose a number up to '
-                                             f'{math.floor(len(target_seqs_and_names)/num_of_datasets)}'))
-            if num_of_datasets*num_of_sequences <= len(target_seqs_and_names):
-                seqs_to_write = rng.choice(array, [num_of_datasets, num_of_sequences], replace=False)
-                train_seqs = seqs_to_write[0, :]
-                if not only_train:
-                    test_seqs = seqs_to_write[1, :]
+            if num_of_sequences > len(target_seqs_and_names):
+                print(f'There are not enough sequences available. Defaulting to {len(target_seqs_and_names)} sequences')
+                num_of_sequences = len(target_seqs_and_names)
+            test_seqs = rng.choice(array, num_of_sequences, replace=False)
+            if not only_test:
+                target_seqs = rng.choice(array, num_of_sequences, replace=False)
         else:
             # Get the species of everyone so that we can make sure we can have all species represented
             species_represented_dict = defaultdict(lambda: defaultdict(lambda: []))
@@ -158,89 +152,75 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
                 species_represented_dict[seq.give_taxonomy(divide_by)][seq.give_taxonomy(unique_at)].append(seq)
                 species_per_order[seq.give_taxonomy(divide_by)].add(seq.give_taxonomy(unique_at))
 
-            # Sort by species, see if there is enough for both test and train. If there is not enough then add all but
-            # one into train. If there is only one sequence add to test
+            # Sort by species, see if there is enough for both test and target. If there is not enough then add all but
+            # one into target. If there is only one sequence add to test
             test_seqs = []
-            train_seqs = []
+            target_seqs = []
             rng = default_rng(seed=seed)
-            training_sets_meeting_criteria = 0
+            targeting_sets_meeting_criteria = 0
             testing_sets_meeting_criteria = 0
-            orders_in_training_set = 0
+            orders_in_targeting_set = 0
             orders_in_testing_set = 0
             for key, items in species_represented_dict.items():
                 to_pick = list(species_per_order[key])
-                if len(items) >= num_of_sequences*num_of_datasets:
-                    sequences_to_take = rng.choice(to_pick, [num_of_datasets, num_of_sequences], replace=False)
-                    training_sets_meeting_criteria += 1
+                if len(items) >= num_of_sequences:
+                    # Sequences between target and test don't have to be different for most user cases.
+                    sequences_to_take_target = rng.choice(to_pick, num_of_sequences, replace=False)
+                    sequences_to_take_test = rng.choice(to_pick, num_of_sequences, replace=False)
+                    targeting_sets_meeting_criteria += 1
                     testing_sets_meeting_criteria += 1
-                    orders_in_training_set += 1
+                    orders_in_targeting_set += 1
                     orders_in_testing_set += 1
-                    for col in range(num_of_sequences):
-                        if not only_train:
-                            test_seqs.extend(rng.choice(items[sequences_to_take[1, col]], 1, replace=False))
-                        train_seqs.extend(rng.choice(items[sequences_to_take[0, col]], 1, replace=False))
-                elif len(items) > num_of_sequences:
-                    training_sets_meeting_criteria += 1
-                    sequences_to_take = rng.choice(to_pick, len(items), replace=False)
-                    orders_in_training_set += 1
-                    orders_in_testing_set += 1
-                    for col in range(0, num_of_sequences):
-                        train_seqs.extend(rng.choice(items[sequences_to_take[col]], 1, replace=False))
-                    if not only_train:
-                        for col in range(num_of_sequences, len(items)):
-                            test_seqs.extend(rng.choice(items[sequences_to_take[col]], 1, replace=False))
                 elif len(items) > 1:
-                    orders_in_training_set += 1
+                    sequences_to_take_target = rng.choice(to_pick, len(items), replace=False)
+                    sequences_to_take_test = rng.choice(to_pick, len(items), replace=False)
+                    orders_in_targeting_set += 1
                     orders_in_testing_set += 1
-                    sequences_to_take = rng.choice(to_pick, len(items), replace=False)
-                    if not only_train:
-                        test_seqs.extend(rng.choice(items[sequences_to_take[-1]], 1, replace=False))
-                    for col in range(0, len(items)-1):
-                        train_seqs.extend(rng.choice(items[sequences_to_take[col]], 1, replace=False))
-                elif len(items) == 1:
-                    if not only_train:
+                else:
+                    if only_test:
                         orders_in_testing_set += 1
                         test_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
                     else:
-                        orders_in_training_set += 1
-                        train_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
+                        orders_in_targeting_set += 1
+                        target_seqs.extend(rng.choice(items[to_pick[0]], 1, replace=False))
+                    continue
+                for col in range(len(sequences_to_take_target)):
+                    if not only_test:
+                        target_seqs.extend(rng.choice(items[sequences_to_take_target[col]], 1, replace=False))
+                    test_seqs.extend(rng.choice(items[sequences_to_take_test[col]], 1, replace=False))
     if not repeat_species:
-        if not only_train:
-            print(f'\n{training_sets_meeting_criteria} {divide_by}s in training set and {testing_sets_meeting_criteria}'
-                  f' {divide_by}s in testing set out of {len(species_represented_dict)} {divide_by}s had at least '
-                  f'{num_of_sequences} unique {unique_at}s available.\nThere are {orders_in_training_set} {divide_by}s '
-                  f'in training set and {orders_in_testing_set} {divide_by}s in testing set represented.'
-                  f'\nTrain dataset has {len(train_seqs)} sequences and test dataset has {len(test_seqs)} sequences '
+        if not only_test:
+            print(f'\n{targeting_sets_meeting_criteria} out of {len(species_represented_dict)} '
+                  f'{divide_by}s had at least {num_of_sequences} unique {unique_at}s available.'
+                  f'\nThere are {orders_in_targeting_set} {divide_by}s in targeting set and {orders_in_testing_set} '
+                  f'{divide_by}s in testing set represented.'
+                  f'\nTarget dataset has {len(target_seqs)} sequences and test dataset has {len(test_seqs)} sequences '
                   f'of unique {unique_at}s.\nNow saving in {output_path}...')
         else:
-            print(f'\n{training_sets_meeting_criteria} {divide_by}s in training set out of '
-                  f'{len(species_represented_dict)} {divide_by}s had at least {num_of_sequences} unique {unique_at}s '
-                  f'available.\nThere are {orders_in_training_set} {divide_by}s in training set represented.'
-                  f'\nTrain dataset has {len(train_seqs)} sequences of unique {unique_at}s.'
+            print(f'\n{testing_sets_meeting_criteria} out of {len(species_represented_dict)} '
+                  f'{divide_by}s had at least {num_of_sequences} unique {unique_at}s available.\nThere are '
+                  f'{orders_in_testing_set} {divide_by}s in test set represented.'
+                  f'\nTest dataset has {len(test_seqs)} sequences of unique {unique_at}s.'
                   f'\nNow saving in {output_path}...')
     else:
-        if not only_train:
-            print(f'Train dataset has {len(train_seqs)} sequences and test dataset has {len(test_seqs)} sequences. '
+        if not only_test:
+            print(f'Target dataset has {len(target_seqs)} sequences and test dataset has {len(test_seqs)} sequences. '
                   f'\nNow saving in {output_path}...')
         else:
-            print(f'Train dataset has {len(train_seqs)} sequences.\nNow saving in {output_path}...')
+            print(f'Test dataset has {len(test_seqs)} sequences.\nNow saving in {output_path}...')
 
     # Add to FASTA file and save
     print('Generating dataset files...')
-    if not pick_from_file:
-        taxonomy_level = silva_by_taxonomy_path.split('/')[-1]
-    else:
-        taxonomy_level = silva_by_taxonomy_path.split('/')[-2]
     if include_only:
         kingdom_level = '_'.join(include_only) + '_Only'
     elif exclude_only:
         kingdom_level = 'All_but_' + '_'.join(include_only)
     else:
         kingdom_level = silva_by_taxonomy_path.split('/')[1].split('_')[7]
-    if only_train:
-        save_this = [('train', train_seqs)]
+    if only_test:
+        save_this = [('test', test_seqs)]
     else:
-        save_this = [('test', test_seqs), ('train', train_seqs)]
+        save_this = [('test', test_seqs), ('target', target_seqs)]
     for name, dataset in save_this:
         if repeat_species:
             file_name = f'{output_path}/{kingdom_level}_by_{divide_by}_{name}.fasta'
