@@ -485,11 +485,10 @@ class RibozymeDesign:
 
 
 def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
-                 guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, selective: bool = False,
-                 background_sequences_folder: str = '', min_delta: float = 0, min_true_cov: float = 0.7,
-                 fileout: bool = False, folder_to_save: str = '', n_limit: float = 0.0,
+                 guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, min_true_cov: float = 0.7,
+                 fileout: bool = False, folder_to_save: str = '',
                  score_type: str = 'weighted', msa_fast: bool = False, gaps_allowed: bool = True,
-                 percent_of_target_seqs_used: float = 1.0, percent_of_background_seqs_used: float = 1,
+                 percent_of_target_seqs_used: float = 1.0,
                  random_guide_sample_size: int = 10, store_batch_results: bool = False):
     """Generates ribozyme designs to target a set of sequences.
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
