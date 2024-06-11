@@ -134,7 +134,7 @@ silva_by_taxonomy_path = silva_ref_99_fasta
 print('Now time for fungi hell yeahhhhh ')
 output_path = f'Datasets_used/SILVA_squished_datasets_fungi'
 generate_silva_datasets(silva_by_taxonomy_path, output_path, num_of_sequences=39, include_only=['Saccharomyces cerevisiae'],
-                        exclude_taxonomy_level='Species', divide_by='Species', seed=seed, pick_from_file=True,
+                        exclude_taxonomy_level='any', divide_by='Species', seed=seed, pick_from_file=True,
                         repeat_species=True, only_test=True)
 
 generate_silva_datasets(silva_by_taxonomy_path, output_path, num_of_sequences=3000, divide_by='Family', unique_at='Species',

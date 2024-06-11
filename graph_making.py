@@ -961,7 +961,7 @@ def plot_variable_regions(ax, var_regs, invert=False):
     return
 
 
-def extract_info(results_file_path: str, dataset: str, data_type: str = 'dict'):
+def extract_info(results_file_path: list[str], dataset: str, data_type: str = 'dict'):
     with open(results_file_path, 'r') as read_file:
         list_of_designs = read_file.readlines()
     # Now extact data here:
@@ -1364,9 +1364,32 @@ def violin_plot_routine(vars_to_plot, all_data_df, folder_to_save, file_type: st
     return
 
 
+def make_file_for_ordering(order_these: pd.DataFrame, output_folder: str, file_label: str, append_to_file: bool = False,
+                           append_to_file_label: str = '', add_overhangs: bool = False,
+                           igs_overhang: str = 'aaaagttaGAGACC', guide_overhang: str = 'GGTCTCagtctgtttgtattatcgac'):
+    # Extract designs too
+    igses = order_these['igs'].tolist()
+    guides = order_these['guide'].tolist()
+    to_order = []
+    for igs, guide in zip(igses, guides):
+        # MAKE SURE THIS IS THE CORRECT DIRECTION!!! SHOULD BE GUIDE + G + IGS!!!
+        design = guide + 'g' + igs
+        if add_overhangs:
+            design = guide_overhang + design + igs_overhang
+        to_order.append(design)
+    order_these.insert(loc=2, column='Sequence with ordering overhangs', value=to_order)
+    file_name_new = f'{output_folder}/{file_label}.csv'
+    if append_to_file:
+        order_these.insert(loc=0, column='Dataset type', value=[append_to_file_label] * len(order_these))
+        order_these.to_csv(file_name_new, mode='a', index=False)
+    else:
+        if os.path.exists(file_name_new):
+            os.remove(file_name_new)
+        order_these.to_csv(file_name_new, index=False)
+
 def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder, file_type='png',
                                   add_overhangs: bool = False, igs_overhang: str = 'aaaaaGAGACC',
-                               guide_overhang: str = 'GGTCTCacgac', var_regs: list[tuple] = None):
+                                  guide_overhang: str = 'GGTCTCacgac', var_regs: list[tuple] = None):
     if not var_regs:
         # Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
         # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
@@ -1625,9 +1648,59 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     return
 
 
+def get_fungi_designs(results_stringent_path, results_to_compare_path, output_folder, file_type='png', add_overhangs: bool = False,
+                 igs_overhang: str = 'aaaagttaGAGACC', guide_overhang: str = 'GGTCTCagtctgtttgtattatcgac'):
+    # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary
+    # approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57-75 (2017).
+    s_cerevisiae_var_regs = [(69, 80), (126, 292), (478, 510), (643, 850), (1048, 1070), (1350, 1400), (1480, 1531),
+                             (1674, 1730)]
+
+    # Load combined data
+    # generate categories: index is category (stri, selective), hue is bp ('Dataset' column)
+    with alive_bar(2, spinner='fishes') as bar:
+        print(f'Now loading stringent data...')
+        stringent_df = import_data_to_df([results_stringent_path], 'stringent')
+
+        bar()
+        print('Loaded! Now loading comparison data...')
+        to_compare_df = import_data_to_df([results_to_compare_path], 'to_compare')
+        all_data_df = pd.concat([stringent_df, to_compare_df])
+        bar()
+
+    # generate categories: Extract target and test dataset names
+    fn_target = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[0]
+    fn_test = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[1]
+
+    all_data_df['target_dataset'] = all_data_df['name_of_test_dataset'].map(fn_target)
+    all_data_df['test_dataset'] = all_data_df['name_of_test_dataset'].map(fn_test)
+
+    # Get relevant columns for this graph
+    filtered_df_all = all_data_df[['id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
+                                   'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
+                                   'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
+                                   'target_dataset', 'test_dataset']]
+    filtered_df = filtered_df_all[filtered_df_all['score'] == 1]
+
+    # First, get only the designs that have perfect U+IGS in stringent
+    possible_ids = filtered_df[(filtered_df.index == 'stringent' ) & (filtered_df['true_%_cov_test'] == 1)]['id']
+
+    # Now, find these in the comparison dataset and sort by highest U+IGS coverage
+    stringent_row = filtered_df[(filtered_df.index == 'stringent') & (filtered_df['id'].isin(possible_ids))]
+    to_compare_row = filtered_df[(filtered_df.index == 'to_compare') & (filtered_df['id'].isin(possible_ids))]
+    # do a left join on the target dataset
+    best_designs = stringent_row.merge(to_compare_row, how='left', suffixes=['_stringent', '_to_compare'],
+                                      on=['id', 'igs', 'guide', 'score', 'reference_idx', 'num_of_targets'])
+    best_designs.sort_values(by=['true_%_cov_test_to_compare'], ascending=False)
+
+    # finally make a csv file
+    make_file_for_ordering(best_designs, output_folder=output_folder, file_label='fungi', add_overhangs=add_overhangs,
+                           igs_overhang=igs_overhang, guide_overhang=guide_overhang)
+    return
+
+
 def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_smithii_var_regs: list, file_type='png',
-                               add_overhangs: bool = False, igs_overhang: str = 'aaaaaGAGACC',
-                               guide_overhang: str = 'GGTCTCacgac'):
+                               add_overhangs: bool = False, igs_overhang: str = 'aaaagttaGAGACC',
+                               guide_overhang: str = 'GGTCTCagtctgtttgtattatcgac'):
     # igs_overhang: str = 'GGTCTCttttt',  guide_overhang: str = 'gtcgtGAGACC'
 
     # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary
@@ -2259,4 +2332,169 @@ def make_summary_graph(subsets, tm_min, tm_max, data_df, control_df, save_fig, s
     if save_fig:
         plt.savefig(fname=f'{save_file_loc}/summary.{file_type}', format=file_type)
     plt.show()
+    return
+
+def make_graphs_for_seed(selective_path, output_folder, file_type='png', fig_1_size_in=(10.769, 8.087),
+                         fig_2_size_in=(15.572,7.877)):
+
+    # Chakravorty, S., Helb, D., Burday, M., Connell, N. & Alland, D. A detailed analysis of 16S ribosomal RNA gene
+    # segments for the diagnosis of pathogenic bacteria. J Microbiol Methods 69, 330-339 (2007).
+    e_coli_var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173),
+                       (1243, 1294), (1435, 1465)]
+    # Load combined data
+    # generate categories: index is category (universal, selective), hue is bp ('Dataset' column)
+    all_data_df = None
+    for current_dset, current_path in {'selective': selective_path}.items():
+        for file_name in os.listdir(current_path):
+            if file_name.startswith('.DS_Store'):
+                continue
+            results_files_root = f'{current_path}/{file_name}/coupled/results/combined'
+            results_files = [f'{results_files_root}/{f}' for f in os.listdir(results_files_root) if f.endswith('.txt')]
+            with alive_bar(unknown='fish', spinner='fishes') as bar:
+                print(f'Now loading {current_dset}_{file_name} data...')
+                if all_data_df is None:
+                    all_data_df = import_data_to_df(results_files, current_dset)
+                    labels = [file_name.replace('_', ' ')] * all_data_df.shape[0]
+                    all_data_df.insert(0, 'Dataset', labels)
+                else:
+                    sub_df = import_data_to_df(results_files, current_dset)
+                    labels = [file_name.replace('_', ' ')] * sub_df.shape[0]
+                    sub_df.insert(0, 'Dataset', labels)
+                    all_data_df = pd.concat([all_data_df, sub_df])
+                bar()
+
+    # generate categories: Extract target and test dataset names
+    fn_target = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[0]
+    fn_test = lambda x: x.split('_designs_')[-1].split('_vs_test_sequences_')[1]
+    fn_taxonomy = lambda x: x.split('_')[-1].split(' ')[0]
+
+    def fn_include_exclude(x: str):
+        if '_include' in x:
+            return 'Included'
+        elif '_exclude' in x:
+            return 'Excluded'
+        else:
+            return 'N/A'
+
+    all_data_df['target_dataset'] = all_data_df['name_of_test_dataset'].map(fn_target)
+    all_data_df['test_dataset'] = all_data_df['name_of_test_dataset'].map(fn_test)
+    all_data_df['Taxonomy of targets'] = all_data_df['Dataset'].map(fn_taxonomy)
+    all_data_df['Target excluded or included'] = all_data_df['target_dataset'].map(fn_include_exclude)
+    all_data_df['Test excluded or included'] = all_data_df['test_dataset'].map(fn_include_exclude)
+
+    dset_names = set(all_data_df['Dataset'].items())
+    order_of_taxonomy = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
+    dset_names = list(dset_names)
+
+    def custom_sort(x):
+        if x[0] == 'selective':
+            for idx, prefix in enumerate(order_of_taxonomy):
+                if prefix in x[1]:
+                    return (x[0], idx, x[1])  # Return the index of the matching prefix
+        return x
+
+    # Sort the list of tuples using the custom sorting function
+    dset_names = sorted(dset_names, key=custom_sort)
+
+    # Get relevant columns for this graph
+    filtered_df_all = all_data_df[['Dataset', 'id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
+                                   'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
+                                   'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
+                                   'target_dataset', 'test_dataset', 'Taxonomy of targets',
+                                   'Target excluded or included', 'Test excluded or included']]
+    filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
+                                  + '_' + filtered_df_all['Dataset'])
+    filtered_df = filtered_df_all[filtered_df_all['score'] == 1]
+    # filtered_df = filtered_df_all[filtered_df_all['true_%_cov'] >= 0.7]
+
+    # selective
+    selective_subset = filtered_df[filtered_df.index == 'selective']
+    # selective_subset.reset_index(inplace=True)
+
+    # Couple selective designs by ID: selective relevant tested vs. background and tested vs. all bacteria
+    # Calculate a delta score for these (relevant test - background)
+    best_selective = []
+    selective_diffs = []
+    selective_above_thresh = []
+    selective_below_thresh = []
+    for type, target in dset_names:
+        if type != 'selective':
+            continue
+        subset = selective_subset[selective_subset['Dataset'] == target]
+        for include_exclude in ('Included', 'Excluded'):
+            if include_exclude == 'Excluded':
+                continue
+            if not target.endswith('all seqs'):
+                subset_in_ex = subset[subset['Target excluded or included'] == include_exclude]
+                target_row = subset_in_ex[subset_in_ex['Test excluded or included'] == include_exclude]
+                background_row = subset_in_ex[subset_in_ex['Test excluded or included'] != include_exclude]
+            else:
+                if include_exclude == 'Excluded':
+                    continue
+                target_row = subset[subset['test_dataset'].str.contains(target.split(' ')[1])]
+                background_row = subset[~subset['test_dataset'].str.contains(target.split(' ')[1])]
+            # do a left join on the target dataset
+            joined_rows = target_row.merge(background_row, how='left', suffixes=['_target', '_background'],
+                                           on=['id', 'igs', 'guide', 'reference_idx', 'Dataset', 'to_pair'])
+            joined_rows['u_test_minus_background'] = (joined_rows['u_conservation_test_target'] -
+                                                      joined_rows['u_conservation_test_background'])
+            joined_rows['igs_test_minus_background'] = (joined_rows['true_%_cov_test_target'] -
+                                                        joined_rows['true_%_cov_test_background'])
+            joined_rows['guide_test_minus_background'] = (joined_rows['test_score_target'] -
+                                                          joined_rows['test_score_background'])
+            # background_row.index = target_row.index
+            # background_row['u_test_minus_background'] = (target_row['u_conservation_test'] -
+            #                                              background_row['u_conservation_test'])
+            # background_row['igs_test_minus_background'] = target_row['true_%_cov_test'] - background_row[
+            #     'true_%_cov_test']
+            # background_row['guide_test_minus_background'] = target_row['test_score'] - background_row['test_score']
+            # background_row['u_conservation_test_is_target'] = target_row['u_conservation_test']
+            # background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
+            # background_row['test_score_test_is_target'] = target_row['test_score']
+            # background_row['number_of_targets_test_is_target'] = target_row['num_of_targets_test']
+            # background_row.index = background_row['index']
+            best_design = joined_rows[joined_rows['igs_test_minus_background'] ==
+                                      joined_rows['igs_test_minus_background'].max()]
+            # # best_design = background_row[background_row['u_test_minus_background'] ==
+            # #                              background_row['u_test_minus_background'].max()]
+            # # In case there are several tied values, just give me the ones with the best igs difference
+            # # best_design.sort_values(by=['u_conservation_test_is_target', 'igs_test_minus_background',
+            # # 'test_score_test_is_target'], ascending=False)
+            best_design.sort_values(by=['igs_test_minus_background', 'u_conservation_test_target',
+                                        'test_score_target'], ascending=False)
+            # Now finally get the ones above our thresholds
+            temp_above = joined_rows[joined_rows['igs_test_minus_background'] >= 0.7]
+            temp_below = joined_rows[joined_rows['igs_test_minus_background'] < 0.7]
+            temp_above = temp_above[temp_above['u_test_minus_background'] >= 0.7]
+            temp_below = temp_below[temp_below['u_test_minus_background'] < 0.7]
+            best_selective.append(best_design.head(1))
+            selective_diffs.append(joined_rows)
+            selective_above_thresh.append(temp_above)
+            selective_below_thresh.append(temp_below)
+
+    best_selective_designs = pd.concat(best_selective)
+    selective_diffs_designs = pd.concat(selective_diffs)
+    selective_above_thresh_designs = pd.concat(selective_above_thresh)
+    selective_below_thresh_designs = pd.concat(selective_below_thresh)
+    # best_selective_designs.drop(columns='index')
+    # fn_cleanup_name = lambda x: ' '.join(x.split('designs_')[-1].split('_universal')[0].split('_only')[0].
+    #                                      replace('Background Bacteria squished', '').replace('cluded_2', '').split(
+    #                                      '_')[1:-2])
+    # best_selective_designs['Design type'] = best_selective_designs['target_dataset'].map(fn_cleanup_name)
+    fn_cleanup_name = lambda x: ' '.join(x.split('designs_')[-1].split('_universal')[0].split('_only')[0].
+                                         replace('Background Bacteria squished', '').replace('cluded_2', '')[:-2].split(
+        '_')[1:])
+    fn_cleanup_name_thresh = lambda x: 'Above thresholds '.join(
+        x.split('designs_')[-1].split('_universal')[0].split('_only')[0].
+        replace('Background Bacteria squished', '').replace('cluded_2', '')[:-2].split('_')[1:])
+    best_selective_designs['Design type'] = best_selective_designs['target_dataset_target'].map(fn_cleanup_name)
+    selective_diffs_designs['Design type'] = selective_diffs_designs['target_dataset_target'].map(fn_cleanup_name)
+    selective_above_thresh_designs['Design type'] = selective_above_thresh_designs['target_dataset_target'].map(
+        fn_cleanup_name_thresh)
+    selective_below_thresh_designs['Design type'] = selective_below_thresh_designs['target_dataset_target'].map(
+        fn_cleanup_name_thresh)
+    selective_above_thresh_designs['U and U-IGS score'] = 'Both above 0.7'
+    selective_below_thresh_designs['U and U-IGS score'] = 'Both below 0.7'
+    test_threshed_selective = pd.concat([selective_below_thresh_designs, selective_above_thresh_designs])
+
     return
