@@ -12,10 +12,10 @@ Make sure you have Muscle5 installed in your path! More info found here: https:/
 This program makes use of Biopython, numpy, pandas, seaborn, and matplotlib, playsound, date_util, icecream, alive_progress. I think the rest of the dependencies are
 default libraries but please let me know if this is not the case. I'll make an environment file later too
 
-To run, I've honestly been opening main.py on Pycharm. if you're running this for the first time I highly suggest
-replacing all instances of ``test_data_folders`` with ``test_data_folders_test``. I also strongly suggest to set all 
-``percent_of_target_seqs_used``, ``percent_of_target_seqs_used`` and ``percent_of_background_seqs_used`` to something 
-like 0.01 (except for the reference sequence and control sequences, those only have one target).
+### Running sample data
+1. Edit main.py to run ``ribodesigner_routine`` with test data
+2. Once test data is done, run ``run_local`` to analyze data
+3. Exctract data to later analyze with ``import_data_to_df``
 
 ### Troubleshooting
 
