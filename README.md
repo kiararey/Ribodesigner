@@ -1,6 +1,14 @@
 # RiboDesigner
 
 ### Setting up
+notes from Kiara:
+- install muscle5
+- Download python 3.11
+- Download all files, unzip
+- open the folder in your favorite IDE or code editor (I like opening mine as a project in PyCharm)
+- Extract ``Ribodesigner_test_files`` and put ``test_output_files`` in the same folder
+- Open ``main.py`` and follow running sample data
+
 
 I've finally uploaded sample data to use, I've added this in the Ribodesigner_test_files folder.
 
