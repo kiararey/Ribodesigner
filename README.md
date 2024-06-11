@@ -4,7 +4,7 @@
 
 I've finally uploaded sample data to use, I've added this in the Ribodesigner_test_files folder.
 
-To use, unzip this folder and extract the ``Datasets_used`` and ``test_output_files`` directories into the same folder 
+To use, unzip this folder and extract the ``test_output_files`` directory into the same folder 
 where you'll run ribodesigner on.
 
 Make sure you have Muscle5 installed in your path! More info found here: https://www.drive5.com/muscle/
