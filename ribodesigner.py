@@ -613,20 +613,20 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
     print('Now pickling output file...')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
-        with open(f'{folder_to_save}/designs_{pickle_file_name}.pickle', 'wb') as handle:
+        with open(os.path.normpath(f'{folder_to_save}/designs_{pickle_file_name}.pickle'), 'wb') as handle:
             pickle.dump(optimized_seqs, handle)
             bar()
 
     if fileout:
         if not os.path.exists(folder_to_save):
             os.mkdir(folder_to_save)
-        out_file = folder_to_save + '/designs_' + pickle_file_name
+        out_file = os.path.normpath(folder_to_save + '/designs_' + pickle_file_name)
         write_output_file(designs=optimized_seqs, folder_path=out_file, all_data=store_batch_results)
 
     end = time.perf_counter()
     round_convert_time(start=start, end=end, round_to=4, task_timed='overall')
     print('########################################################\n')
-    return f'{folder_to_save}/designs_{pickle_file_name}.pickle'
+    return os.path.normpath(f'{folder_to_save}/designs_{pickle_file_name}.pickle')
 
 
 def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
@@ -712,8 +712,8 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
     if not os.path.exists(folder_to_save):
         os.mkdir(folder_to_save)
 
-    title = test_folder.split('.')[0].split('/')[-1]
-    save_file_name = f'{folder_to_save}/test_sequences_{title}'
+    title = test_folder.split('.')[0].split('/')[-1].split('\\')[-1]
+    save_file_name = os.path.normpath(f'{folder_to_save}/test_sequences_{title}')
     if graph_results:
         # Graph IGS data
         num_of_seqs = len(test_names_and_seqs)
@@ -1274,7 +1274,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
                                 score_type: str = 'weighted'):
     # For now, you must tell the program the location of the U for random sequences to analyze.
     # First, make a results folder, checkpoint, and coupled folder if they do not exist
-    subfile = file_to_save + '/coupled'
+    subfile = os.path.normpath(file_to_save + '/coupled')
     if not os.path.exists(subfile):
         os.mkdir(subfile)
 
@@ -1290,7 +1290,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
                                   score_type_attr=score_type)]
 
         # Rename designs_input to correctly name file later on
-        designs_input = subfile + '/' + igs_id + '.pickle'
+        designs_input = os.path.normpath(subfile + '/' + igs_id + '.pickle')
     else:
         # Extract design sequence data
         with open(designs_input, 'rb') as handle:
@@ -1301,8 +1301,8 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
     # Prepare data for check_guide_stats:
     # Need the design, the aligned target sequences to test against for each design
-    coupled_datasets_name = designs_input.split('.')[0].split('/')[-1] + '_vs_' + \
-                            test_seqs_input.split('.')[0].split('/')[-1]
+    coupled_datasets_name = designs_input.split('.')[0].split('/')[-1].split('\\')[-1] + '_vs_' + \
+                            test_seqs_input.split('.')[0].split('/')[-1].split('\\')[-1]
     print(f'Coupling designs for {coupled_datasets_name}')
     with alive_bar(len(designs), spinner='fishes') as bar:
         for design in designs:
@@ -1353,21 +1353,22 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
     # save into a separate folder. Each pickle file will have 50 designs in it
     print('Now saving...')
-    pickle_file_name = subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled'
+    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with open(pickle_file_name, 'wb') as handle:
             pickle.dump(designs, handle)
         bar()
 
     print('Updating big checkpoint file...')
-    if not os.path.exists(subfile + '/big_checkpoint.txt'):
-        with open(subfile + '/big_checkpoint.txt', 'a') as d:
+    file_name_to_check = os.path.normpath(subfile + '/big_checkpoint.txt')
+    if not os.path.exists(file_name_to_check):
+        with open(file_name_to_check, 'a') as d:
             for i in range(len(designs)):
                 d.write(f'{i}\t{pickle_file_name}\t{i}\n')
     else:
-        with open(subfile + '/big_checkpoint.txt', 'r') as d:
+        with open(file_name_to_check, 'r') as d:
             last_idx = int(d.readlines()[-1].split('\t')[0])
-        with open(subfile + '/big_checkpoint.txt', 'a') as d:
+        with open(file_name_to_check, 'a') as d:
             for i in range(len(designs)):
                 d.write(f'{i + last_idx + 1}\t{pickle_file_name}\t{i}\n')
     print('Done!')
@@ -1382,9 +1383,9 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     worker_number = int(worker_number)
     number_of_workers = int(number_of_workers)
 
-    work_done_file = f'{coupled_folder}/work_done_{worker_number}.txt'
-    designs_skipped = f'{coupled_folder}/skipped_designs{worker_number}.txt'
-    results_folder = f'{coupled_folder}/results'
+    work_done_file = os.path.normpath(f'{coupled_folder}/work_done_{worker_number}.txt')
+    designs_skipped = os.path.normpath(f'{coupled_folder}/skipped_designs{worker_number}.txt')
+    results_folder = os.path.normpath(f'{coupled_folder}/results')
 
     # Check if we have anything to test
     analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
@@ -1406,11 +1407,12 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     total_work = sum(lengths)
 
     # read each line as a tuple of three values - big index, file name, small index
-    with open(coupled_folder + '/big_checkpoint.txt', 'r') as handle:
+    with open(os.path.normpath(coupled_folder + '/big_checkpoint.txt'), 'r') as handle:
         work_to_do_list = handle.read().splitlines()
 
     # Check the big work done checkpoint file and remove any indexes that are already there
-    work_done_files = [f'{coupled_folder}/{f}' for f in os.listdir(coupled_folder) if f.startswith('work_done_')]
+    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder)
+                       if f.startswith('work_done_')]
     work_done = []
     for work_done_file in work_done_files:
         with open(work_done_file) as handle:
@@ -1471,7 +1473,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             for (design_to_test, big_idx, file_name) in designs_to_test:
                 result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name,
                                          guide_len=opti_len, get_tm_nn=get_tm_nn)
-                naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
+                naming_for_file = file_name.split('/')[-1].split['\\'][-1].split('.')[0] + f'_worker_{worker_number}'
 
                 # If our result does not meet n_limit requirements, skip it
                 if not result:
@@ -1483,7 +1485,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
                     continue
 
                 result_dict = result.to_dict(all_data=False)
-                with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
+                with open(os.path.normpath(f'{results_folder}/{naming_for_file}_results.txt'), 'a') as d:
                     d.write(json.dumps(result_dict) + '\n')
 
                 with open(work_done_file, 'a') as d:
@@ -1493,7 +1495,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
         for (design_to_test, big_idx, file_name) in designs_to_test:
             result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name, guide_len=opti_len,
                                      get_tm_nn=get_tm_nn)
-            naming_for_file = file_name.split('/')[-1].split('.')[0] + f'_worker_{worker_number}'
+            naming_for_file = file_name.split('/')[-1].split('\\')[-1].split('.')[0] + f'_worker_{worker_number}'
 
             # If our result does not meet n_limit requirements, skip it
             if not result:
@@ -1504,7 +1506,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
                 continue
 
             result_dict = result.to_dict(all_data=False)
-            with open(f'{results_folder}/{naming_for_file}_results.txt', 'a') as d:
+            with open(os.path.normpath(f'{results_folder}/{naming_for_file}_results.txt'), 'a') as d:
                 d.write(json.dumps(result_dict) + '\n')
 
             with open(work_done_file, 'a') as d:
@@ -1558,7 +1560,7 @@ def select_designs(tested_to_targets_path: list[str], designs_required: int, res
     # Save designs into file
     print(f'{filtered_df.shape[0]} out of {target_seqs_df.shape[0]} designs meet given parameters! '
           f'Selecting top {designs_required}...\n')
-    file_name = f'{results_folder}/{design_type}_top_{designs_required}_designs{file_extra_text}.csv'
+    file_name = os.path.normpath(f'{results_folder}/{design_type}_top_{designs_required}_designs{file_extra_text}.csv')
     if os.path.exists(file_name):
         os.remove(file_name)
     filtered_df.head(designs_required).to_csv(file_name, index=False)
@@ -1876,20 +1878,21 @@ def give_scoring_dict():
 
 def combine_data(folder_path):
     # Get all files in the folder that end in .txt
-    files = [f'{folder_path}/{f}'.replace('//', '/') for f in os.listdir(folder_path)
+    files = [os.path.normpath(f'{folder_path}/{f}'.replace('//', '/')) for f in os.listdir(folder_path)
              if f.endswith('.txt')]
     worker_file_names = defaultdict(lambda: [])
 
     for file_temp in files:
         file_name = file_temp.split('/')[-1].split('_worker')[0]
-        worker_file_names[f'{folder_path}/combined/{file_name}.txt'].append(file_temp)
+        worker_file_names[os.path.normpath(f'{folder_path}/combined/{file_name}.txt')].append(file_temp)
 
     # Append the data from each file in a batch to combined name file
-    if not os.path.exists(f'{folder_path}/combined'):
-        os.mkdir(f'{folder_path}/combined')
+    file_to_test = os.path.normpath(f'{folder_path}/combined')
+    if not os.path.exists(file_to_test):
+        os.mkdir(file_to_test)
     else:
-        for file in os.listdir(f'{folder_path}/combined'):
-            os.remove(f'{folder_path}/combined/{file}')
+        for file in os.listdir(file_to_test):
+            os.remove(os.path.normpath(f'{folder_path}/combined/{file}'))
 
     for new_file_name, items_to_write in worker_file_names.items():
         for item in items_to_write:

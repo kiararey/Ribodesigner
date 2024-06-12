@@ -11,6 +11,7 @@
     <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Fixing test files">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph_making.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph_making.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -71,33 +72,33 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.generate_silva_datasets_code.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.main.executor&quot;: &quot;Debug&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;SONARLINT_PRECOMMIT_ANALYSIS&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_directory_selection&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;two.files.diff.last.used.file&quot;: &quot;/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.generate_silva_datasets_code.executor": "Debug",
+    "Python.main.executor": "Debug",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "last_directory_selection": "/Users/kiarareyes/PycharmProjects/RiboDesigner/Datasets_used/SILVA_Ref_NR_99_dataset_by_taxonomy_All",
+    "last_opened_file_path": "/Users/kiarareyes/PycharmProjects/RiboDesigner",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "run.code.analysis.last.selected.profile": "aDefault",
+    "settings.editor.selected.configurable": "reference.settings.ide.settings.notifications",
+    "two.files.diff.last.used.file": "/Users/kiarareyes/PycharmProjects/RiboDesigner test/ribozymer.py",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
-      &quot;Python&quot;
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python"
     ]
   }
-}</component>
+}]]></component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings module-name="RiboDesigner" is-module-sdk="true">
@@ -464,7 +465,7 @@
       <workItem from="1713305789319" duration="2486000" />
       <workItem from="1717105597544" duration="1357000" />
       <workItem from="1717184798326" duration="49955000" />
-      <workItem from="1718126363175" duration="4464000" />
+      <workItem from="1718126363175" duration="10853000" />
     </task>
     <task id="LOCAL-00043" summary="Small efficiency improvement in find_repeat_targets">
       <created>1675101391002</created>
@@ -809,7 +810,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="176" />
+    <option name="localTasksCounter" value="177" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1011,7 +1012,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/graph_making.py</url>
-          <line>2211</line>
+          <line>2210</line>
           <option name="timeStamp" value="1394" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -1086,18 +1087,13 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/graph_making.py</url>
-          <line>1903</line>
-          <option name="timeStamp" value="1680" />
+          <line>1990</line>
+          <option name="timeStamp" value="1683" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/graph_making.py</url>
-          <line>1911</line>
-          <option name="timeStamp" value="1681" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/graph_making.py</url>
-          <line>1933</line>
-          <option name="timeStamp" value="1682" />
+          <line>2019</line>
+          <option name="timeStamp" value="1685" />
         </line-breakpoint>
       </breakpoints>
       <breakpoints-defaults>
