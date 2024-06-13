@@ -610,7 +610,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
-    pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1] + '_universal'
+    pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1].split('\\')[-1] + '_universal'
     print('Now pickling output file...')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with open(os.path.normpath(f'{folder_to_save}/designs_{pickle_file_name}.pickle'), 'wb') as handle:
@@ -1403,7 +1403,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
         #     h = 0
 
     # check the amount of work by summing the number of designs on each file in the coupled folder
-    lengths = [int(name.split('/')[-1].split('_')[0]) for name in analysis_files]
+    lengths = [int(name.split('/')[-1].split('\\')[-1].split('_')[0]) for name in analysis_files]
     total_work = sum(lengths)
 
     # read each line as a tuple of three values - big index, file name, small index
@@ -1473,7 +1473,7 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
             for (design_to_test, big_idx, file_name) in designs_to_test:
                 result = compare_to_test(design_to_test, n_limit=n_limit, test_dataset_name=file_name,
                                          guide_len=opti_len, get_tm_nn=get_tm_nn)
-                naming_for_file = file_name.split('/')[-1].split['\\'][-1].split('.')[0] + f'_worker_{worker_number}'
+                naming_for_file = file_name.split('/')[-1].split('\\')[-1].split('.')[0] + f'_worker_{worker_number}'
 
                 # If our result does not meet n_limit requirements, skip it
                 if not result:
@@ -1883,7 +1883,7 @@ def combine_data(folder_path):
     worker_file_names = defaultdict(lambda: [])
 
     for file_temp in files:
-        file_name = file_temp.split('/')[-1].split('_worker')[0]
+        file_name = file_temp.split('/')[-1].split('\\')[-1].split('_worker')[0]
         worker_file_names[os.path.normpath(f'{folder_path}/combined/{file_name}.txt')].append(file_temp)
 
     # Append the data from each file in a batch to combined name file

@@ -15,14 +15,14 @@ import os
 
 
 def import_data_to_df(designs_path, name, check_integrity: bool = True):
-    # lengths = [int(name.split('/')[-1].split('_')[0]) for name in designs_path]
+    # lengths = [int(name.split('/')[-1].split('\\')[-1].split('_')[0]) for name in designs_path]
     dfs = []
     all_dupes_check = defaultdict(lambda: [])
     all_without_dupes = defaultdict(lambda: [])
 
     for i in range(0, len(designs_path)):
         temp = extract_info(designs_path[i], name)
-        file_name = designs_path[i].split('/')[-1].split('_worker')[0]
+        file_name = designs_path[i].split('/')[-1].split('\\')[-1].split('_worker')[0]
         if check_integrity:
             dupes_check = len(temp.index)
             all_dupes_check[file_name].append(dupes_check)
@@ -50,7 +50,7 @@ def import_data_to_df(designs_path, name, check_integrity: bool = True):
 
 def set_percentages_for_bar(list_of_paths):
     print('Loading data...')
-    fn = lambda x: int(x.split('/')[-1].split('_')[0])
+    fn = lambda x: int(x.split('/')[-1].split('\\')[-1].split('_')[0])
     percentages = []
     for paths in list_of_paths:
         if not paths:
@@ -113,7 +113,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
               'designs_Gram_positives_only': 'Gram positives only'}
     new_target_labels = []
     for line in all_data_df['name_of_test_dataset']:
-        txt = line.split('/')[-1].split('vs_test_sequences')[0]
+        txt = line.split('/')[-1].split('\\')[-1].split('vs_test_sequences')[0]
         for key, name in labels.items():
             if key in txt:
                 new_target_labels.append(name)
@@ -253,7 +253,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #         title = f'Designs from {target_name} target sequences against {test_name} test dataset'
     #         jointplot_fig.suptitle(title)
     #         plt.tight_layout()
-    #         save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}.{file_type}'
+    #         save_file_name = os.path.normpath(f'{save_file_loc}/{figname}_{target_name}_{test_name}.{file_type}')
     # Figures 4, 5
     for target_name, test_name in paired_names:
         graph = all_subsets[target_name][test_name]
@@ -275,10 +275,10 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                 plt.tight_layout()
 
                 if save_fig:
-                    save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}_a.{file_type}'
+                    save_file_name = os.path.normpath(f'{save_file_loc}/{figname}_{target_name}_{test_name}_a.{file_type}')
                     plt.savefig(fname=save_file_name, format=file_type)
                 plt.show()
-                save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}_b'
+                save_file_name = os.path.normpath(f'{save_file_loc}/{figname}_{target_name}_{test_name}_b')
                 plot_three_panel_graph(var_regs, graph['reference_idx'], graph[xvar], 0.3, graph[yvar], xlabel,
                                        ylabel, len(graph['reference_idx']), title, save_file_name, file_type,
                                        add_control=True, control_loc_data=top_control['reference_idx'],
@@ -334,7 +334,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                 jointplot_fig.suptitle(title)
                 plt.tight_layout()
                 if save_fig:
-                    save_file_name = f'{save_file_loc}/{figname}_{target_name}_{test_name}.{file_type}'
+                    save_file_name = os.path.normpath(f'{save_file_loc}/{figname}_{target_name}_{test_name}.{file_type}')
                     plt.savefig(fname=save_file_name, format=file_type)
                 plt.show()
 
@@ -400,7 +400,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         multipliers = [val + 1 for val in multipliers]
     plt.tight_layout()
     if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/figure_3a.{file_type}', format=file_type)
+        plt.savefig(fname=os.path.normpath(f'{save_file_loc}/figure_3a.{file_type}'), format=file_type)
     plt.show()
 
     # Fig 7: : Assessing universal design quality. 2a) IGS true percent coverage vs. guide score of bacterial designs
@@ -456,7 +456,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         jointplot_fig.axes[2].set_ylabel('Guide score')
         plt.tight_layout()
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/figure_3b_{target_name}.{file_type}', format=file_type)
+            plt.savefig(fname=os.path.normpath(f'{save_file_loc}/figure_3b_{target_name}.{file_type}'), format=file_type)
         plt.show()
 
     # Okay. For the next graph, I'll have to add some detail to the index of the data! Specifically, labeling universal
@@ -573,7 +573,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #
     #     legend = plt.legend(bbox_to_anchor=(1.4, -0.15), ncols=5, title='Test dataset')
     #     for label in legend.get_texts():
-    #         txt = label.get_text().split('/')[-1].split('vs_test_sequences')[-1].replace('_', ' ')
+    #         txt = label.get_text().split('/')[-1].split('\\')[-1].split('vs_test_sequences')[-1].replace('_', ' ')
     #         for name in inner_dict.keys():
     #             if name[3:].casefold() in txt.casefold():
     #                 label.set_text(name)
@@ -583,7 +583,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #     plt.tight_layout()
     #
     #     if save_fig:
-    #         plt.savefig(fname=f'{save_file_loc}/figure_2a_{target_name}.{file_type}', format=file_type)
+    #         plt.savefig(fname=os.path.normpath(f'{save_file_loc}/figure_2a_{target_name}.{file_type}'), format=file_type)
     #     plt.show()
 
     # # Graph 1a:
@@ -607,7 +607,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #
     # plt.tight_layout()
     # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig1a.{file_type}', format=file_type)
+    #     plt.savefig(fname=os.path.normpath(f'{save_file_loc}/fig1a.{file_type}'), format=file_type)
     # plt.show()
     #
     # def make_jointplot(x_var, y_var, name):
@@ -651,12 +651,12 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #     jointplot_fig.axes[5].tick_params(labelleft=False)
     #
     #     if save_fig:
-    #         plt.savefig(fname=f'{save_file_loc}/{name}.{file_type}', format=file_type)
+    #         plt.savefig(fname=os.path.normpath(f'{save_file_loc}/{name}.{file_type}'), format=file_type)
     #     plt.show()
     #     return
     #
-    # make_jointplot('true_%_cov_test', 'test_score', name='/fig1b')
-    # make_jointplot('delta_igs_vs_test', 'delta_guide_vs_test', name='/fig1c')
+    # make_jointplot('true_%_cov_test', 'test_score', name='fig1b')
+    # make_jointplot('delta_igs_vs_test', 'delta_guide_vs_test', name='fig1c')
     #
     # # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
     # # selective for all designs in different panels (same data as above but order along gene)
@@ -688,7 +688,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # ax2a[i, 0].set_xlabel('Position in reference sequence')
     # plt.tight_layout()
     # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig2a.{file_type}', format=file_type)
+    #     plt.savefig(fname=os.path.normpath(f'{save_file_loc}/fig2a.{file_type}'), format=file_type)
     # plt.show()
     #
     # fig2b, ax2b = plt.subplots(nrows=2, ncols=1, sharex='all')
@@ -706,7 +706,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # ax2b[1].set_xlabel('16s rRNA sequence position on reference sequence')
     # plt.tight_layout()
     # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig2b.{file_type}', format=file_type)
+    #     plt.savefig(fname=os.path.normpath(f'{save_file_loc}/fig2b.{file_type}'), format=file_type)
     # plt.show()
     #
     # # Graph 3: violin plot, showing composite score distribution in all designs of a given category
@@ -724,7 +724,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #
     # plt.tight_layout()
     # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig3.{file_type}', format=file_type)
+    #     plt.savefig(fname=os.path.normpath(f'{save_file_loc}/fig3.{file_type}'), format=file_type)
     # plt.show()
     #
     # # Graph 4: y-axis is the delta score, x-axis is the 16s rRNA gene, plot all selective designs in different panels
@@ -742,7 +742,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # ax4[1].set_xlabel('16s rRNA sequence position on reference sequence')
     #
     # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig4.{file_type}', format=file_type)
+    #     plt.savefig(fname=os.path.normpath(f'{save_file_loc}/fig4.{file_type}'), format=file_type)
     # plt.show()
     #
     # # Extract taxonomy levels from test dataset too
@@ -786,7 +786,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # plt.tight_layout()
     # plt.subplots_adjust(bottom=0.27)
     # if save_fig:
-    #     plt.savefig(fname=f'{save_file_loc}/fig5.{file_type}', format=file_type)
+    #     plt.savefig(fname=os.path.normpath(f'{save_file_loc}/fig5.{file_type}'), format=file_type)
     # plt.show()
     print('All graphs generated!')
     return
@@ -1243,7 +1243,7 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
         plt.tight_layout()
 
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/igs_alignments_at_U_{key}.{file_type}', format=file_type)
+            plt.savefig(fname=os.path.normpath(f'{save_file_loc}/igs_alignments_at_U_{key}.{file_type}'), format=file_type)
 
         plt.show()
 
@@ -1269,7 +1269,7 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
         plt.tight_layout()
 
         if save_fig:
-            plt.savefig(fname=f'{save_file_loc}/guide_alignments_at_igs_{key}.{file_type}', format=file_type)
+            plt.savefig(fname=os.path.normpath(f'{save_file_loc}/guide_alignments_at_igs_{key}.{file_type}'), format=file_type)
 
         plt.show()
 
@@ -1310,11 +1310,11 @@ def make_violin_plots(folders: list, vars_to_plot: list[str], folder_to_save: st
     # folders: list of tuples of form (dataset name, folder) where dataset name is the category you want to plot by
     for dset, sub_folder in folders:
         to_analyze = {}
-        files = [(f, f'{sub_folder}/{f}/coupled/results') for f in os.listdir(sub_folder) if not os.path.isfile(f)]
+        files = [(f, os.path.normpath(f'{sub_folder}/{f}/coupled/results')) for f in os.listdir(sub_folder) if not os.path.isfile(f)]
         sorted_files = sorted(files, key=lambda a: int(a[0][:-3]))
         for name, file in sorted_files:
             try:
-                items = [file + '/' + data_file for data_file in os.listdir(file) if data_file.endswith('.txt')]
+                items = [os.path.normpath(file + '/' + data_file) for data_file in os.listdir(file) if data_file.endswith('.txt')]
                 to_analyze[name.replace('_', ' ')] = items
             except FileNotFoundError:
                 continue
@@ -1359,7 +1359,7 @@ def violin_plot_routine(vars_to_plot, all_data_df, folder_to_save, file_type: st
     joint_ax[1].legend(loc='lower right')
     text = '_and_'.join(vars_to_plot)
     plt.tight_layout()
-    plt.savefig(fname=f'{folder_to_save}/{text}.{file_type}', format=file_type)
+    plt.savefig(fname=os.path.normpath(f'{folder_to_save}/{text}.{file_type}'), format=file_type)
     plt.show()
     return
 
@@ -1378,7 +1378,7 @@ def make_file_for_ordering(order_these: pd.DataFrame, output_folder: str, file_l
             design = guide_overhang + design + igs_overhang
         to_order.append(design)
     order_these.insert(loc=2, column='Sequence with ordering overhangs', value=to_order)
-    file_name_new = f'{output_folder}/{file_label}.csv'
+    file_name_new = os.path.normpath(f'{output_folder}/{file_label}.csv')
     if append_to_file:
         order_these.insert(loc=0, column='Dataset type', value=[append_to_file_label] * len(order_these))
         order_these.to_csv(file_name_new, mode='a', index=False)
@@ -1402,8 +1402,8 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
         print(f'Extracting designs for guide len {i} bp...')
         u_files_root = universal_path + f'/{i}_bp/coupled/results/combined'
         s_files_root = selective_path + f'/{i}_bp/coupled/results'
-        u_files = [f'{u_files_root}/{f}' for f in os.listdir(u_files_root) if f.endswith('.txt')]
-        s_files = [f'{s_files_root}/{f}' for f in os.listdir(s_files_root) if f.endswith('.txt')]
+        u_files = [os.path.normpath(f'{u_files_root}/{f}') for f in os.listdir(u_files_root) if f.endswith('.txt')]
+        s_files = [os.path.normpath(f'{s_files_root}/{f}') for f in os.listdir(s_files_root) if f.endswith('.txt')]
         percentages, total_designs = set_percentages_for_bar([u_files, s_files])
         with alive_bar(total=total_designs, spinner='fishes') as bar:
             print('Now loading universal data...')
@@ -1564,7 +1564,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
         joint_ax[3].set(ylim=[-0.1, 1600], ylabel='Reference index (bp)')
         joint_ax[3].legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5, title='Guide length')
         plt.tight_layout()
-        plt.savefig(fname=f'{output_folder}/{name}_scores.{file_type}', format=file_type)
+        plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_scores.{file_type}'), format=file_type)
         plt.show()
 
     jointplot_fig = plt.figure()
@@ -1589,7 +1589,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     joint_ax[2].legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=5, title='Guide length')
 
     plt.tight_layout()
-    plt.savefig(fname=f'{output_folder}/{name}_delta_scores.{file_type}', format=file_type)
+    plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_delta_scores.{file_type}'), format=file_type)
     plt.show()
 
     # Do some more plots
@@ -1608,12 +1608,12 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
             ax.set_ylabel(xlabels[i] + ' background')
             ax.set_xlabel(xlabels[i] + ' target')
             fig.suptitle(f'{xlabels[i]} scores for selective designs')
-            name = f'{output_folder}/{xlabels[i]}_selective_scores.{file_type}'
+            name = os.path.normpath(f'{output_folder}/{xlabels[i]}_selective_scores.{file_type}')
         else:
             ax.set_xlabel('\u0394 U conservation')
             ax.set_ylabel('\u0394 IGS true coverage')
             fig.suptitle(f'\u0394 U conservation vs. \u0394 IGS coverage for selective designs')
-            name = f'{output_folder}/delta U vs delta IGS_selective_scores.{file_type}'
+            name = os.path.normpath(f'{output_folder}/delta U vs delta IGS_selective_scores.{file_type}')
         ax.set(ylim=[0, 1.1], xlim=[0, 1.1])
 
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=2)
@@ -1640,7 +1640,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
             design = igs_overhang + design + guide_overhang
         to_order.append(design)
     best_all_to_order.insert(loc=2, column='Sequence with ordering overhangs', value=to_order)
-    file_name = f'{output_folder}/best_designs.csv'
+    file_name = os.path.normpath(f'{output_folder}/best_designs.csv')
     if os.path.exists(file_name):
         os.remove(file_name)
     best_all_to_order.to_csv(file_name, index=False)
@@ -1720,8 +1720,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
         for file_name in os.listdir(current_path):
             if file_name.startswith('.DS_Store'):
                 continue
-            results_files_root = f'{current_path}/{file_name}/coupled/results/combined'
-            results_files = [f'{results_files_root}/{f}' for f in os.listdir(results_files_root) if f.endswith('.txt')]
+            results_files_root = os.path.normpath(f'{current_path}/{file_name}/coupled/results/combined')
+            results_files = [os.path.normpath(f'{results_files_root}/{f}') for f in os.listdir(results_files_root) if f.endswith('.txt')]
             with alive_bar(unknown='fish', spinner='fishes') as bar:
                 print(f'Now loading {current_dset}_{file_name} data...')
                 if all_data_df is None:
@@ -1900,7 +1900,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
 
         # go ahead and graph guide scores of subset
         graph = universal_subset_all[universal_subset_all['Dataset'] == target]
-        save_file_name = f'{output_folder}/{target}_vs_test_scores'
+        save_file_name = os.path.normpath(f'{output_folder}/{target}_vs_test_scores')
         make_test_seqs_graph(target, x_data=graph['u_conservation_test'].astype(float), xlabel='U coverage',
                              y_data=graph['true_%_cov_test'].astype(float), ylabel='IGS true coverage',
                              loc_data=graph['reference_idx'].astype(int), var_regs=u1376_dict[target][1],
@@ -1984,7 +1984,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
         # joint_ax[3].set(ylim=[-0.1, 1600], ylabel='Reference index (bp)')
         joint_ax[1].legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=5, title='Target dataset')
         plt.tight_layout()
-        plt.savefig(fname=f'{output_folder}/{name}_scores.{file_type}', format=file_type)
+        plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_scores.{file_type}'), format=file_type)
         plt.show()
 
     # Plot deltas
@@ -2013,7 +2013,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     joint_ax[2].set(xlim=[-0.1, 1.1], xlabel='\u0394 guide score')
     joint_ax[1].legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), ncol=5, title='Target dataset')
     plt.tight_layout()
-    plt.savefig(fname=f'{output_folder}/{name}_delta_scores.{file_type}', format=file_type)
+    plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_delta_scores.{file_type}'), format=file_type)
     plt.show()
 
     # # uncomment this to show bad points
@@ -2071,7 +2071,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     joint_ax[3].set(xlabel='E. coli 16s rRNA indexing', ylabel='')
     joint_ax[3].legend(loc='upper right', bbox_to_anchor=(1.25, 0.8), ncol=1, title='\u0394U and \u0394U-IGS scores')
     plt.tight_layout()
-    plt.savefig(fname=f'{output_folder}/{name}_chosen_designs_delta_scores_all_graphed.{file_type}', format=file_type)
+    plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_chosen_designs_delta_scores_all_graphed.{file_type}'), format=file_type)
     plt.show()
     #
 
@@ -2124,7 +2124,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     # joint_ax[2].set(xlim=[-0.1, 1.1], xlabel='\u0394 guide score', ylabel='', yticklabels='')
     # joint_ax[3].set(xlabel='E. coli 16s rRNA indexing', ylabel='')
     # plt.tight_layout()
-    # plt.savefig(fname=f'{output_folder}/{name}_chosen_designs_delta_scores.{file_type}', format=file_type)
+    # plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_chosen_designs_delta_scores.{file_type}'), format=file_type)
     # plt.show()
 
     # # Plot different metrics vs. other metrics
@@ -2144,13 +2144,13 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     #         ax.set_ylabel(xlabels[i] + ' background')
     #         ax.set_xlabel(xlabels[i] + ' target')
     #         fig.suptitle(f'{xlabels[i]} scores for selective designs')
-    #         name = f'{output_folder}/{xlabels[i]}_selective_scores_by_taxonomy.{file_type}'
+    #         name = os.path.normpath(f'{output_folder}/{xlabels[i]}_selective_scores_by_taxonomy.{file_type}')
     #         plt.plot([0, 1], [0, 1], color='orange', linestyle='--')
     #     else:
     #         ax.set_xlabel('\u0394 U conservation')
     #         ax.set_ylabel('\u0394 IGS true coverage')
     #         fig.suptitle(f'\u0394 U conservation vs. \u0394 IGS coverage for selective designs')
-    #         name = f'{output_folder}/delta U vs delta IGS_selective_scores.{file_type}'
+    #         name = os.path.normpath(f'{output_folder}/delta U vs delta IGS_selective_scores.{file_type}')
     #         ax.axhline(y=0.7, color='orange', linestyle='-')
     #         ax.axvline(x=0.7, color='orange', linestyle='-')
     #     ax.set(ylim=[0, 1.1], xlim=[0, 1.1])
@@ -2171,7 +2171,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     #         ax.set_ylabel(xlabels[i] + ' background')
     #         ax.set_xlabel(xlabels[i] + ' target')
     #         fig.suptitle(f'{xlabels[i]} scores for selective designs')
-    #         name = f'{output_folder}/{xlabels[i]}_selective_scores.{file_type}'
+    #         name = os.path.normpath(f'{output_folder}/{xlabels[i]}_selective_scores.{file_type}')
     #         plt.plot([0, 1], [0, 1], color='orange', linestyle='--')
     #     else:
     #         ax.set_xlabel('\u0394 U conservation')
@@ -2179,7 +2179,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     #         fig.suptitle(f'\u0394 U conservation vs. \u0394 IGS coverage for selective designs')
     #         ax.axhline(y=0.7, color='orange', linestyle='-')
     #         ax.axvline(x=0.7, color='orange', linestyle='-')
-    #         name = f'{output_folder}/delta U vs delta IGS_selective_scores_by_taxonomy.{file_type}'
+    #         name = os.path.normpath(f'{output_folder}/delta U vs delta IGS_selective_scores_by_taxonomy.{file_type}')
     #     ax.set(ylim=[0, 1.1], xlim=[0, 1.1])
     #
     #     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=3)
@@ -2203,7 +2203,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
                 design = guide_overhang + design + igs_overhang
             to_order.append(design)
         d_set.insert(loc=2, column='Sequence with ordering overhangs', value=to_order)
-        file_name_new = f'{output_folder}/best_designs{type}.csv'
+        file_name_new = os.path.normpath(f'{output_folder}/best_designs{type}.csv')
         if os.path.exists(file_name_new):
             os.remove(file_name_new)
         d_set.to_csv(file_name_new, index=False)
@@ -2257,11 +2257,11 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
     jointplot_fig.axes[1].set(xlabel='Reference SSU rRNA index')
     jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
     jointplot_fig.axes[0].tick_params(labelleft=False)
-    name = save_file_name.split('/')[-1].replace('_', ' ').replace('scores', 'guide scores')
+    name = save_file_name.split('/')[-1].split('\\')[-1].replace('_', ' ').replace('scores', 'guide scores')
     jointplot_fig.suptitle(name.replace('vs test', 'tested to target'))
     plt.tight_layout()
     if save_fig:
-        save_file_name = f'{save_file_name}_guide_scores.{file_type}'
+        save_file_name = os.path.normpath(f'{save_file_name}_guide_scores.{file_type}')
         plt.savefig(fname=save_file_name, format=file_type)
     plt.show()
 
@@ -2331,6 +2331,6 @@ def make_summary_graph(subsets, tm_min, tm_max, data_df, control_df, save_fig, s
         multipliers = [val + 1 for val in multipliers]
     plt.tight_layout()
     if save_fig:
-        plt.savefig(fname=f'{save_file_loc}/summary.{file_type}', format=file_type)
+        plt.savefig(fname=os.path.normpath(f'{save_file_loc}/summary.{file_type}'), format=file_type)
     plt.show()
     return
