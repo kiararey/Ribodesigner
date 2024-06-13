@@ -1303,6 +1303,12 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
     # Need the design, the aligned target sequences to test against for each design
     coupled_datasets_name = designs_input.split('.')[0].split('/')[-1].split('\\')[-1] + '_vs_' + \
                             test_seqs_input.split('.')[0].split('/')[-1].split('\\')[-1]
+
+    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled')
+    # Check if this file already exists
+    if os.path.exists(pickle_file_name) and os.path.exists(os.path.normpath(subfile + '/big_checkpoint.txt')):
+        print('Coupled file and checklist already exist! Skipping coupling...')
+        return
     print(f'Coupling designs for {coupled_datasets_name}')
     with alive_bar(len(designs), spinner='fishes') as bar:
         for design in designs:
@@ -1390,17 +1396,9 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     # Check if we have anything to test
     analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
 
-    if len(analysis_files) == 0:
-        print('Please make sure to couple designs with the appropriate test sequences')
-        return
-
     # Generate input results folder if it does not exist yet
     if not os.path.exists(results_folder):
         os.mkdir(results_folder)
-        # try:
-        #     os.mkdir(results_folder)
-        # except FileExistsError:
-        #     h = 0
 
     # check the amount of work by summing the number of designs on each file in the coupled folder
     lengths = [int(name.split('/')[-1].split('\\')[-1].split('_')[0]) for name in analysis_files]
@@ -1432,14 +1430,6 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
     files_to_open_dict = defaultdict(lambda: [])
     for big_idx, file_name, small_idx in this_worker_worklist:
         files_to_open_dict[file_name].append((int(big_idx), int(small_idx)))
-
-    # test = [file for file in files_to_open_dict.keys() if 'Bacteria' in file]
-    # if len(test) == 0:
-    #     return
-
-    if total_work != work_to_do + work_completed:
-        print(f'big_checkpoint.txt corrupted. Please delete and couple datasets again.')
-        return -1
 
     # Print how much work is left to do
     print(f'Total work:{total_work}\nWork to be done: {work_to_do}\nWork completed: {work_completed} '
@@ -1878,7 +1868,7 @@ def give_scoring_dict():
 
 def combine_data(folder_path):
     # Get all files in the folder that end in .txt
-    files = [os.path.normpath(f'{folder_path}/{f}'.replace('//', '/')) for f in os.listdir(folder_path)
+    files = [os.path.normpath(f'{folder_path}/{f}') for f in os.listdir(folder_path)
              if f.endswith('.txt')]
     worker_file_names = defaultdict(lambda: [])
 
