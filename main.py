@@ -40,13 +40,15 @@ def check_checkpoint_file(coupled_folder):
                        item.split('\t')[0] not in work_done]
     work_to_do = len(work_to_do_list)
     work_completed = len(work_done)
-    if total_work == work_completed:
-        print('All work to do has been done! Enjoy analyzing your files!')
-        return -1
-    elif total_work != work_to_do + work_completed:
-        decision = input(f'big_checkpoint.txt does not match amount of work to do. '
-                         f'Would you like to delete checkpoint file and associated work / coupled files '
-                         f'to start analysis over? [Y/N]: ')
+    if total_work != work_to_do + work_completed:
+        if total_work == work_completed:
+            decision = input('All work to do has been done, but checkpoint file is corrupted. Recommending deleting '
+                            'checkpoint file and associated work / coupled files to re-do analysis. Would you like'
+                            'to delete these? [Y/N]: ')
+        else:
+            decision = input(f'big_checkpoint.txt does not match amount of work to do. '
+                             f'Would you like to delete checkpoint file and associated work / coupled files '
+                             f'to start analysis over? [Y/N]: ')
         while decision != 'Y' and decision != 'N' and decision != 'y' and decision != 'n':
             decision = input(
                 f'Please enter either Y or N: ')
@@ -115,7 +117,7 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
     all_test_file_names = []
     for test_file in test_seqs_to_process:
         title = test_file.split('.')[0].split('/')[-1].split('\\')[-1]
-        test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
+        test_save_file_name = os.path.normpath(f'{out_path}/test_sequences_{title}.pickle')
         all_test_file_names.append(test_save_file_name)
         if not os.path.exists(test_save_file_name):
             _ = prepare_test_seqs(test_folder=test_file, ref_sequence_file=ref_seq_file, guide_length=guide_len,
@@ -128,8 +130,8 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
             print(f'{test_save_file_name} exists already! Moving on...')
     all_target_file_names = []
     for target_file in target_seqs_to_process:
-        target_title = target_file.split('.')[0].split('/')[-1]
-        target_save_file_name = f'{out_path}/designs_{target_title}_universal.pickle'
+        target_title = target_file.split('.')[0].split('/')[-1].split('\\')[-1]
+        target_save_file_name = os.path.normpath(f'{out_path}/designs_{target_title}_universal.pickle')
         all_target_file_names.append(target_save_file_name)
 
         if not os.path.exists(target_save_file_name):
@@ -162,24 +164,24 @@ if __name__ == '__main__':
         pass
 
     # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
-    barcode_seq_file = 'Common_sequences/sfGFP_2_seq_barcode.txt'
+    barcode_seq_file = os.path.normpath('Common_sequences/sfGFP_2_seq_barcode.txt')
 
     # We'll be using the Ribozyme published in the RAM paper
-    ribobody_file = 'Common_sequences/ribozyme_body.txt'
+    ribobody_file = os.path.normpath('Common_sequences/ribozyme_body.txt')
 
     # Prepare the datasets
-    datasets_path = 'Datasets_used/zymo_files/'
+    datasets_path = os.path.normpath('Datasets_used/zymo_files/')
 
     # Output folder
-    output_path = 'test_output_files/'
+    output_path = os.path.normpath('test_output_files/')
 
     # Reference sequence - will have to be E. coli to graph the variable regions
-    ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
-    ref_path_arc = 'Common_sequences/Methanobrevibacter smithii 16s.fasta'
-    ref_path_euk = 'Common_sequences/Saccharomyces cerevisiae 18s.fasta'
+    ref_path = os.path.normpath('Common_sequences/e-coli-16s-mg1655.fasta')
+    ref_path_arc = os.path.normpath('Common_sequences/Methanobrevibacter smithii 16s.fasta')
+    ref_path_euk = os.path.normpath('Common_sequences/Saccharomyces cerevisiae 18s.fasta')
 
     # Our random sequence!
-    random_seq_path = 'Common_sequences/Lactobacillus_casei_example.fasta'
+    random_seq_path = os.path.normpath('Common_sequences/Lactobacillus_casei_example.fasta')
 
     u1376 = 'CAACCCACTCCCATGGTGTGACGGGCGGTGTGTACAAGGCCCGGGAACGTgTTCAC'
 
@@ -203,59 +205,59 @@ if __name__ == '__main__':
     euk_1376_idx = adjust_var_regs(known_seq_file=ref_path, known_var_regs=1376, unknown_seq_file=ref_path_euk)
 
     # ########################################################
-    # test data targeted
-    path = 'Datasets_used/SILVA_squished_datasets_1_per_genus/'
-    bad_targets = 'Datasets_used/Bacillus_halotolerans.fasta'
-    universal_data_1 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
-    universal_data_2 = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_2.fasta'
-    universal_data_3 = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_2.fasta'
-    universal_data_4 = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_2.fasta'
-    big_data_entero_only = path + 'Enterobacterales_only_squished/Enterobacterales_only_by_Genus_1.fasta'
-    big_data_pseudo_only = path + 'Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_1.fasta'
-    big_data_no_entero_or_pseudo = path + 'Background_Bacteria_squished/' \
-                                          'Background_Bacteria_squished_no_pseudo_or_entero.fasta'
-    big_data_no_pseudo = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
-    big_data_no_entero = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
-    big_data_only_entero_and_pseudo = path + 'Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta'
-    big_data_gram_pos_only = path + 'Gram_positives_only/Gram_positives_only.fasta'
-    big_data_no_gram_pos = path + 'No_Gram_positives/No_Gram_positives.fasta'
-    background_data_bac = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
-    background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
-    background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
-    background_data_all = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta'
-    test_output_folder = 'test_output_files/test_outputs_parallelizing'
-    test_file = 'test_dataset_for_graphs.csv'
-    big_data_file_for_output = 'large_dataset.csv'
-    ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
-
-    test_data_folders = [background_data_euk, background_data_arc, background_data_bac, background_data_all]
-    selective_data_folders_targets = [big_data_no_entero_or_pseudo, big_data_entero_only, big_data_pseudo_only,
-                                      big_data_gram_pos_only]
-    selective_data_folders_tests = [big_data_only_entero_and_pseudo, big_data_no_entero, big_data_no_pseudo,
-                                    big_data_no_gram_pos]
-    universal_data_files = [universal_data_1, universal_data_2, universal_data_3, universal_data_4]
-    test_data_folders_test = [bad_targets, big_data_entero_only]
-    # Test new RiboDesigner for images
-    universal_datasets = []
-    selective_datasets = []
-
-    test_data_pickles = ['test_sequences_All_by_Genus_1.pickle', 'test_sequences_Archaea_Only_by_Genus_1.pickle',
-                         'test_sequences_Bacteria_Only_by_Genus_1.pickle',
-                         'test_sequences_Eukaryota_Only_by_Genus_1.pickle',
-                         'test_sequences_All_by_Genus_1_batched.pickle',
-                         'test_sequences_Archaea_Only_by_Genus_1_batched.pickle',
-                         'test_sequences_Bacteria_Only_by_Genus_1_batched.pickle',
-                         'test_sequences_Eukaryota_Only_by_Genus_1_batched.pickle']
-    test_data_pickles = [test_output_folder + '/' + item for item in test_data_pickles]
-
-    universal_data_pickles = ['designs_Eukaryota_Only_by_Genus_2_universal.pickle',
-                              'designs_All_by_Genus_2_universal.pickle',
-                              'designs_Archaea_Only_by_Genus_2_universal.pickle',
-                              'designs_Bacteria_Only_by_Genus_2_universal.pickle']
-    universal_data_pickles = [test_output_folder + '/' + item for item in universal_data_pickles]
-
-    ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
-    random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
+    # # test data targeted
+    # path = 'Datasets_used/SILVA_squished_datasets_1_per_genus/'
+    # bad_targets = 'Datasets_used/Bacillus_halotolerans.fasta'
+    # universal_data_1 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
+    # universal_data_2 = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_2.fasta'
+    # universal_data_3 = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_2.fasta'
+    # universal_data_4 = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_2.fasta'
+    # big_data_entero_only = path + 'Enterobacterales_only_squished/Enterobacterales_only_by_Genus_1.fasta'
+    # big_data_pseudo_only = path + 'Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_1.fasta'
+    # big_data_no_entero_or_pseudo = path + 'Background_Bacteria_squished/' \
+    #                                       'Background_Bacteria_squished_no_pseudo_or_entero.fasta'
+    # big_data_no_pseudo = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
+    # big_data_no_entero = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
+    # big_data_only_entero_and_pseudo = path + 'Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta'
+    # big_data_gram_pos_only = path + 'Gram_positives_only/Gram_positives_only.fasta'
+    # big_data_no_gram_pos = path + 'No_Gram_positives/No_Gram_positives.fasta'
+    # background_data_bac = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
+    # background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
+    # background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
+    # background_data_all = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta'
+    # test_output_folder = 'test_output_files/test_outputs_parallelizing'
+    # test_file = 'test_dataset_for_graphs.csv'
+    # big_data_file_for_output = 'large_dataset.csv'
+    # ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
+    #
+    # test_data_folders = [background_data_euk, background_data_arc, background_data_bac, background_data_all]
+    # selective_data_folders_targets = [big_data_no_entero_or_pseudo, big_data_entero_only, big_data_pseudo_only,
+    #                                   big_data_gram_pos_only]
+    # selective_data_folders_tests = [big_data_only_entero_and_pseudo, big_data_no_entero, big_data_no_pseudo,
+    #                                 big_data_no_gram_pos]
+    # universal_data_files = [universal_data_1, universal_data_2, universal_data_3, universal_data_4]
+    # test_data_folders_test = [bad_targets, big_data_entero_only]
+    # # Test new RiboDesigner for images
+    # universal_datasets = []
+    # selective_datasets = []
+    #
+    # test_data_pickles = ['test_sequences_All_by_Genus_1.pickle', 'test_sequences_Archaea_Only_by_Genus_1.pickle',
+    #                      'test_sequences_Bacteria_Only_by_Genus_1.pickle',
+    #                      'test_sequences_Eukaryota_Only_by_Genus_1.pickle',
+    #                      'test_sequences_All_by_Genus_1_batched.pickle',
+    #                      'test_sequences_Archaea_Only_by_Genus_1_batched.pickle',
+    #                      'test_sequences_Bacteria_Only_by_Genus_1_batched.pickle',
+    #                      'test_sequences_Eukaryota_Only_by_Genus_1_batched.pickle']
+    # test_data_pickles = [test_output_folder + '/' + item for item in test_data_pickles]
+    #
+    # universal_data_pickles = ['designs_Eukaryota_Only_by_Genus_2_universal.pickle',
+    #                           'designs_All_by_Genus_2_universal.pickle',
+    #                           'designs_Archaea_Only_by_Genus_2_universal.pickle',
+    #                           'designs_Bacteria_Only_by_Genus_2_universal.pickle']
+    # universal_data_pickles = [test_output_folder + '/' + item for item in universal_data_pickles]
+    #
+    # ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
+    # random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
 
     # # Here we make the designs batched
     # for test_data in test_data_folders:
