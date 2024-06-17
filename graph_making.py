@@ -180,12 +180,12 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     tm_max = max(all_data_df['tm_nn_vs_test'])
     tm_min = min(all_data_df['tm_nn_vs_test'])
 
-    vars_to_plot = [('u_conservation_test', 'true_%_cov_test', 'figure_2a',
+    vars_to_plot = [('u_conservation_test', 'true_U_IGS_cov_test', 'figure_2a',
                      'U site conservation', 'IGS true percent coverage'),
                     ('test_score', 'tm_nn_vs_test', 'figure_2b', 'Guide score vs test', 'Tm GC of guide vs test')]
 
     # Get common values to later normalize
-    min_max = {'u_conservation_test_vs_true_%_cov_test': [], 'test_score_vs_tm_nn_vs_test': []}
+    min_max = {'u_conservation_test_vs_true_U_IGS_cov_test': [], 'test_score_vs_tm_nn_vs_test': []}
     for target_name, test_name in paired_names:
         for test_name in test_file_names.keys():
             target_subset = all_subsets[target_name][test_name]
@@ -369,7 +369,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
 
     # Each row is a group, each column is a metric to graph
     vars_and_titles = [('U conservation', 'u_conservation_test', [0, 1]),
-                       ('IGS conservation', 'true_%_cov_test', [0, 1]),
+                       ('IGS conservation', 'true_U_IGS_cov_test', [0, 1]),
                        ('Guide score', 'test_score', [0, 1]),
                        ('Tm GC', 'tm_nn_vs_test', [tm_min, tm_max])]
     current_graph = 0
@@ -407,7 +407,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # evaluated against datasets of different kingdoms. 2b) 16s rRNA location of all designs along the reference
     # E. coli MG1655 16s rRNA sequence.
     # Prepare axes
-    xvar = 'true_%_cov_test'
+    xvar = 'true_U_IGS_cov_test'
     yvar = 'test_score'
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20 * 0.8, 20 * 0.8)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
@@ -485,7 +485,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #         4: jointplot_fig.add_subplot(gridspec[2:4, 0:6]),
     #         5: jointplot_fig.add_subplot(gridspec[4:6, 0:6])
     #     }
-    #     xvar = 'true_%_cov_test'
+    #     xvar = 'true_U_IGS_cov_test'
     #     yvar = 'test_score'
     #     # Plot scatter and kde plots
     #     sns.scatterplot(x=xvar, y=yvar, hue='name_of_test_dataset', data=subset_to_graph, ax=joint_ax[0], alpha=0.2,
@@ -655,7 +655,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #     plt.show()
     #     return
     #
-    # make_jointplot('true_%_cov_test', 'test_score', name='fig1b')
+    # make_jointplot('true_U_IGS_cov_test', 'test_score', name='fig1b')
     # make_jointplot('delta_igs_vs_test', 'delta_guide_vs_test', name='fig1c')
     #
     # # Graph 2: y-axis is the composite score, x-axis is the 16s rRNA gene, plot the universal, control, and each
@@ -663,8 +663,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # fig2a, ax2a = plt.subplots(nrows=max(num_universal, num_selective), ncols=2, layout='constrained', sharey='all',
     #                            sharex='all')
     # fig2a.suptitle('Scores along 16s rRNA sequences in test datasets: universal/ selective')
-    # fig_2a_titles = ['Average conservation of catalytic site', '% of reads with IGS', 'Guide score']
-    # fig_2a_columns = ['u_conservation_test', 'true_%_cov_test', 'test_score']
+    # fig_2a_titles = ['Average conservation of catalytic site', 'U_IGS of reads with IGS', 'Guide score']
+    # fig_2a_columns = ['u_conservation_test', 'true_U_IGS_cov_test', 'test_score']
     # ax2a[0, 0].set_title('Universal designs')
     # for i, name, col in zip(range(3), fig_2a_titles, fig_2a_columns):
     #     plot_variable_regions(ax2a[i, 0], var_regs)
@@ -713,9 +713,9 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     # back_score_data = all_data_df.loc[:, ['id', 'test_score']]
     # back_score_data['score_type'] = 'Guide score on test data'
     # back_score_data.rename(columns={'test_score': 'Score'}, inplace=True)
-    # back_true_cov_data = all_data_df.loc[:, ['id', 'true_%_cov_test']]
-    # back_true_cov_data['score_type'] = 'True % coverage on test data'
-    # back_true_cov_data.rename(columns={'true_%_cov_test': 'Score'}, inplace=True)
+    # back_true_cov_data = all_data_df.loc[:, ['id', 'true_U_IGS_cov_test']]
+    # back_true_cov_data['score_type'] = 'True U_IGS coverage on test data'
+    # back_true_cov_data.rename(columns={'true_U_IGS_cov_test': 'Score'}, inplace=True)
     # fig_3_data = pd.concat([back_score_data, back_true_cov_data])
     # plt.title('Guide and IGS scores distribution on test dataset')
     # # sns.violinplot(x=fig_3_data.index, y='score', hue='score_type', data=fig_3_data, inner='point', cut=0, split=True)
@@ -769,7 +769,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
     #
     # fig5, ax5 = plt.subplots(ncols=2, nrows=1, sharey='all', layout='constrained')
     # # Figure 5a:
-    # # Get 100%
+    # # Get 100U_IGS
     # totals = filter_nans.sum(axis=1)
     # # Calculate fractions
     # fractions = filter_nans.div(totals, axis=0)
@@ -967,15 +967,15 @@ def extract_info(results_file_path: list[str], dataset: str, data_type: str = 'd
     # Now extact data here:
     column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
                     'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
-                    'num_of_targets': int, 'score_type': str, 'score': float, '%_coverage': float, '%_on target': float,
-                    'true_%_cov': float, 'composite_score': float, 'num_of_targets_background': int,
-                    'u_conservation_background': float, 'background_score': float, '%_coverage_background': float,
-                    '%_on target_background': float, 'true_%_cov_background': float,
+                    'num_of_targets': int, 'score_type': str, 'score': float, 'U_IGS_coverage': float, 'U_IGS_on target': float,
+                    'true_U_IGS_cov': float, 'composite_score': float, 'num_of_targets_background': int,
+                    'u_conservation_background': float, 'background_score': float, 'U_IGS_coverage_background': float,
+                    'U_IGS_on target_background': float, 'true_U_IGS_cov_background': float,
                     'composite_background_score': float,
                     'delta_igs_vs_background': float, 'delta_guide_vs_background': float, 'delta_vs_background': float,
                     'name_of_test_dataset': str, 'num_of_targets_test': int, 'u_conservation_test': float,
-                    'test_score': float, 'tm_nn_vs_test': float, '%_coverage_test': float, '%_on target_test': float,
-                    'true_%_cov_test': float, 'composite_test_score': float, 'delta_igs_vs_test': float,
+                    'test_score': float, 'tm_nn_vs_test': float, 'U_IGS_coverage_test': float, 'U_IGS_on target_test': float,
+                    'true_U_IGS_cov_test': float, 'composite_test_score': float, 'delta_igs_vs_test': float,
                     'delta_guide_vs_test': float, 'delta_vs_test': float, 'target_Domain': str,
                     'target_Domain_background': str, 'target_Domain_test': str, 'target_Phylum': str,
                     'target_Phylum_background': str, 'target_Phylum_test': str, 'target_Class': str,
@@ -1204,7 +1204,7 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
                     #                                           ['guide'])
 
                     # Save in a tuple with:
-                    # (idx, [extracted_data_test, extracted_data_design, extracted_data_ref], igs_true_%_cov)
+                    # (idx, [extracted_data_test, extracted_data_design, extracted_data_ref], igs_true_U_IGS_cov)
                     data_to_graph_igs[key].append((igs_id, [test_igs_counted, design_igs_counted, ref_igs_counted],
                                                    igs_true_perc_cov.iloc[0], design_vs_test_igs, ref_vs_test_igs))
                     # except lm.src.error_handling.LogomakerError:
@@ -1265,7 +1265,7 @@ def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], r
         ax[2].set_title(f'Reference sequence: conservation with consensus test: '
                         f'{round(ref_v_test_guide, 4)}', loc='left')
 
-        fig.suptitle(f'{titles[key]} guide data for igs {igs_id}\nIGS true % coverage = {round(igs_con, 4)}')
+        fig.suptitle(f'{titles[key]} guide data for igs {igs_id}\nIGS true U_IGS coverage = {round(igs_con, 4)}')
         plt.tight_layout()
 
         if save_fig:
@@ -1440,14 +1440,14 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
 
     # Get relevant columns for this graph
     filtered_df_all = all_data_df[['Dataset', 'id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
-                               'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
-                               'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
+                               'true_U_IGS_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
+                               'tm_nn_vs_test', 'true_U_IGS_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
                                    'target_dataset', 'test_dataset']]
     filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
                                   + '_' + filtered_df_all['Dataset'])
     # Extract categories: anything with target guide = 1 (no ambiguity) and target coverage > 0.7
     filtered_df_all = filtered_df_all[filtered_df_all['score'] == 1]
-    filtered_df = filtered_df_all[filtered_df_all['true_%_cov'] >= 0.7]
+    filtered_df = filtered_df_all[filtered_df_all['true_U_IGS_cov'] >= 0.7]
 
     # selective
     selective_subset = filtered_df[filtered_df.index == 'selective']
@@ -1465,10 +1465,10 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
         background_row.index = target_row.index
         background_row['u_test_minus_background'] = (target_row['u_conservation_test'] -
                                                      background_row['u_conservation_test'])
-        background_row['igs_test_minus_background'] = target_row['true_%_cov_test'] - background_row['true_%_cov_test']
+        background_row['igs_test_minus_background'] = target_row['true_U_IGS_cov_test'] - background_row['true_U_IGS_cov_test']
         background_row['guide_test_minus_background'] = target_row['test_score'] - background_row['test_score']
         background_row['u_conservation_test_is_target'] = target_row['u_conservation_test']
-        background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
+        background_row['true_U_IGS_cov_test_is_target'] = target_row['true_U_IGS_cov_test']
         background_row['test_score_test_is_target'] = target_row['test_score']
         background_row.index = background_row['index']
         for i in range(10, 60, 10):
@@ -1504,14 +1504,14 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     worst_subset_all = []
     for i in range(10, 60, 10):
         subset_bac = universal_designs_bac[universal_designs_bac['Dataset'] == f'{i} bp']
-        best_universal_bac.append(subset_bac[subset_bac['true_%_cov_test'] == subset_bac['true_%_cov_test'].max()])
-        worst_universal_bac.append(subset_bac[subset_bac['true_%_cov_test'] == subset_bac['true_%_cov_test'].min()])
-        worst_subset_bac.append(subset_bac[subset_bac['true_%_cov_test'] == subset_bac['true_%_cov_test'].min()].head(1))
+        best_universal_bac.append(subset_bac[subset_bac['true_U_IGS_cov_test'] == subset_bac['true_U_IGS_cov_test'].max()])
+        worst_universal_bac.append(subset_bac[subset_bac['true_U_IGS_cov_test'] == subset_bac['true_U_IGS_cov_test'].min()])
+        worst_subset_bac.append(subset_bac[subset_bac['true_U_IGS_cov_test'] == subset_bac['true_U_IGS_cov_test'].min()].head(1))
 
         subset_all = universal_designs_all[universal_designs_all['Dataset'] == f'{i} bp']
-        best_universal_all.append(subset_all[subset_all['true_%_cov_test'] == subset_all['true_%_cov_test'].max()])
-        worst_universal_all.append(subset_all[subset_all['true_%_cov_test'] == subset_all['true_%_cov_test'].min()])
-        worst_subset_all.append(subset_all[subset_all['true_%_cov_test'] == subset_all['true_%_cov_test'].min()].head(1))
+        best_universal_all.append(subset_all[subset_all['true_U_IGS_cov_test'] == subset_all['true_U_IGS_cov_test'].max()])
+        worst_universal_all.append(subset_all[subset_all['true_U_IGS_cov_test'] == subset_all['true_U_IGS_cov_test'].min()])
+        worst_subset_all.append(subset_all[subset_all['true_U_IGS_cov_test'] == subset_all['true_U_IGS_cov_test'].min()].head(1))
     best_universal_bac = pd.concat(best_universal_bac)
     best_universal_all = pd.concat(best_universal_all)
     best_universal_bac['Design type'] = ['Best universal bacteria'] * best_universal_bac.shape[0]
@@ -1531,8 +1531,8 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
     # Finally, graph!
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (20 * 0.6, 20 * 0.6)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    vars = [('u_conservation_test', 'true_%_cov_test', 'test_score'),
-            ('u_conservation_test_is_target', 'true_%_cov_test_is_target', 'test_score_test_is_target')]
+    vars = [('u_conservation_test', 'true_U_IGS_cov_test', 'test_score'),
+            ('u_conservation_test_is_target', 'true_U_IGS_cov_test_is_target', 'test_score_test_is_target')]
     for name, current_set , current_vars in [('universal tested to target', universal_designs_select, vars[0]),
                                              ('selective tested to background', best_selective_designs, vars[0]),
                                              ('selective tested to target', best_selective_designs, vars[1])]:
@@ -1594,7 +1594,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
 
     # Do some more plots
     xlabels = ['U conservation', 'IGS true coverage', 'Guide score']
-    vars = [('u_conservation_test', 'u_conservation_test_is_target'), ('true_%_cov_test', 'true_%_cov_test_is_target'),
+    vars = [('u_conservation_test', 'u_conservation_test_is_target'), ('true_U_IGS_cov_test', 'true_U_IGS_cov_test_is_target'),
             ('test_score', 'test_score_test_is_target'), ('igs_test_minus_background', 'u_test_minus_background')]
 
     for i, (yvar, xvar) in enumerate(vars):
@@ -1676,13 +1676,13 @@ def get_fungi_designs(results_stringent_path, results_to_compare_path, output_fo
 
     # Get relevant columns for this graph
     filtered_df_all = all_data_df[['id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
-                                   'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
-                                   'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
+                                   'true_U_IGS_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
+                                   'tm_nn_vs_test', 'true_U_IGS_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
                                    'target_dataset', 'test_dataset']]
     filtered_df = filtered_df_all[filtered_df_all['score'] == 1]
 
     # First, get only the designs that have perfect U+IGS in stringent
-    possible_ids = filtered_df[(filtered_df.index == 'stringent' ) & (filtered_df['true_%_cov_test'] == 1)]['id']
+    possible_ids = filtered_df[(filtered_df.index == 'stringent' ) & (filtered_df['true_U_IGS_cov_test'] == 1)]['id']
 
     # Now, find these in the comparison dataset and sort by highest U+IGS coverage
     stringent_row = filtered_df[(filtered_df.index == 'stringent') & (filtered_df['id'].isin(possible_ids))]
@@ -1690,7 +1690,7 @@ def get_fungi_designs(results_stringent_path, results_to_compare_path, output_fo
     # do a left join on the target dataset
     best_designs = stringent_row.merge(to_compare_row, how='left', suffixes=['_stringent', '_to_compare'],
                                       on=['id', 'igs', 'guide', 'score', 'reference_idx', 'num_of_targets'])
-    best_designs.sort_values(by=['true_%_cov_test_to_compare'], ascending=False)
+    best_designs.sort_values(by=['true_U_IGS_cov_test_to_compare'], ascending=False)
 
     # finally make a csv file
     make_file_for_ordering(best_designs, output_folder=output_folder, file_label='fungi', add_overhangs=add_overhangs,
@@ -1769,14 +1769,14 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
 
     # Get relevant columns for this graph
     filtered_df_all = all_data_df[['Dataset', 'id', 'igs', 'reference_idx', 'guide', 'num_of_targets', 'score',
-                                   'true_%_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
-                                   'tm_nn_vs_test', 'true_%_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
+                                   'true_U_IGS_cov', 'num_of_targets_test', 'u_conservation_test', 'test_score',
+                                   'tm_nn_vs_test', 'true_U_IGS_cov_test', 'delta_igs_vs_test', 'delta_guide_vs_test',
                                    'target_dataset', 'test_dataset', 'Taxonomy of targets',
                                    'Target excluded or included', 'Test excluded or included']]
     filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
                                   + '_' + filtered_df_all['Dataset'])
     filtered_df = filtered_df_all[filtered_df_all['score'] == 1]
-    # filtered_df = filtered_df_all[filtered_df_all['true_%_cov'] >= 0.7]
+    # filtered_df = filtered_df_all[filtered_df_all['true_U_IGS_cov'] >= 0.7]
 
     # selective
     selective_subset = filtered_df[filtered_df.index == 'selective']
@@ -1809,18 +1809,18 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
                                            on=['id', 'igs', 'guide', 'reference_idx', 'Dataset', 'to_pair'])
             joined_rows['u_test_minus_background'] = (joined_rows['u_conservation_test_target'] -
                                                       joined_rows['u_conservation_test_background'])
-            joined_rows['igs_test_minus_background'] = (joined_rows['true_%_cov_test_target'] -
-                                                      joined_rows['true_%_cov_test_background'])
+            joined_rows['igs_test_minus_background'] = (joined_rows['true_U_IGS_cov_test_target'] -
+                                                      joined_rows['true_U_IGS_cov_test_background'])
             joined_rows['guide_test_minus_background'] = (joined_rows['test_score_target'] -
                                                       joined_rows['test_score_background'])
             # background_row.index = target_row.index
             # background_row['u_test_minus_background'] = (target_row['u_conservation_test'] -
             #                                              background_row['u_conservation_test'])
-            # background_row['igs_test_minus_background'] = target_row['true_%_cov_test'] - background_row[
-            #     'true_%_cov_test']
+            # background_row['igs_test_minus_background'] = target_row['true_U_IGS_cov_test'] - background_row[
+            #     'true_U_IGS_cov_test']
             # background_row['guide_test_minus_background'] = target_row['test_score'] - background_row['test_score']
             # background_row['u_conservation_test_is_target'] = target_row['u_conservation_test']
-            # background_row['true_%_cov_test_is_target'] = target_row['true_%_cov_test']
+            # background_row['true_U_IGS_cov_test_is_target'] = target_row['true_U_IGS_cov_test']
             # background_row['test_score_test_is_target'] = target_row['test_score']
             # background_row['number_of_targets_test_is_target'] = target_row['num_of_targets_test']
             # background_row.index = background_row['index']
@@ -1888,13 +1888,13 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
             u1376_equivalent = u1376_equivalent_temp[(u1376_equivalent_temp['id'] == u1376_dict[target][0])]
         u1376_equivalent['Design type'] = ['Original design'] * u1376_equivalent.shape[0]
         u1376_designs.append(u1376_equivalent)
-        best_universal_temp = subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].max()]
+        best_universal_temp = subset[subset['true_U_IGS_cov_test'] == subset['true_U_IGS_cov_test'].max()]
         best_universal_temp['Design type'] = ['Best universal'] * best_universal_temp.shape[0]
         best_universal.append(best_universal_temp)
-        worst_universal_temp = subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].min()]
+        worst_universal_temp = subset[subset['true_U_IGS_cov_test'] == subset['true_U_IGS_cov_test'].min()]
         worst_universal_temp['Design type'] = ['Worst universal'] * worst_universal_temp.shape[0]
         worst_universal.append(worst_universal_temp)
-        worst_subset_temp = subset[subset['true_%_cov_test'] == subset['true_%_cov_test'].min()].head(1)
+        worst_subset_temp = subset[subset['true_U_IGS_cov_test'] == subset['true_U_IGS_cov_test'].min()].head(1)
         worst_subset_temp['Design type'] = ['Worst universal'] * worst_subset_temp.shape[0]
         worst_subset.append(worst_subset_temp)
 
@@ -1902,22 +1902,22 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
         graph = universal_subset_all[universal_subset_all['Dataset'] == target]
         save_file_name = os.path.normpath(f'{output_folder}/{target}_vs_test_scores')
         make_test_seqs_graph(target, x_data=graph['u_conservation_test'].astype(float), xlabel='U coverage',
-                             y_data=graph['true_%_cov_test'].astype(float), ylabel='IGS true coverage',
+                             y_data=graph['true_U_IGS_cov_test'].astype(float), ylabel='IGS true coverage',
                              loc_data=graph['reference_idx'].astype(int), var_regs=u1376_dict[target][1],
                              save_file_name=save_file_name, file_type='png', alpha=0.3,
                              add_control=True, control_x_data=u1376_equivalent['u_conservation_test'].astype(float),
-                             control_y_data=u1376_equivalent['true_%_cov_test'].astype(float),
+                             control_y_data=u1376_equivalent['true_U_IGS_cov_test'].astype(float),
                              control_loc_data=u1376_equivalent['reference_idx'].astype(int))
         # # Graph guide score data
-        make_guide_score_plot(xdata=graph['true_%_cov_test'], xlabel='IGS true coverage', ydata=graph['test_score'],
+        make_guide_score_plot(xdata=graph['true_U_IGS_cov_test'], xlabel='IGS true coverage', ydata=graph['test_score'],
                               ylabel='Guide score', loc_data=graph['reference_idx'], var_regs=u1376_dict[target][1],
                               save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True,
                              add_control=True, control_x_data=u1376_equivalent['u_conservation_test'],
-                             control_y_data=u1376_equivalent['true_%_cov_test'],
+                             control_y_data=u1376_equivalent['true_U_IGS_cov_test'],
                              control_loc_data=u1376_equivalent['reference_idx'], lim=u1376_dict[target][2])
 
         # Now finally get the ones above our thresholds
-        temp_above = subset[subset['true_%_cov_test'] >= 0.7]
+        temp_above = subset[subset['true_U_IGS_cov_test'] >= 0.7]
         temp_above = temp_above[temp_above['u_conservation_test'] >= 0.7]
         universal_above_thresh.append(temp_above)
 
@@ -1937,9 +1937,9 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     # Here we graph the best designs
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 20 * 0.6)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    vars = [('u_conservation_test', 'true_%_cov_test', 'test_score'),
-            ('u_conservation_test_target', 'true_%_cov_test_background', 'test_score_background'),
-            ('u_conservation_test_target', 'true_%_cov_test_target', 'test_score_target')]
+    vars = [('u_conservation_test', 'true_U_IGS_cov_test', 'test_score'),
+            ('u_conservation_test_target', 'true_U_IGS_cov_test_background', 'test_score_background'),
+            ('u_conservation_test_target', 'true_U_IGS_cov_test_target', 'test_score_target')]
     batlow_4 = ['#093B6F', '#528165', '#D6A24E', '#FED0E5']
     for name, current_set, current_vars, suffix in [('universal tested to target', universal_designs_select, vars[0], ''),
                                             ('selective tested to background', best_selective_designs, vars[0], '_background'),
@@ -2131,7 +2131,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     # custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 30 * 0.6)}
     # sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # xlabels = ['U conservation', 'IGS true coverage', 'Guide score']
-    # vars = [('u_conservation_test_background', 'u_conservation_test_target'), ('true_%_cov_test_background', 'true_%_cov_test_target'),
+    # vars = [('u_conservation_test_background', 'u_conservation_test_target'), ('true_U_IGS_cov_test_background', 'true_U_IGS_cov_test_target'),
     #         ('test_score_background', 'test_score_target'), ('igs_test_minus_background', 'u_test_minus_background')]
     #
     # for i, (yvar, xvar) in enumerate(vars):
@@ -2299,7 +2299,7 @@ def make_summary_graph(subsets, tm_min, tm_max, data_df, control_df, save_fig, s
 
     # Each row is a group, each column is a metric to graph
     vars_and_titles = [('U conservation', 'u_conservation_test', [0, 1]),
-                       ('IGS conservation', 'true_%_cov_test', [0, 1]),
+                       ('IGS conservation', 'true_U_IGS_cov_test', [0, 1]),
                        ('Guide score', 'test_score', [0, 1]),
                        ('Tm GC', 'tm_nn_vs_test', [tm_min, tm_max])]
     current_graph = 0
