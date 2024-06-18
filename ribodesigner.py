@@ -1304,7 +1304,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
     coupled_datasets_name = designs_input.split('.')[0].split('/')[-1].split('\\')[-1] + '_vs_' + \
                             test_seqs_input.split('.')[0].split('/')[-1].split('\\')[-1]
 
-    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled')
+    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_' + coupled_datasets_name + '.coupled')
     # Check if this file already exists
     if os.path.exists(pickle_file_name) and os.path.exists(os.path.normpath(subfile + '/big_checkpoint.txt')):
         print('Coupled file and checklist already exist! Skipping coupling...')
@@ -1359,7 +1359,7 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
     # save into a separate folder. Each pickle file will have 50 designs in it
     print('Now saving...')
-    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled')
+    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_' + coupled_datasets_name + '.coupled')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with open(pickle_file_name, 'wb') as handle:
             pickle.dump(designs, handle)
