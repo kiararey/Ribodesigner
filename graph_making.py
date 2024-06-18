@@ -9,43 +9,11 @@ import logomaker as lm
 import random
 import icecream as ic
 import ribodesigner as rd
+from ribodesigner import extract_info, import_data_to_df
 import scipy
 from matplotlib.colors import LogNorm, ListedColormap, BoundaryNorm
 import os
 
-
-def import_data_to_df(designs_path, name, check_integrity: bool = True):
-    # lengths = [int(name.split('/')[-1].split('\\')[-1].split('_')[0]) for name in designs_path]
-    dfs = []
-    all_dupes_check = defaultdict(lambda: [])
-    all_without_dupes = defaultdict(lambda: [])
-
-    for i in range(0, len(designs_path)):
-        temp = extract_info(designs_path[i], name)
-        file_name = designs_path[i].split('/')[-1].split('\\')[-1].split('_worker')[0]
-        if check_integrity:
-            dupes_check = len(temp.index)
-            all_dupes_check[file_name].append(dupes_check)
-            without_dupes = len(temp.drop_duplicates().index)
-            all_without_dupes[file_name].append(without_dupes)
-            if dupes_check != without_dupes:
-                print(f'\n{name} {file_name} has duplicate outputs!')
-            dfs.append(temp)
-
-    for key, val in all_without_dupes.items():
-        all_vals = sum(val)
-        design_amt = int(key.split('_')[0])
-        # if design_amt == all_vals:
-        #     print(f'\n{name} {key} designs file has correct number of outputs')
-        # else:
-        #     print(f'\n{name} {key} designs file is not done cooking! Missing {design_amt - all_vals} designs. '
-        #           f'Run again to complete analysis.')
-        if design_amt != all_vals:
-            print(f'\n{name} {key} designs file is not done cooking! Missing {design_amt - all_vals} designs. '
-                  f'Run again to complete analysis.')
-
-    designs_df = pd.concat(dfs)
-    return designs_df
 
 
 def set_percentages_for_bar(list_of_paths):
@@ -433,8 +401,8 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
         for i, test_name in enumerate(test_file_names.keys()):
             # Plot a testing set that's relevant
             graph = all_subsets[target_name][test_name]
-            jointplot_fig.axes[i].axhline(y=0.7, color='orange', linestyle='-')
-            jointplot_fig.axes[i].axvline(x=0.7, color='orange', linestyle='-')
+            jointplot_fig.axes[i].axhline(y=0.75, color='orange', linestyle='-')
+            jointplot_fig.axes[i].axvline(x=0.75, color='orange', linestyle='-')
             hist_data = jointplot_fig.axes[i].hist2d(graph[xvar], graph[yvar], cmap='viridis', bins=bins_wanted,
                                                      norm=LogNorm(vmin=1, vmax=vmax))
             # Plot control datapoints
@@ -444,7 +412,7 @@ def make_graphs(var_regs: list[tuple[int, int]], control_designs_path: list[str]
                                           sizes=[150] * len(top_control[yvar]))
             jointplot_fig.axes[i].set(xlabel=None, ylabel=None, xlim=[0, 1], ylim=[0, 1])
             jointplot_fig.axes[i].set_title(test_name, loc='left')
-            num_df = graph[((graph[xvar] >= 0.7) & (graph[yvar] >= 0.7))]
+            num_df = graph[((graph[xvar] >= 0.75) & (graph[yvar] >= 0.75))]
             jointplot_fig.axes[i].annotate(f'n = {len(num_df.index)}\ngood guides', xy=(0.75, 0.15),
                                            xycoords='axes fraction')
             jointplot_fig.axes[i].label_outer()
@@ -961,71 +929,6 @@ def plot_variable_regions(ax, var_regs, invert=False):
     return
 
 
-def extract_info(results_file_path: list[str], dataset: str, data_type: str = 'dict'):
-    with open(results_file_path, 'r') as read_file:
-        list_of_designs = read_file.readlines()
-    # Now extact data here:
-    column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
-                    'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
-                    'num_of_targets': int, 'score_type': str, 'score': float, 'U_IGS_coverage': float, 'U_IGS_on target': float,
-                    'true_U_IGS_cov': float, 'composite_score': float, 'num_of_targets_background': int,
-                    'u_conservation_background': float, 'background_score': float, 'U_IGS_coverage_background': float,
-                    'U_IGS_on target_background': float, 'true_U_IGS_cov_background': float,
-                    'composite_background_score': float,
-                    'delta_igs_vs_background': float, 'delta_guide_vs_background': float, 'delta_vs_background': float,
-                    'name_of_test_dataset': str, 'num_of_targets_test': int, 'u_conservation_test': float,
-                    'test_score': float, 'tm_nn_vs_test': float, 'U_IGS_coverage_test': float, 'U_IGS_on target_test': float,
-                    'true_U_IGS_cov_test': float, 'composite_test_score': float, 'delta_igs_vs_test': float,
-                    'delta_guide_vs_test': float, 'delta_vs_test': float, 'target_Domain': str,
-                    'target_Domain_background': str, 'target_Domain_test': str, 'target_Phylum': str,
-                    'target_Phylum_background': str, 'target_Phylum_test': str, 'target_Class': str,
-                    'target_Class_background': str, 'target_Class_test': str, 'target_Order': str,
-                    'target_Order_background': str, 'target_Order_test': str, 'target_Family': str,
-                    'target_Family_background': str, 'target_Family_test': str, 'target_Genus': str,
-                    'target_Genus_background': str, 'target_Genus_test': str, 'target_Species': str,
-                    'target_Species_background': str, 'target_Species_test': str, 'target_Taxon': str,
-                    'target_Taxon_background': str, 'target_Taxon_test': str}
-
-    # design_dict = defaultdict(lambda: [])
-    # design_dict['index'] = [dataset] * len(list_of_designs)
-    # for design in list_of_designs:
-    #     individual_attributes = design.strip(' {').split(', "')
-    #     for key_val in individual_attributes:
-    #         key, val = key_val.split('": ')
-    #         key = key.strip('"')
-    #         try:
-    #             val_typed = column_types[key](val.strip('"\''))
-    #         except ValueError:
-    #             if column_types[key] == int or column_types[key] == float:
-    #                 val_typed = column_types[key](0)
-    #             else:
-    #                 print(column_types[key])
-    #         design_dict[key].append(val_typed)
-    # design_df = pd.DataFrame.from_dict(design_dict).convert_dtypes()
-    # return design_df
-
-    designs = []
-    for design in list_of_designs:
-        design_dict = {}
-        individual_attributes = design.strip(' {').split(', "')
-        for key_val in individual_attributes:
-            key, val = key_val.split('": ')
-            key = key.strip('"')
-            try:
-                val_typed = column_types[key](val.strip('"\''))
-            except ValueError:
-                if column_types[key] == int or column_types[key] == float:
-                    val_typed = column_types[key](0)
-                else:
-                    print(column_types[key])
-            design_dict[key] = val_typed
-        designs.append(design_dict)
-    if dataset is not None:
-        design_df = pd.DataFrame.from_records(designs, index=[dataset] * len(designs)).convert_dtypes()
-    else:
-        design_df = pd.DataFrame.from_records(designs, index=dataset).convert_dtypes()
-    return design_df
-
 
 def make_sequence_logo_graph(test_data_path: str, design_data_path: list[str], ref_data_path: list[str],
                              save_fig: bool = False,
@@ -1445,9 +1348,9 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
                                    'target_dataset', 'test_dataset']]
     filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
                                   + '_' + filtered_df_all['Dataset'])
-    # Extract categories: anything with target guide = 1 (no ambiguity) and target coverage > 0.7
+    # Extract categories: anything with target guide = 1 (no ambiguity) and target coverage > 0.75
     filtered_df_all = filtered_df_all[filtered_df_all['score'] == 1]
-    filtered_df = filtered_df_all[filtered_df_all['true_U_IGS_cov'] >= 0.7]
+    filtered_df = filtered_df_all[filtered_df_all['true_U_IGS_cov'] >= 0.75]
 
     # selective
     selective_subset = filtered_df[filtered_df.index == 'selective']
@@ -1602,7 +1505,7 @@ def graphs_multiple_guide_lengths(universal_path, selective_path, output_folder,
         fig, ax = plt.subplots()
 
         sns.scatterplot(x=xvar, y=yvar, data=selective_diffs_designs, linewidth=0, hue='Dataset',
-                        style='target_dataset', alpha=0.7, ax=ax)
+                        style='target_dataset', alpha=0.75, ax=ax)
         plt.plot([0, 1], [0, 1], color='orange', linestyle='--')
         if i < 3:
             ax.set_ylabel(xlabels[i] + ' background')
@@ -1723,7 +1626,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
             results_files_root = os.path.normpath(f'{current_path}/{file_name}/coupled/results/combined')
             results_files = [os.path.normpath(f'{results_files_root}/{f}') for f in os.listdir(results_files_root) if f.endswith('.txt')]
             with alive_bar(unknown='fish', spinner='fishes') as bar:
-                print(f'Now loading {current_dset}_{file_name} data...')
+                print(f'Now loading {current_dset} {file_name} data...')
                 if all_data_df is None:
                     all_data_df = import_data_to_df(results_files, current_dset)
                     labels = [file_name.replace('_', ' ')] * all_data_df.shape[0]
@@ -1776,7 +1679,7 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     filtered_df_all['to_pair'] = (filtered_df_all['id'] + '_' + filtered_df_all['target_dataset']
                                   + '_' + filtered_df_all['Dataset'])
     filtered_df = filtered_df_all[filtered_df_all['score'] == 1]
-    # filtered_df = filtered_df_all[filtered_df_all['true_U_IGS_cov'] >= 0.7]
+    # filtered_df = filtered_df_all[filtered_df_all['true_U_IGS_cov'] >= 0.75]
 
     # selective
     selective_subset = filtered_df[filtered_df.index == 'selective']
@@ -1834,10 +1737,10 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
             best_design.sort_values(by=['igs_test_minus_background', 'u_conservation_test_target',
                                         'test_score_target'], ascending=False)
             # Now finally get the ones above our thresholds
-            temp_above = joined_rows[joined_rows['igs_test_minus_background'] >= 0.7]
-            temp_below = joined_rows[joined_rows['igs_test_minus_background'] < 0.7]
-            temp_above = temp_above[temp_above['u_test_minus_background'] >= 0.7]
-            temp_below = temp_below[temp_below['u_test_minus_background'] < 0.7]
+            temp_above = joined_rows[joined_rows['igs_test_minus_background'] >= 0.65]
+            temp_below = joined_rows[joined_rows['igs_test_minus_background'] < 0.65]
+            temp_above = temp_above[temp_above['u_test_minus_background'] >= 0.65]
+            temp_below = temp_below[temp_below['u_test_minus_background'] < 0.65]
             best_selective.append(best_design.head(1))
             selective_diffs.append(joined_rows)
             selective_above_thresh.append(temp_above)
@@ -1861,8 +1764,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     selective_diffs_designs['Design type'] = selective_diffs_designs['target_dataset_target'].map(fn_cleanup_name)
     selective_above_thresh_designs['Design type'] = selective_above_thresh_designs['target_dataset_target'].map(fn_cleanup_name_thresh)
     selective_below_thresh_designs['Design type'] = selective_below_thresh_designs['target_dataset_target'].map(fn_cleanup_name_thresh)
-    selective_above_thresh_designs['U and U-IGS score'] = 'Both above 0.7'
-    selective_below_thresh_designs['U and U-IGS score'] = 'Both below 0.7'
+    selective_above_thresh_designs['U and U-IGS score'] = 'Both above 0.65'
+    selective_below_thresh_designs['U and U-IGS score'] = 'U or IGS below 0.65'
     test_threshed_selective = pd.concat([selective_below_thresh_designs, selective_above_thresh_designs])
     # Find best design for each universal
     universal_subset = filtered_df[filtered_df.index == 'universal']
@@ -1904,21 +1807,21 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
         make_test_seqs_graph(target, x_data=graph['u_conservation_test'].astype(float), xlabel='U coverage',
                              y_data=graph['true_U_IGS_cov_test'].astype(float), ylabel='IGS true coverage',
                              loc_data=graph['reference_idx'].astype(int), var_regs=u1376_dict[target][1],
-                             save_file_name=save_file_name, file_type='png', alpha=0.3,
+                             save_file_name=save_file_name, file_type=file_type, alpha=0.3,
                              add_control=True, control_x_data=u1376_equivalent['u_conservation_test'].astype(float),
                              control_y_data=u1376_equivalent['true_U_IGS_cov_test'].astype(float),
                              control_loc_data=u1376_equivalent['reference_idx'].astype(int))
         # # Graph guide score data
         make_guide_score_plot(xdata=graph['true_U_IGS_cov_test'], xlabel='IGS true coverage', ydata=graph['test_score'],
                               ylabel='Guide score', loc_data=graph['reference_idx'], var_regs=u1376_dict[target][1],
-                              save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True,
+                              save_file_name=save_file_name, bins_wanted = 100, file_type=file_type, save_fig=True,
                              add_control=True, control_x_data=u1376_equivalent['u_conservation_test'],
                              control_y_data=u1376_equivalent['true_U_IGS_cov_test'],
-                             control_loc_data=u1376_equivalent['reference_idx'], lim=u1376_dict[target][2])
+                             control_loc_data=u1376_equivalent['reference_idx'], lim=u1376_dict[target][2], dual_plot=False)
 
         # Now finally get the ones above our thresholds
-        temp_above = subset[subset['true_U_IGS_cov_test'] >= 0.7]
-        temp_above = temp_above[temp_above['u_conservation_test'] >= 0.7]
+        temp_above = subset[subset['true_U_IGS_cov_test'] >= 0.75]
+        temp_above = temp_above[temp_above['u_conservation_test'] >= 0.75]
         universal_above_thresh.append(temp_above)
 
     u1376_designs = pd.concat(u1376_designs)
@@ -2016,67 +1919,10 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_delta_scores.{file_type}'), format=file_type)
     plt.show()
 
-    # # uncomment this to show bad points
-    # test_threshed_selective = pd.concat([selective_below_thresh_designs, selective_above_thresh_designs])
-    # Plot chosen selective designs
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (7.73, 6.237)}
-    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    jointplot_fig = plt.figure()
-    gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=9)
-    joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[0:3, 0:3]),
-        1: jointplot_fig.add_subplot(gridspec[0:3, 3:6]),
-        2: jointplot_fig.add_subplot(gridspec[0:3, 6:9]),
-        3: jointplot_fig.add_subplot(gridspec[3:6, 0:9])
-    }
-    # Choose designs
-    fn_clean_dataset = lambda x: x.split(' all seqs')[0].split('Order ')[-1]
-    graph = test_threshed_selective[test_threshed_selective['Dataset'].isin(
-        ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
-    temp = selective_above_thresh_designs[selective_above_thresh_designs['Dataset'].isin(
-        ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
-    graph['Dataset'] = graph['Dataset'].map(fn_clean_dataset)
-    temp['Dataset'] = temp['Dataset'].map(fn_clean_dataset)
-    pts = temp[temp['id'].isin(['ACACG1076', 'CGGGA1099'])]
-    pts['color'] = ['#56B4E9', '#D38BB4']
-    graph = graph[~graph['id'].isin(['TCACC1216', 'TTAGC1500'])]
-    # Prepare plots
-    palette = {'Both above 0.7': '#000000', 'Both below 0.7': '#BDBDBD'}
-    plot_variable_regions(joint_ax[3], e_coli_var_regs)
-    joint_ax[3].axvline(x=1376, color='pink', linestyle='-')
-    sns.scatterplot(y='Dataset', x='u_test_minus_background', hue='U and U-IGS score', data=graph, alpha=0.5,
-                    ax=joint_ax[0], linestyle='', legend=False, style='U and U-IGS score', s=150, palette=palette,
-                    markers=['X', 'o'])
-    sns.scatterplot(y='Dataset', x='igs_test_minus_background', hue='U and U-IGS score', data=graph, legend=False,
-                    alpha=0.5,
-                    ax=joint_ax[1], linestyle='', style='U and U-IGS score', s=150, palette=palette, markers=['X', 'o'])
-    sns.scatterplot(y='Dataset', x='guide_test_minus_background', hue='U and U-IGS score', data=graph, alpha=0.5,
-                    ax=joint_ax[2], linestyle='', style='U and U-IGS score', s=150, palette=palette, legend=False,
-                    markers=['X', 'o'])
-    sns.scatterplot(y='Dataset', x='reference_idx', data=graph, ax=joint_ax[3], hue='U and U-IGS score', alpha=0.5,
-                    linestyle='', style='U and U-IGS score', palette=palette, markers=['X', 'o'])
-    # now plot the designs we are testing
-    sns.scatterplot(y='Dataset', x='u_test_minus_background', color=pts['color'], data=pts,
-                    ax=joint_ax[0], linestyle='', legend=False, s=150)
-    sns.scatterplot(y='Dataset', x='igs_test_minus_background', color=pts['color'], data=pts, legend=False,
-                    ax=joint_ax[1], linestyle='', s=150)
-    sns.scatterplot(y='Dataset', x='guide_test_minus_background', color=pts['color'], data=pts,
-                    ax=joint_ax[2], linestyle='', s=150, legend=False)
-    sns.scatterplot(y='Dataset', x='reference_idx', data=pts, ax=joint_ax[3], color=pts['color'],
-                    linestyle='')
-    jointplot_fig.suptitle('\u0394 scores for tested order-level selective ribozymes')
-    joint_ax[0].set(xlim=[0, 1.1], xlabel='\u0394 U conservation', ylabel='')
-    joint_ax[1].set(xlim=[0, 1.1], xlabel='\u0394 IGS true coverage', ylabel='', yticklabels='')
-    joint_ax[2].set(xlim=[-0.1, 1.1], xlabel='\u0394 guide score', ylabel='', yticklabels='')
-    joint_ax[3].set(xlabel='E. coli 16s rRNA indexing', ylabel='')
-    joint_ax[3].legend(loc='upper right', bbox_to_anchor=(1.25, 0.8), ncol=1, title='\u0394U and \u0394U-IGS scores')
-    plt.tight_layout()
-    plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_chosen_designs_delta_scores_all_graphed.{file_type}'), format=file_type)
-    plt.show()
-    #
-
+    # # # uncomment this to show bad points
+    # # test_threshed_selective = pd.concat([selective_below_thresh_designs, selective_above_thresh_designs])
     # # Plot chosen selective designs
-    # custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 11 * 0.6)}
+    # custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (7.73, 6.237)}
     # sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # jointplot_fig = plt.figure()
     # gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=9)
@@ -2088,34 +1934,37 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     # }
     # # Choose designs
     # fn_clean_dataset = lambda x: x.split(' all seqs')[0].split('Order ')[-1]
-    # graph = selective_above_thresh_designs[selective_above_thresh_designs['Dataset'].isin(
+    # graph = test_threshed_selective[test_threshed_selective['Dataset'].isin(
     #     ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
-    # below_graph = selective_below_thresh_designs[selective_below_thresh_designs['Dataset'].isin(
+    # temp = selective_above_thresh_designs[selective_above_thresh_designs['Dataset'].isin(
     #     ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
     # graph['Dataset'] = graph['Dataset'].map(fn_clean_dataset)
-    # below_graph['Dataset'] = below_graph['Dataset'].map(fn_clean_dataset)
-    # pts = graph[graph['id'].isin(['ACACG1076', 'CGGGA1099'])]
+    # temp['Dataset'] = temp['Dataset'].map(fn_clean_dataset)
+    # pts = temp[temp['id'].isin(['ACACG1076', 'CGGGA1099'])]
     # pts['color'] = ['#56B4E9', '#D38BB4']
     # graph = graph[~graph['id'].isin(['TCACC1216', 'TTAGC1500'])]
     # # Prepare plots
+    # palette = {'Both above 0.65': '#000000', 'U or IGS below 0.65': '#BDBDBD'}
     # plot_variable_regions(joint_ax[3], e_coli_var_regs)
     # joint_ax[3].axvline(x=1376, color='pink', linestyle='-')
-    #
-    # sns.scatterplot(y='Dataset', x='u_test_minus_background', color='#000000', data=graph,
-    #                 ax=joint_ax[0], linestyle='', legend=False, style='Target excluded or included_target', s=150)
-    # sns.scatterplot(y='Dataset', x='igs_test_minus_background', color='#000000', data=graph, legend=False,
-    #                 ax=joint_ax[1], linestyle='', style='Target excluded or included_target', s=150)
-    # sns.scatterplot(y='Dataset', x='guide_test_minus_background', color='#000000', data=graph,
-    #                 ax=joint_ax[2], linestyle='', style='Target excluded or included_target', s=150, legend=False)
-    # sns.scatterplot(y='Dataset', x='reference_idx', data=graph, ax=joint_ax[3], color='#000000',
-    #                 linestyle='')
+    # sns.scatterplot(y='Dataset', x='u_test_minus_background', hue='U and U-IGS score', data=graph, alpha=0.5,
+    #                 ax=joint_ax[0], linestyle='', legend=False, style='U and U-IGS score', s=150, palette=palette,
+    #                 markers=['X', 'o'])
+    # sns.scatterplot(y='Dataset', x='igs_test_minus_background', hue='U and U-IGS score', data=graph, legend=False,
+    #                 alpha=0.5,
+    #                 ax=joint_ax[1], linestyle='', style='U and U-IGS score', s=150, palette=palette, markers=['X', 'o'])
+    # sns.scatterplot(y='Dataset', x='guide_test_minus_background', hue='U and U-IGS score', data=graph, alpha=0.5,
+    #                 ax=joint_ax[2], linestyle='', style='U and U-IGS score', s=150, palette=palette, legend=False,
+    #                 markers=['X', 'o'])
+    # sns.scatterplot(y='Dataset', x='reference_idx', data=graph, ax=joint_ax[3], hue='U and U-IGS score', alpha=0.5,
+    #                 linestyle='', style='U and U-IGS score', palette=palette, markers=['X', 'o'])
     # # now plot the designs we are testing
     # sns.scatterplot(y='Dataset', x='u_test_minus_background', color=pts['color'], data=pts,
-    #                 ax=joint_ax[0], linestyle='', legend=False, style='Target excluded or included_target', s=150)
+    #                 ax=joint_ax[0], linestyle='', legend=False, s=150)
     # sns.scatterplot(y='Dataset', x='igs_test_minus_background', color=pts['color'], data=pts, legend=False,
-    #                 ax=joint_ax[1], linestyle='', style='Target excluded or included_target', s=150)
+    #                 ax=joint_ax[1], linestyle='', s=150)
     # sns.scatterplot(y='Dataset', x='guide_test_minus_background', color=pts['color'], data=pts,
-    #                 ax=joint_ax[2], linestyle='', style='Target excluded or included_target', s=150, legend=False)
+    #                 ax=joint_ax[2], linestyle='', s=150, legend=False)
     # sns.scatterplot(y='Dataset', x='reference_idx', data=pts, ax=joint_ax[3], color=pts['color'],
     #                 linestyle='')
     # jointplot_fig.suptitle('\u0394 scores for tested order-level selective ribozymes')
@@ -2123,9 +1972,66 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     # joint_ax[1].set(xlim=[0, 1.1], xlabel='\u0394 IGS true coverage', ylabel='', yticklabels='')
     # joint_ax[2].set(xlim=[-0.1, 1.1], xlabel='\u0394 guide score', ylabel='', yticklabels='')
     # joint_ax[3].set(xlabel='E. coli 16s rRNA indexing', ylabel='')
+    # joint_ax[3].legend(loc='upper right', bbox_to_anchor=(1.25, 0.8), ncol=1, title='\u0394U and \u0394U-IGS scores')
     # plt.tight_layout()
-    # plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_chosen_designs_delta_scores.{file_type}'), format=file_type)
+    # plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_chosen_designs_delta_scores_all_graphed.{file_type}'), format=file_type)
     # plt.show()
+
+    # Plot chosen selective designs
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (11.693, 6.72)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=9)
+    joint_ax = {
+        0: jointplot_fig.add_subplot(gridspec[0:3, 0:3]),
+        1: jointplot_fig.add_subplot(gridspec[0:3, 3:6]),
+        2: jointplot_fig.add_subplot(gridspec[0:3, 6:9]),
+        3: jointplot_fig.add_subplot(gridspec[3:6, 0:9])
+    }
+    # Choose designs
+    fn_clean_dataset = lambda x: x.split(' all seqs')[0].split('Order ')[-1]
+    graph = selective_above_thresh_designs[selective_above_thresh_designs['Dataset'].isin(
+        ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
+    below_graph = selective_below_thresh_designs[selective_below_thresh_designs['Dataset'].isin(
+        ['Order Pseudomonadales all seqs', 'Order Enterobacterales all seqs'])]
+    graph['Dataset'] = graph['Dataset'].map(fn_clean_dataset)
+    below_graph['Dataset'] = below_graph['Dataset'].map(fn_clean_dataset)
+    pts = graph[graph['id'].isin(['ACACG1076', 'CGGGA1099'])]
+    pts['color'] = ['#CBAED3', '#5CB4E5']
+    graph = graph[~graph['id'].isin(['TCACC1216', 'TTAGC1500'])]
+    # Prepare plots
+    plot_variable_regions(joint_ax[3], e_coli_var_regs)
+    joint_ax[3].axvline(x=1376, color='pink', linestyle='-')
+
+    sns.scatterplot(y='Dataset', x='u_test_minus_background', color='#000000', data=graph,
+                    ax=joint_ax[0], linestyle='', legend=False, style='Target excluded or included_target', s=150)
+    sns.scatterplot(y='Dataset', x='igs_test_minus_background', color='#000000', data=graph, legend=False,
+                    ax=joint_ax[1], linestyle='', style='Target excluded or included_target', s=150)
+    sns.scatterplot(y='Dataset', x='guide_test_minus_background', color='#000000', data=graph,
+                    ax=joint_ax[2], linestyle='', style='Target excluded or included_target', s=150, legend=False)
+    sns.scatterplot(y='Dataset', x='reference_idx', data=graph, ax=joint_ax[3], color='#000000',
+                    linestyle='')
+    # now plot the designs we are testing
+    sns.scatterplot(y='Dataset', x='u_test_minus_background', color=pts['color'], data=pts,
+                    ax=joint_ax[0], linestyle='', legend=False, style='Target excluded or included_target', s=150)
+    sns.scatterplot(y='Dataset', x='igs_test_minus_background', color=pts['color'], data=pts, legend=False,
+                    ax=joint_ax[1], linestyle='', style='Target excluded or included_target', s=150)
+    sns.scatterplot(y='Dataset', x='guide_test_minus_background', color=pts['color'], data=pts,
+                    ax=joint_ax[2], linestyle='', style='Target excluded or included_target', s=150, legend=False)
+    sns.scatterplot(y='Dataset', x='reference_idx', data=pts, ax=joint_ax[3], color=pts['color'],
+                    linestyle='')
+    jointplot_fig.suptitle('\u0394 scores for tested order-level selective ribozymes')
+    joint_ax[0].set(xlim=[0, 1.1], xlabel='\u0394 U conservation', ylabel='Scores')
+    joint_ax[1].set(xlim=[0, 1.1], xlabel='\u0394 IGS true coverage', ylabel='', yticklabels='')
+    joint_ax[2].set(xlim=[-0.1, 1.1], xlabel='\u0394 guide score', ylabel='', yticklabels='')
+    joint_ax[3].set(xlabel='E. coli 16s rRNA indexing', ylabel='16S rRNA locations')
+    joint_ax[0].axes.yaxis.set_ticklabels(['Entero', 'Pseudo'])
+    joint_ax[1].axes.yaxis.set_ticklabels([])
+    joint_ax[2].axes.yaxis.set_ticklabels([])
+    joint_ax[3].axes.yaxis.set_ticklabels(['Entero', 'Pseudo'])
+    plt.tight_layout()
+    plt.savefig(fname=os.path.normpath(f'{output_folder}/{name}_chosen_designs_delta_scores.{file_type}'), format=file_type)
+    plt.show()
 
     # # Plot different metrics vs. other metrics
     # custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 30 * 0.6)}
@@ -2151,8 +2057,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     #         ax.set_ylabel('\u0394 IGS true coverage')
     #         fig.suptitle(f'\u0394 U conservation vs. \u0394 IGS coverage for selective designs')
     #         name = os.path.normpath(f'{output_folder}/delta U vs delta IGS_selective_scores.{file_type}')
-    #         ax.axhline(y=0.7, color='orange', linestyle='-')
-    #         ax.axvline(x=0.7, color='orange', linestyle='-')
+    #         ax.axhline(y=0.75, color='orange', linestyle='-')
+    #         ax.axvline(x=0.75, color='orange', linestyle='-')
     #     ax.set(ylim=[0, 1.1], xlim=[0, 1.1])
     #
     #     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=5)
@@ -2177,8 +2083,8 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
     #         ax.set_xlabel('\u0394 U conservation')
     #         ax.set_ylabel('\u0394 IGS true coverage')
     #         fig.suptitle(f'\u0394 U conservation vs. \u0394 IGS coverage for selective designs')
-    #         ax.axhline(y=0.7, color='orange', linestyle='-')
-    #         ax.axvline(x=0.7, color='orange', linestyle='-')
+    #         ax.axhline(y=0.75, color='orange', linestyle='-')
+    #         ax.axvline(x=0.75, color='orange', linestyle='-')
     #         name = os.path.normpath(f'{output_folder}/delta U vs delta IGS_selective_scores_by_taxonomy.{file_type}')
     #     ax.set(ylim=[0, 1.1], xlim=[0, 1.1])
     #
@@ -2212,51 +2118,84 @@ def graphs_multiple_conditions(universal_path, selective_path, output_folder, m_
 
 def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, loc_data: list,
                           var_regs: list, save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True,
-                          add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None, lim=1580):
-    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (10.769, 8.087)}
+                          add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None, lim=1580,
+                          dual_plot: bool = True):
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (10.193, 6.932)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
-    jointplot_fig = plt.figure()
-    gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
-    joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[0:6, 6:14]),
-        1: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
-    }
-    # Plot scatter and kde plots
-    # below is for individual log norms
-    good_guides = 0
-    for x, y in zip(xdata, ydata):
-        if x > 0.7 and y > 0.7:
-            good_guides += 1
+    if dual_plot:
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[0:6, 6:14]),
+            1: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
+        }
+        # Plot scatter and kde plots
+        # below is for individual log norms
+        good_guides = 0
+        for x, y in zip(xdata, ydata):
+            if x > 0.75 and y > 0.75:
+                good_guides += 1
 
-    jointplot_fig.axes[0].axhline(y=0.7, color='orange', linestyle='-')
-    jointplot_fig.axes[0].axvline(x=0.7, color='orange', linestyle='-')
-    hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
-    jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
+        jointplot_fig.axes[0].axhline(y=0.75, color='orange', linestyle='-')
+        jointplot_fig.axes[0].axvline(x=0.75, color='orange', linestyle='-')
+        hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
+        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
 
-    jointplot_fig.axes[0].annotate(f'n = {good_guides}\ngood guides', xy=(0.75, 0.15), xycoords='axes fraction')
+        jointplot_fig.axes[0].annotate(f'n = {good_guides}\ncandidate\ndesigns', xy=(0.75, 0.15), xycoords='axes fraction')
 
-    jointplot_fig.axes[0].set_xlabel(xlabel)
-    jointplot_fig.axes[0].set_ylabel(ylabel)
-    # Set variable regions for location plots
-    plot_variable_regions(joint_ax[1], var_regs)
-    # Plot test data for each testing condition
-    sns.scatterplot(x=loc_data, y=ydata, ax=joint_ax[1], alpha=0.3, legend=False, linewidth=0, size=0.5,
-                    color='#000000')
+        jointplot_fig.axes[0].set_xlabel(xlabel)
+        jointplot_fig.axes[0].set_ylabel(ylabel)
+        # Set variable regions for location plots
+        plot_variable_regions(joint_ax[1], var_regs)
+        # Plot test data for each testing condition
+        sns.scatterplot(x=loc_data, y=ydata, ax=joint_ax[1], alpha=0.3, legend=False, linewidth=0, size=0.5,
+                        color='#000000')
 
-    if add_control:
-        sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#43a2ca',
-                        edgecolors = 'black', linewidth = 0.8, marker = '^', sizes = [150] * len(control_loc_data))
-        sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
-                        edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+        if add_control:
+            sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#43a2ca',
+                            edgecolors = 'black', linewidth = 0.8, marker = '^', sizes = [150] * len(control_loc_data))
+            sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
+                            edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
 
-    jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
-    jointplot_fig.axes[1].set_ylabel(ylabel)
-    jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02], ylabel=None)
-    # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
-    jointplot_fig.axes[1].set(xlim=[-0.1, lim])
-    jointplot_fig.axes[1].set(xlabel='Reference SSU rRNA index')
-    jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
-    jointplot_fig.axes[0].tick_params(labelleft=False)
+        jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
+        jointplot_fig.axes[1].set_ylabel(ylabel)
+        jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02], ylabel=None)
+        # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
+        jointplot_fig.axes[1].set(xlim=[-0.1, lim])
+        jointplot_fig.axes[1].set(xlabel='Reference SSU rRNA index')
+        jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[0].tick_params(labelleft=False)
+    else:
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=6)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
+        }
+        # Plot scatter and kde plots
+        # below is for individual log norms
+        good_guides = 0
+        for x, y in zip(xdata, ydata):
+            if x > 0.75 and y > 0.75:
+                good_guides += 1
+
+        jointplot_fig.axes[0].axhline(y=0.75, color='orange', linestyle='-')
+        jointplot_fig.axes[0].axvline(x=0.75, color='orange', linestyle='-')
+        hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
+        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
+
+        jointplot_fig.axes[0].annotate(f'n = {good_guides}\ncandidate\ndesigns', xy=(0.75, 0.15),
+                                       xycoords='axes fraction')
+
+        jointplot_fig.axes[0].set_xlabel(xlabel)
+        jointplot_fig.axes[0].set_ylabel(ylabel)
+
+        if add_control:
+            sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
+                            edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+
+        jointplot_fig.axes[0].set_ylabel(ylabel)
+        jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02])
+
     name = save_file_name.split('/')[-1].split('\\')[-1].replace('_', ' ').replace('scores', 'guide scores')
     jointplot_fig.suptitle(name.replace('vs test', 'tested to target'))
     plt.tight_layout()

@@ -2086,3 +2086,78 @@ def get_tm_gc(seq, strict=True, valueset=7, userset=None, mismatch=True, mismatc
     if mismatch:
         melting_temp -= d * (seq.count(mismatch_base) * 100.0 / len(seq))
     return melting_temp
+
+
+def extract_info(results_file_path: str, dataset: str):
+    with open(results_file_path, 'r') as read_file:
+        list_of_designs = read_file.readlines()
+    # Now extact data here:
+    column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
+                    'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
+                    'num_of_targets': int, 'score_type': str, 'score': float, 'U_IGS_coverage': float, 'U_IGS_on target': float,
+                    'true_U_IGS_cov': float, 'composite_score': float, 'num_of_targets_background': int,
+                    'u_conservation_background': float, 'background_score': float, 'U_IGS_coverage_background': float,
+                    'U_IGS_on target_background': float, 'true_U_IGS_cov_background': float,
+                    'composite_background_score': float,
+                    'delta_igs_vs_background': float, 'delta_guide_vs_background': float, 'delta_vs_background': float,
+                    'name_of_test_dataset': str, 'num_of_targets_test': int, 'u_conservation_test': float,
+                    'test_score': float, 'tm_nn_vs_test': float, 'U_IGS_coverage_test': float, 'U_IGS_on target_test': float,
+                    'true_U_IGS_cov_test': float, 'composite_test_score': float, 'delta_igs_vs_test': float,
+                    'delta_guide_vs_test': float, 'delta_vs_test': float, 'target_Domain': str,
+                    'target_Domain_background': str, 'target_Domain_test': str, 'target_Phylum': str,
+                    'target_Phylum_background': str, 'target_Phylum_test': str, 'target_Class': str,
+                    'target_Class_background': str, 'target_Class_test': str, 'target_Order': str,
+                    'target_Order_background': str, 'target_Order_test': str, 'target_Family': str,
+                    'target_Family_background': str, 'target_Family_test': str, 'target_Genus': str,
+                    'target_Genus_background': str, 'target_Genus_test': str, 'target_Species': str,
+                    'target_Species_background': str, 'target_Species_test': str, 'target_Taxon': str,
+                    'target_Taxon_background': str, 'target_Taxon_test': str}
+
+    designs = []
+    for design in list_of_designs:
+        design_dict = {}
+        individual_attributes = design.strip(' {').split(', "')
+        for key_val in individual_attributes:
+            key, val = key_val.split('": ')
+            key = key.strip('"')
+            try:
+                val_typed = column_types[key](val.strip('"\''))
+            except ValueError:
+                if column_types[key] == int or column_types[key] == float:
+                    val_typed = column_types[key](0)
+                else:
+                    print(column_types[key])
+            design_dict[key] = val_typed
+        designs.append(design_dict)
+    if dataset is not None:
+        design_df = pd.DataFrame.from_records(designs, index=[dataset] * len(designs)).convert_dtypes()
+    else:
+        design_df = pd.DataFrame.from_records(designs, index=dataset).convert_dtypes()
+    return design_df
+
+def import_data_to_df(designs_path: list[str], name: str = 'designs', check_integrity: bool = True):
+    dfs = []
+    all_dupes_check = defaultdict(lambda: [])
+    all_without_dupes = defaultdict(lambda: [])
+
+    for i in range(0, len(designs_path)):
+        temp = extract_info(designs_path[i], name)
+        file_name = designs_path[i].split('/')[-1].split('\\')[-1].split('_worker')[0]
+        if check_integrity:
+            dupes_check = len(temp.index)
+            all_dupes_check[file_name].append(dupes_check)
+            without_dupes = len(temp.drop_duplicates().index)
+            all_without_dupes[file_name].append(without_dupes)
+            if dupes_check != without_dupes:
+                print(f'\n{name} {file_name} has duplicate outputs!')
+            dfs.append(temp)
+
+    for key, val in all_without_dupes.items():
+        all_vals = sum(val)
+        design_amt = int(key.split('_')[0])
+        if design_amt != all_vals:
+            print(f'\n{name} {key} designs file is not done cooking! Missing {design_amt - all_vals} designs. '
+                  f'Run again to complete analysis.')
+
+    designs_df = pd.concat(dfs)
+    return designs_df
