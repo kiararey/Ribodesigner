@@ -3,7 +3,7 @@ import os
 from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
-                          select_designs, adjust_var_regs)
+                          select_designs, adjust_var_regs, import_data_to_df)
 from graph_making import (make_graphs, make_sequence_logo_graph, make_violin_plots, graphs_multiple_guide_lengths,
                           graphs_multiple_conditions, get_fungi_designs)
 
@@ -1189,3 +1189,5 @@ if __name__ == '__main__':
                                output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
                                              'My Drive/KRG Thesis/Posters/SEED 2024/Data files from Ribodesigner',
                                add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs, file_type='png')
+
+    import_data_to_df(['here is your result file'])

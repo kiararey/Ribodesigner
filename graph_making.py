@@ -9,7 +9,7 @@ import logomaker as lm
 import random
 import icecream as ic
 import ribodesigner as rd
-from ribodesigner import extract_info, import_data_to_df
+from ribodesigner import import_data_to_df
 import scipy
 from matplotlib.colors import LogNorm, ListedColormap, BoundaryNorm
 import os
