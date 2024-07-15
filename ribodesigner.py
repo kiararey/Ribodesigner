@@ -7,8 +7,6 @@ import subprocess
 import time
 from collections import defaultdict
 from math import exp, log
-from graph_making import make_test_seqs_graph, import_data_to_df, make_guide_score_plot
-
 import numpy as np
 import pandas as pd
 from Bio import AlignIO, SeqUtils
@@ -17,6 +15,9 @@ from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from alive_progress import alive_bar
 from icecream import ic
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap, BoundaryNorm
 
 ic.configureOutput(prefix='debug | --> ')
 
@@ -2161,3 +2162,264 @@ def import_data_to_df(designs_path: list[str], name: str = 'designs', check_inte
 
     designs_df = pd.concat(dfs)
     return designs_df
+
+
+def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, loc_data: list,
+                          var_regs: list, save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True,
+                          add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None, lim=1580,
+                          dual_plot: bool = True):
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (10.193, 6.932)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    if dual_plot:
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[0:6, 6:14]),
+            1: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
+        }
+        # Plot scatter and kde plots
+        # below is for individual log norms
+        good_guides = 0
+        for x, y in zip(xdata, ydata):
+            if x > 0.75 and y > 0.75:
+                good_guides += 1
+
+        jointplot_fig.axes[0].axhline(y=0.75, color='orange', linestyle='-')
+        jointplot_fig.axes[0].axvline(x=0.75, color='orange', linestyle='-')
+        hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
+        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
+
+        jointplot_fig.axes[0].annotate(f'n = {good_guides}\ncandidate\ndesigns', xy=(0.75, 0.15), xycoords='axes fraction')
+
+        jointplot_fig.axes[0].set_xlabel(xlabel)
+        jointplot_fig.axes[0].set_ylabel(ylabel)
+        # Set variable regions for location plots
+        plot_variable_regions(joint_ax[1], var_regs)
+        # Plot test data for each testing condition
+        sns.scatterplot(x=loc_data, y=ydata, ax=joint_ax[1], alpha=0.3, legend=False, linewidth=0, size=0.5,
+                        color='#000000')
+
+        if add_control:
+            sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#43a2ca',
+                            edgecolors = 'black', linewidth = 0.8, marker = '^', sizes = [150] * len(control_loc_data))
+            sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
+                            edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+
+        jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
+        jointplot_fig.axes[1].set_ylabel(ylabel)
+        jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02], ylabel=None)
+        # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
+        jointplot_fig.axes[1].set(xlim=[-0.1, lim])
+        jointplot_fig.axes[1].set(xlabel='Reference SSU rRNA index')
+        jointplot_fig.axes[1].sharey(jointplot_fig.axes[0])
+        jointplot_fig.axes[0].tick_params(labelleft=False)
+    else:
+        jointplot_fig = plt.figure()
+        gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=6)
+        joint_ax = {
+            0: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
+        }
+        # Plot scatter and kde plots
+        # below is for individual log norms
+        good_guides = 0
+        for x, y in zip(xdata, ydata):
+            if x > 0.75 and y > 0.75:
+                good_guides += 1
+
+        jointplot_fig.axes[0].axhline(y=0.75, color='orange', linestyle='-')
+        jointplot_fig.axes[0].axvline(x=0.75, color='orange', linestyle='-')
+        hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
+        jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
+
+        jointplot_fig.axes[0].annotate(f'n = {good_guides}\ncandidate\ndesigns', xy=(0.75, 0.15),
+                                       xycoords='axes fraction')
+
+        jointplot_fig.axes[0].set_xlabel(xlabel)
+        jointplot_fig.axes[0].set_ylabel(ylabel)
+
+        if add_control:
+            sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
+                            edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+
+        jointplot_fig.axes[0].set_ylabel(ylabel)
+        jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02])
+
+    name = save_file_name.split('/')[-1].split('\\')[-1].replace('_', ' ').replace('scores', 'guide scores')
+    jointplot_fig.suptitle(name.replace('vs test', 'tested to target'))
+    plt.tight_layout()
+    if save_fig:
+        save_file_name = os.path.normpath(f'{save_file_name}_guide_scores.{file_type}')
+        plt.savefig(fname=save_file_name, format=file_type)
+    plt.show()
+
+    return
+
+
+def plot_variable_regions(ax, var_regs, invert=False):
+    if invert:
+        for V in var_regs:
+            ax.axhspan(V[0], V[1], facecolor='g', alpha=0.2)
+    else:
+        for V in var_regs:
+            ax.axvspan(V[0], V[1], facecolor='g', alpha=0.2)
+    return
+
+
+def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, ylabel: str,
+                         loc_data: list[int], var_regs: list, save_file_name: str, alpha=0.5,
+                         file_type: str = 'png', dataset_len: int = None, add_three_panel: bool = True,
+                         add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None):
+    # Set plot parameters
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 18 * 0.6)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    # Prepare axes for first figure
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=7, ncols=14)
+    joint_ax = {
+        0: jointplot_fig.add_subplot(gridspec[1:7, 0:7]),
+        1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
+        2: jointplot_fig.add_subplot(gridspec[1:7, 7:14]),
+        3: jointplot_fig.add_subplot(gridspec[0:1, 7:14])
+    }
+    # Prepare hue data: color based on yes no var regs
+    yes_no_var_reg = ['Conserved region'] * len(loc_data)
+    for i, loc in enumerate(loc_data):
+        for range_min, range_max in var_regs:
+            if range_min <= loc <= range_max:
+                yes_no_var_reg[i] = 'Variable region'
+                break
+    # Plot scatter and kde plots
+    # color based on location:
+    yes_no_palette = {'Conserved region': '#000000', 'Variable region': 'g'}
+    sns.scatterplot(x=x_data, y=y_data, linewidth=0, alpha=alpha, hue=loc_data, ax=joint_ax[0], palette='viridis')
+    norm = plt.Normalize(min(loc_data), max(loc_data))
+    colorbar_data = plt.cm.ScalarMappable(cmap='viridis', norm=norm)
+    colorbar_data.set_array([])
+    joint_ax[0].get_legend().remove()
+    jointplot_fig.colorbar(colorbar_data, ax=joint_ax[0], pad=0.1, orientation='horizontal',
+                           label='Location along E. coli 16s')
+    sns.scatterplot(x=x_data, y=y_data, linewidth=0, alpha=alpha, hue=yes_no_var_reg, ax=joint_ax[2],
+                    palette=yes_no_palette)
+    cmap = ListedColormap(colors=['#000000', 'g'])
+    bounds = [0, 0.5, 1]
+    norm = BoundaryNorm(bounds, cmap.N)
+    colorbar_data = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    colorbar_data.set_array([])
+    joint_ax[2].get_legend().remove()
+
+    formatter = plt.FixedFormatter(['Conserved region', 'Variable region'])
+    plt.colorbar(colorbar_data, ticks=plt.FixedLocator([0.25, 0.75]), format=formatter, ax=joint_ax[2], pad=0.1,
+                 orientation='horizontal', label='Variable region location')
+
+    sns.kdeplot(x=x_data, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0,
+                clip=[0.1, 1])
+    joint_ax[1].label_outer()
+    # sns.kdeplot(y=y_data, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0)
+    # jointplot_fig.axes[1].tick_params(axis='both', labelleft=False)
+    sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
+                palette=yes_no_palette, cut=0, clip=[0.1, 1])
+    if add_control:
+        jointplot_fig.axes[0].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
+                                      linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+        jointplot_fig.axes[2].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
+                                      linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+    # sns.kdeplot(y=y_data, ax=joint_ax[5], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
+    #             palette=yes_no_palette, cut=0)
+    jointplot_fig.axes[0].set(xlabel=xlabel, ylabel=ylabel, xlim=[0, 1], ylim=[0, 1])
+    jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+    joint_ax[2].label_outer()
+    joint_ax[3].label_outer()
+    jointplot_fig.axes[1].tick_params(axis='both', labelleft=False, labelbottom=False, left=False)
+    jointplot_fig.axes[2].set(xlabel=xlabel, xlim=[0, 1], ylim=[0, 1])
+    jointplot_fig.axes[3].sharex(jointplot_fig.axes[0])
+    jointplot_fig.axes[3].tick_params(axis='both', labelleft=False, labelbottom=False, left=False)
+    jointplot_fig.axes[2].tick_params(axis='y', labelleft=False)
+    if dataset_len is not None:
+        jointplot_fig.suptitle(title.replace('_', ' ') + f' {xlabel} and {ylabel} distributions '
+                                                         f'n = {dataset_len}')
+    else:
+        jointplot_fig.suptitle(title.replace('_', ' ') + f' {xlabel} and {ylabel} distributions')
+    plt.tight_layout()
+    plt.savefig(fname=f'{save_file_name}_var_regs.{file_type}', format=file_type)
+    plt.show()
+
+    # Prepare axes for second figure
+    plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
+                           save_file_name, file_type, add_control=add_control, control_x_data=control_x_data,
+                           control_y_data=control_y_data, control_loc_data=control_loc_data)
+
+    return
+
+
+
+def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
+                           save_file_name, file_type, add_control: bool = False, control_loc_data=None,
+                           control_x_data=None, control_y_data=None):
+    # Set plot parameters
+    custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 18 * 0.6)}
+    sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
+    # Prepare axes for figure
+    jointplot_fig = plt.figure()
+    gridspec = jointplot_fig.add_gridspec(nrows=9, ncols=7)
+    joint_ax = {
+        0: jointplot_fig.add_subplot(gridspec[0:3, 0:7]),
+        1: jointplot_fig.add_subplot(gridspec[3:6, 0:7]),
+        2: jointplot_fig.add_subplot(gridspec[6:9, 0:7])
+    }
+    # Set variable regions for location plots
+    plot_variable_regions(joint_ax[0], var_regs)
+    plot_variable_regions(joint_ax[1], var_regs)
+    plot_variable_regions(joint_ax[2], var_regs)
+    # Plot test data for each testing condition
+    unique_locs = {loc: [set(), 0] for loc in set(loc_data)}
+    for loc, xval in zip(loc_data, x_data):
+        unique_locs[loc][0].add(xval)
+        unique_locs[loc][1] += 1
+    to_plot_x = []
+    to_plot_loc = []
+    to_plot_nums_of_vals = []
+    for loc, (val, num_of_vals) in unique_locs.items():
+        to_plot_x.append(*val)
+        to_plot_loc.append(loc)
+        to_plot_nums_of_vals.append(num_of_vals)
+    if len(to_plot_loc) != len(to_plot_x):
+        print('x data contains non-unique values and cannot be plotted by reducing duplicates')
+        sns.scatterplot(x=loc_data, y=x_data, linewidth=0, size=0.5, color='#000000',
+                        ax=jointplot_fig.axes[0], alpha=alpha / 2, legend=False)
+    else:
+        sns.scatterplot(x=to_plot_loc, y=to_plot_x, linewidth=0, size=0.5, color='#000000',
+                        ax=jointplot_fig.axes[0], alpha=1, legend=False)
+        jointplot_fig.axes[0].set_title(f'{len(to_plot_loc)} unique U sites', loc='left')
+        jointplot_fig.axes[0].label_outer()
+    jointplot_fig.axes[1].bar(to_plot_loc, to_plot_nums_of_vals, color='#000000', edgecolor='#000000')
+    # jointplot_fig.axes[1].set_title(f'{len(loc_data)} unique U-IGS sites', loc='left')
+    jointplot_fig.axes[1].label_outer()
+    sns.scatterplot(x=loc_data, y=y_data, linewidth=0, size=0.5, color='#000000',
+                    ax=jointplot_fig.axes[2], alpha=alpha / 2, legend=False)
+    if add_control:
+        jointplot_fig.axes[0].scatter(x=control_loc_data, y=control_x_data, alpha=1, c='#43a2ca', edgecolors='black',
+                                      linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+        jointplot_fig.axes[2].scatter(x=control_loc_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
+                                      linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
+    jointplot_fig.axes[2].set_title(f'{len(loc_data)} unique U-IGS sites', loc='left')
+    # Set graph settings for pretti graphing
+    jointplot_fig.axes[0].set_ylabel(xlabel)
+    jointplot_fig.axes[1].set_ylabel('Number of U-IGS')
+    jointplot_fig.axes[2].set_ylabel(ylabel)
+    max_loc = max(loc_data)
+    jointplot_fig.axes[0].set(xlabel=None, xlim=[-0.1, max_loc + 20], ylim=[-0.1, 1.1])
+    jointplot_fig.axes[2].sharex(jointplot_fig.axes[0])
+    jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
+    jointplot_fig.axes[2].set(xlabel=None)
+    jointplot_fig.axes[2].set(xlabel='Reference 16s rRNA index')
+    jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
+    jointplot_fig.axes[0].tick_params(labelbottom=False)
+    if dataset_len is not None:
+        jointplot_fig.suptitle(title.replace('_', ' ') + f' {xlabel} and {ylabel} distributions '
+                                                         f'n = {dataset_len}')
+    else:
+        jointplot_fig.suptitle(title.replace('_', ' ') + f' {xlabel} and {ylabel} distributions')
+    plt.tight_layout()
+    plt.savefig(fname=save_file_name + '.' + file_type, format=file_type)
+    plt.show()
+    return

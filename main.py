@@ -4,8 +4,7 @@ from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
                           select_designs, adjust_var_regs, import_data_to_df)
-from graph_making import (make_graphs, make_sequence_logo_graph, make_violin_plots, graphs_multiple_guide_lengths,
-                          graphs_multiple_conditions, get_fungi_designs)
+from graphs_for_paper import (graphs_multiple_conditions)
 
 
 
@@ -19,7 +18,7 @@ def check_checkpoint_file(coupled_folder):
         return -1
 
     # check the amount of work by summing the number of designs on each file in the coupled folder
-    lengths = [int(name.split('/')[-1].split('\\')[-1].split('_')[0]) for name in analysis_files]
+    lengths = [int(name.split('/')[-1].split('\\')[-1].split('_designs')[0]) for name in analysis_files]
     total_work = sum(lengths)
 
     # read each line as a tuple of three values - big index, file name, small index
@@ -131,7 +130,7 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
                                   score_type=score_type, msa_fast=msa_fast,
                                   remove_x_dupes_in_graph=remove_x_dupes_in_graph, lim=var_regs_lim)
         else:
-            print(f'{test_save_file_name} exists already! Moving on...')
+            print(f'{title} exists already! Moving on...')
     all_target_file_names = []
     for target_file in target_seqs_to_process:
         target_title = target_file.split('.')[0].split('/')[-1].split('\\')[-1]
@@ -145,7 +144,7 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
                              score_type=score_type, percent_of_target_seqs_used=percent_of_target_seqs_used,
                              gaps_allowed=gaps_allowed, random_guide_sample_size=random_guide_sample_size)
         else:
-            print(f'{target_save_file_name} exists already! Moving on...')
+            print(f'{target_title} exists already! Moving on...')
 
         for test_outfile in all_test_file_names:
             _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
@@ -1099,30 +1098,30 @@ if __name__ == '__main__':
     # get_fungi_designs(results_stringent_path=stringent_path, results_to_compare_path=to_compare_path,
     #              output_folder=out_path, file_type='png', add_overhangs=True)
 
-    # # Set up datasets we will test
-    # # 1 - Universal
-    # path = 'Datasets_used/SILVA_squished_datasets'
-    # universal_target_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
-    #                          if file.endswith('_target.fasta')}
-    # universal_test_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
-    #                        if file.endswith('_test.fasta')}
-    # save_file = 'test_output_files/universal'
-    #
-    # for key, targets in universal_target_seqs.items():
-    #     print(f'\nNow making universal ribozymes for {key}...')
-    #     current_ref_path = ref_paths_dict[key]
-    #     var_regs = var_regs_dict[key]
-    #     target_file_names, test_file_names = (
-    #         ribodesigner_routine(target_seqs_to_process=[targets],
-    #                              test_seqs_to_process=[universal_test_seqs[key]],
-    #                              out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
-    #                              graph_results=True, var_regs=var_regs, graph_type='png',
-    #                              get_consensus_batches=True, batch_num=10, score_type='weighted', msa_fast=True,
-    #                              remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
-    #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
-    #                              flexible_igs=True))
-    #
-    # output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    # Set up datasets we will test
+    # 1 - Universal
+    path = 'Datasets_used/SILVA_squished_datasets'
+    universal_target_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
+                             if file.endswith('_target.fasta')}
+    universal_test_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
+                           if file.endswith('_test.fasta')}
+    save_file = 'test_output_files/universal_results'
+
+    for key, targets in universal_target_seqs.items():
+        print(f'\nNow making universal ribozymes for {key}...')
+        current_ref_path = ref_paths_dict[key]
+        var_regs = var_regs_dict[key]
+        target_file_names, test_file_names = (
+            ribodesigner_routine(target_seqs_to_process=[targets],
+                                 test_seqs_to_process=[universal_test_seqs[key]],
+                                 out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
+                                 graph_results=True, var_regs=var_regs, graph_type='png',
+                                 get_consensus_batches=True, batch_num=10, score_type='weighted', msa_fast=True,
+                                 remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
+                                 percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+                                 flexible_igs=True))
+
+    output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
     #
     # # 2 Selective pseudo and entero
     # path_e = 'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_Enterobacterales_included'
