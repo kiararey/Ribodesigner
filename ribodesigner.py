@@ -489,7 +489,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                  guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, min_true_cov: float = 0.7,
                  fileout: bool = False, folder_to_save: str = '',
                  score_type: str = 'weighted', msa_fast: bool = False, gaps_allowed: bool = True,
-                 percent_of_target_seqs_used: float = 1.0,
+                 percent_of_target_seqs_used: float = 1.0, get_consensus_batches: bool = True,
                  random_guide_sample_size: int = 10, store_batch_results: bool = False):
     """Generates ribozyme designs to target a set of sequences.
     :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
@@ -588,7 +588,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
     # for i in range(0, 10):
     #     optimize_designs(to_optimize[i], score_type=score_type, msa_fast=msa_fast,
     #                      gaps_allowed=gaps_allowed, compare_to_background=False,
-    #                      random_sample_size=random_guide_sample_size, random_sample=True)
+    #                      random_sample_size=random_guide_sample_size, random_sample=get_consensus_batches)
     #     ic()
     # time1 = time.perf_counter()
     with alive_bar(unknown='fish', spinner='fishes') as bar:
@@ -599,7 +599,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                                         'random_sample_size', 'random_sample', 'store_batch_results'])
         # prepare data for starmap
         in_data = [(sub_array, score_type, guide_length, msa_fast, gaps_allowed, False,
-                    random_guide_sample_size, True, store_batch_results)
+                    random_guide_sample_size, get_consensus_batches, store_batch_results)
                    for sub_array in np.array_split(to_optimize, process_num)]
 
         # multithread
@@ -722,12 +722,20 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         igs_true_perc_cov_list = []
         ref_idxes_list = []
         guide_scores_list = []
+        in_var_reg = []
         for igs_id, igs_id_count in igs_ids_counts.items():
             ref_idx = int(igs_id[igs_length:])
             ref_idxes_list.append(ref_idx)
             u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
             igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
             guide_scores_list.append(guide_scores[igs_id])
+            # for l, r in var_regs:
+            #     if l <= ref_idx <= r:
+            #         in_var_reg_temp = True
+            #         break
+            #     else:
+            #         in_var_reg_temp = False
+            # in_var_reg.append(in_var_reg_temp)
         make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U coverage',
                              y_data=igs_true_perc_cov_list, ylabel='IGS true coverage', loc_data=ref_idxes_list,
                              var_regs=var_regs, save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
@@ -735,7 +743,7 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         # Graph guide score data
         make_guide_score_plot(xdata=igs_true_perc_cov_list, xlabel='IGS true coverage', ydata=guide_scores_list,
                               ylabel='Average guide score', loc_data=ref_idxes_list, var_regs=var_regs, lim=lim,
-                              save_file_name=save_file_name, bins_wanted = 100, file_type='png', save_fig=True)
+                              save_file_name=save_file_name, bins_wanted = 100, file_type=graph_file_type, save_fig=True)
 
 
     if os.path.exists(f'{save_file_name}.pickle'):
@@ -1932,6 +1940,41 @@ def words2countmatrix(words, priori: list = None):
                 m[i][1] = m[i][1] + priori[1]
                 m[i][2] = m[i][2] + priori[2]
                 m[i][3] = m[i][3] + priori[3]
+            # adding some ambiguity
+            elif letter == 'R':
+                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[2])
+                m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[2])
+            elif letter == 'Y':
+                m[i][1] = m[i][1] + priori[1]/(priori[1] + priori[3])
+                m[i][3] = m[i][3] + priori[3]/(priori[1] + priori[3])
+            elif letter == 'W':
+                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[3])
+                m[i][3] = m[i][3] + priori[3]/(priori[0] + priori[3])
+            elif letter == 'S':
+                m[i][1] = m[i][1] + priori[1]/(priori[1] + priori[2])
+                m[i][2] = m[i][2] + priori[2]/(priori[1] + priori[2])
+            elif letter == 'M':
+                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[1])
+                m[i][1] = m[i][1] + priori[1]/(priori[0] + priori[1])
+            elif letter == 'K':
+                m[i][2] = m[i][2] + priori[2]/(priori[2] + priori[3])
+                m[i][3] = m[i][3] + priori[3]/(priori[2] + priori[3])
+            elif letter == 'H':
+                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[1] + priori[3])
+                m[i][1] = m[i][1] + priori[1]/(priori[0] + priori[1] + priori[3])
+                m[i][3] = m[i][3] + priori[3]/(priori[0] + priori[1] + priori[3])
+            elif letter == 'B':
+                m[i][1] = m[i][1] + priori[1]/(priori[1] + priori[2] + priori[3])
+                m[i][2] = m[i][2] + priori[2]/(priori[1] + priori[2] + priori[3])
+                m[i][3] = m[i][3] + priori[3]/(priori[1] + priori[2] + priori[3])
+            elif letter == 'V':
+                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[1] + priori[2])
+                m[i][1] = m[i][1] + priori[1]/(priori[0] + priori[1] + priori[2])
+                m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[1] + priori[2])
+            elif letter == 'D':
+                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[2] + priori[3])
+                m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[2] + priori[3])
+                m[i][3] = m[i][3] + priori[3]/(priori[0] + priori[2] + priori[3])
     return m
 
 
