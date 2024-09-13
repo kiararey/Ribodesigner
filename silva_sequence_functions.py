@@ -95,7 +95,7 @@ def get_unique_members(list_of_sequences, set_of_species_represented, level):
 def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_of_sequences: int = 5, divide_by='Order',
                             unique_at='Genus', exclude_only: list = None, include_only: list = None,
                             exclude_taxonomy_level: str = 'any', seed: int = 1, pick_from_file: bool = False,
-                            repeat_species=False, only_test = False):
+                            repeat_species=False, only_test = False, name: str = None):
     """
     Will generate a squished dataset given an input file that has already been made through SequencePrepper.py. Will
     return test and target datasets containing ideally num_of_sequences in each without any repeated species.
@@ -217,10 +217,10 @@ def generate_silva_datasets(silva_by_taxonomy_path: str, output_path: str, num_o
 
     # Add to FASTA file and save
     print('Generating dataset files...')
-    if include_only:
-        kingdom_level = '_'.join(include_only) + '_Only'
-    elif exclude_only:
+    if exclude_only:
         kingdom_level = 'All_but_' + '_'.join(exclude_only)
+    elif include_only:
+        kingdom_level = '_'.join(include_only) + '_Only'
     else:
         kingdom_level = 'All'
     if only_test:

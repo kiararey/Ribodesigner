@@ -4,7 +4,8 @@ from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
                           select_designs, adjust_var_regs, import_data_to_df)
-from graphs_for_paper import (graphs_multiple_conditions)
+from graphs_for_paper import (graphs_multiple_conditions, batched_vs_unbatched_guide_graph, graph_simple_data_selective,
+                              qpcr_graph)
 
 
 
@@ -109,7 +110,8 @@ def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, numb
 
 def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: list, out_path: str, ref_seq_file: str,
                          guide_len: int = 50, igs_len: int = 5, min_len: int = 35, graph_results: bool = True,
-                         var_regs=None, graph_type: str = 'png', get_consensus_batches: bool = True,
+                         var_regs=None, graph_type: str = 'png', get_consensus_batches_test: bool = True,
+                         get_consensus_batches_designs: bool = False,
                          batch_num: int = 10, score_type: str = 'weighted', msa_fast: bool = True,
                          remove_x_dupes_in_graph: bool = True, var_regs_lim: int = 1580, min_true_cov: float = 0,
                          percent_of_target_seqs_used: float = 1, gaps_allowed: bool = False,
@@ -126,7 +128,7 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
             _ = prepare_test_seqs(test_folder=test_file, ref_sequence_file=ref_seq_file, guide_length=guide_len,
                                   igs_length=igs_len, min_length=min_len, folder_to_save=out_path,
                                   graph_results=graph_results, var_regs=var_regs, graph_file_type=graph_type,
-                                  get_consensus_batches=get_consensus_batches, batch_num=batch_num,
+                                  get_consensus_batches=get_consensus_batches_test, batch_num=batch_num,
                                   score_type=score_type, msa_fast=msa_fast,
                                   remove_x_dupes_in_graph=remove_x_dupes_in_graph, lim=var_regs_lim)
         else:
@@ -142,7 +144,8 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
                              guide_length=guide_len, igs_length=igs_len, min_length=min_len, fileout=True,
                              folder_to_save=out_path, min_true_cov=min_true_cov, msa_fast=msa_fast,
                              score_type=score_type, percent_of_target_seqs_used=percent_of_target_seqs_used,
-                             gaps_allowed=gaps_allowed, random_guide_sample_size=random_guide_sample_size)
+                             gaps_allowed=gaps_allowed, get_consensus_batches=get_consensus_batches_designs,
+                             random_guide_sample_size=random_guide_sample_size)
         else:
             print(f'{target_title} exists already! Moving on...')
 
@@ -1065,12 +1068,12 @@ if __name__ == '__main__':
     #         _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
     #                                         flexible_igs=True, file_to_save=out_path)
 
-
+    #
     # # Here is an example of how to run ribodesigner with all options to make designs locally and test them locally.
     # test_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Saccharomyces cerevisiae_Only_by_Species_test.fasta',
     #                         'Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_test.fasta']
     # target_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target.fasta']
-    # out_path = 'test_output_files/fungi'
+    # out_path = 'test_output_files/test'
     #
     # # If when generating graphs it says it is not done cooking, comment out the ribodesigner routine and just run
     # # run_local or else you risk having to couple everything again
@@ -1078,7 +1081,7 @@ if __name__ == '__main__':
     #     ribodesigner_routine(target_seqs_to_process=target_seqs_to_process, test_seqs_to_process=test_seqs_to_process,
     #                          out_path=out_path, ref_seq_file=ref_path_euk, guide_len=n, igs_len=m, min_len=n,
     #                          graph_results=True,var_regs=s_cerevisiae_var_regs, graph_type='png',
-    #                          get_consensus_batches= True, batch_num=10, score_type='weighted', msa_fast=True,
+    #                          get_consensus_batches_test=True, get_consensus_batches_designs=False, batch_num=10, score_type='weighted', msa_fast=True,
     #                          remove_x_dupes_in_graph=True, var_regs_lim=1800, min_true_cov=0,
     #                          percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
     #                          flexible_igs=True))
@@ -1098,30 +1101,52 @@ if __name__ == '__main__':
     # get_fungi_designs(results_stringent_path=stringent_path, results_to_compare_path=to_compare_path,
     #              output_folder=out_path, file_type='png', add_overhangs=True)
 
-    # Set up datasets we will test
-    # 1 - Universal
-    path = 'Datasets_used/SILVA_squished_datasets'
-    universal_target_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
-                             if file.endswith('_target.fasta')}
-    universal_test_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
-                           if file.endswith('_test.fasta')}
-    save_file = 'test_output_files/universal_results'
-
-    for key, targets in universal_target_seqs.items():
-        print(f'\nNow making universal ribozymes for {key}...')
-        current_ref_path = ref_paths_dict[key]
-        var_regs = var_regs_dict[key]
-        target_file_names, test_file_names = (
-            ribodesigner_routine(target_seqs_to_process=[targets],
-                                 test_seqs_to_process=[universal_test_seqs[key]],
-                                 out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
-                                 graph_results=True, var_regs=var_regs, graph_type='png',
-                                 get_consensus_batches=True, batch_num=10, score_type='weighted', msa_fast=True,
-                                 remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
-                                 percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
-                                 flexible_igs=True))
-
-    output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    # # Set up datasets we will test
+    # # 1 - Universal (unbatched, batched)
+    # path = 'Datasets_used/SILVA_squished_datasets'
+    # universal_target_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
+    #                          if file.endswith('_target.fasta')}
+    # universal_test_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
+    #                        if file.endswith('_test.fasta')}
+    # save_file_path = 'test_output_files/universal_results_no_batching'
+    #
+    # for key, targets in universal_target_seqs.items():
+    #     save_file = save_file_path + f'/{key}'
+    #     print(f'\nNow making universal ribozymes for {key}...')
+    #     current_ref_path = ref_paths_dict[key]
+    #     var_regs = var_regs_dict[key]
+    #     target_file_names, test_file_names = (
+    #         ribodesigner_routine(target_seqs_to_process=[targets],
+    #                              test_seqs_to_process=[universal_test_seqs[key]],
+    #                              out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
+    #                              graph_results=True, var_regs=var_regs, graph_type='svg',
+    #                              get_consensus_batches_test=True, get_consensus_batches_designs=False,
+    #                              batch_num=10, score_type='weighted', msa_fast=True,
+    #                              remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
+    #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+    #                              flexible_igs=True))
+    #
+    #     output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    #
+    # save_file_path = 'test_output_files/universal_results_with_batching'
+    #
+    # for key, targets in universal_target_seqs.items():
+    #     save_file = save_file_path + f'/{key}'
+    #     print(f'\nNow making universal ribozymes for {key}...')
+    #     current_ref_path = ref_paths_dict[key]
+    #     var_regs = var_regs_dict[key]
+    #     target_file_names, test_file_names = (
+    #         ribodesigner_routine(target_seqs_to_process=[targets],
+    #                              test_seqs_to_process=[universal_test_seqs[key]],
+    #                              out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
+    #                              graph_results=True, var_regs=var_regs, graph_type='svg',
+    #                              get_consensus_batches_test=True, get_consensus_batches_designs=True,
+    #                              batch_num=10, score_type='weighted', msa_fast=True,
+    #                              remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
+    #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+    #                              flexible_igs=True))
+    #
+    #     output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
     #
     # # 2 Selective pseudo and entero
     # path_e = 'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_Enterobacterales_included'
@@ -1135,58 +1160,88 @@ if __name__ == '__main__':
     # print('\n Moving on to making Entero and Pseudo designs...')
     # target_file_names, test_file_names = (
     #     ribodesigner_routine(target_seqs_to_process=target_seqs_selective_e_p, test_seqs_to_process=test_seqs_selective_e_p,
-    #                              out_path=save_file, ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=n,
-    #                              graph_results=True, var_regs=e_coli_var_regs, graph_type='png',
-    #                              get_consensus_batches=True, batch_num=10, score_type='weighted', msa_fast=True,
+    #                          out_path=save_file, ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=n,
+    #                          graph_results=True, var_regs=e_coli_var_regs, graph_type='svg',
+    #                          get_consensus_batches_test=True, get_consensus_batches_designs=True, batch_num=10,
+    #                          score_type='weighted', msa_fast=True,
     #                              remove_x_dupes_in_graph=True, var_regs_lim=1580, min_true_cov=0,
     #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
     #                              flexible_igs=True))
     #
     # output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
     #
-    # 3 - Selective 1 per genus
-    taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
-    to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes', 'Actinobacteriota_and_Firmicutes'],
-                   'Class': ['Gammaproteobacteria', 'Bacilli'],
-                   'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
-                   'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
-                   'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
-    test_seq_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus'
-    save_file_path = output_path + '/selective_by_taxonomy/'
-    selective_target_test_pairs = []
-    for level, vals in to_generate.items():
-        for taxonomy in vals:
-            file_to_check = f'{test_seq_path}/{level}_{taxonomy}'
-            selective_test_seqs_to_process = [f'{file_to_check}_excluded/{file}' for file in
-                                              os.listdir(f'{file_to_check}_excluded') if file.endswith('_test.fasta')]
-            selective_target_seqs_to_process = [f'{file_to_check}_excluded/{file}' for file in
-                                                os.listdir(f'{file_to_check}_excluded')
-                                                if file.endswith('_target.fasta')]
-            selective_test_seqs_to_process.extend([f'{file_to_check}_included/{file}' for file in
-                                                   os.listdir(f'{file_to_check}_included')
-                                                   if file.endswith('_test.fasta')])
-            selective_target_seqs_to_process.extend([f'{file_to_check}_included/{file}' for file in
-                                                     os.listdir(f'{file_to_check}_included')
-                                                     if file.endswith('_target.fasta')])
-            save_file = save_file_path + f'{level}_{taxonomy}'
-            print(f'\nNow making universal ribozymes for {save_file}...')
-            target_file_names, test_file_names = (
-                ribodesigner_routine(target_seqs_to_process=selective_target_seqs_to_process,
-                                     test_seqs_to_process=selective_test_seqs_to_process, out_path=save_file,
-                                     ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=n, graph_results=True,
-                                     var_regs=e_coli_var_regs, graph_type='png', get_consensus_batches=True,
-                                     batch_num=10, score_type='weighted', msa_fast=True, remove_x_dupes_in_graph=True,
-                                     var_regs_lim=1800, min_true_cov=0, percent_of_target_seqs_used=1,
-                                     gaps_allowed=False, random_guide_sample_size=10, flexible_igs=True))
+    # # 3 - Selective 1 per genus
+    # taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
+    # to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes', 'Actinobacteriota_and_Firmicutes'],
+    #                'Class': ['Gammaproteobacteria', 'Bacilli'],
+    #                'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
+    #                'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
+    #                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
+    # test_seq_path = f'Datasets_used/SILVA_squished_datasets_10_per_genus_wwtp_only'
+    # save_file_path = output_path + '/selective_by_taxonomy/'
+    # selective_target_test_pairs = []
+    # for level, vals in to_generate.items():
+    #     for taxonomy in vals:
+    #         file_to_check = f'{test_seq_path}/{level}_{taxonomy}'
+    #         selective_test_seqs_to_process = [f'{file_to_check}_excluded/{file}' for file in
+    #                                           os.listdir(f'{file_to_check}_excluded') if file.endswith('_test.fasta')]
+    #         selective_target_seqs_to_process = [f'{file_to_check}_excluded/{file}' for file in
+    #                                             os.listdir(f'{file_to_check}_excluded')
+    #                                             if file.endswith('_target.fasta')]
+    #         selective_test_seqs_to_process.extend([f'{file_to_check}_included/{file}' for file in
+    #                                                os.listdir(f'{file_to_check}_included')
+    #                                                if file.endswith('_test.fasta')])
+    #         selective_target_seqs_to_process.extend([f'{file_to_check}_included/{file}' for file in
+    #                                                  os.listdir(f'{file_to_check}_included')
+    #                                                  if file.endswith('_target.fasta')])
+    #         save_file = save_file_path + f'{level}_{taxonomy}'
+    #         print(f'\nNow making universal ribozymes for {save_file}...')
+    #         target_file_names, test_file_names = (
+    #             ribodesigner_routine(target_seqs_to_process=selective_target_seqs_to_process,
+    #                                  test_seqs_to_process=selective_test_seqs_to_process, out_path=save_file,
+    #                                  ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=n, graph_results=True,
+    #                                  var_regs=e_coli_var_regs, graph_type='svg', get_consensus_batches_test=True,
+    #                                  get_consensus_batches_designs=True,
+    #                                  batch_num=10, score_type='weighted', msa_fast=True, remove_x_dupes_in_graph=True,
+    #                                  var_regs_lim=1800, min_true_cov=0, percent_of_target_seqs_used=1,
+    #                                  gaps_allowed=False, random_guide_sample_size=10, flexible_igs=True))
+    #
+    #         # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
+    #         # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
+    #         output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    #
+    # # Test our chosen designs against a set of test sequences
+    # test_files = [
+    #     'test_output_files/Pseudo and Entero/test_sequences_Enterobacterales_Only_by_Order_unique_Species_test.pickle',
+    #     'test_output_files/Pseudo and Entero/test_sequences_Pseudomonadales_Only_by_Order_unique_Species_test.pickle']
+    # pribo = 'GAGTGCCCACCATAACGTGCTGGTAACTAAGGACAAGGGTTGCGCTCGTTgCGGGA'
+    #
+    # for designs_to_test, uloc, name in [(pribo, 1099, 'pribo'), (u1376, 1376, 'u64')]:
+    #     for test_seq_file in test_files:
+    #         file_to_save = f'test_output_files/checking_scores_figure_5/{name}'
+    #         couple_designs_to_test_seqs(designs_to_test, test_seqs_input=test_seq_file, file_to_save=file_to_save,
+    #                                     flexible_igs=True, ref_idx_u_loc=uloc)
+    #
+    #         output = run_local(output_folder=file_to_save, guide_len=n, num_of_workers=number_of_workers)
 
-            # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
-            # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
-            output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    graph_simple_data_selective(data_path='test_output_files/checking_scores_figure_5',
+                                qpcr_data_path='/Users/kiarareyes/Downloads/q24_U64_Pcat.csv',
+                                output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
+                                              'My Drive/KRG Thesis/Figures/RiboDesigner paper/'
+                                              'output figures from ribodesigner only pribo u64', file_type='svg')
 
-    graphs_multiple_conditions(universal_path='test_output_files/universal',
+    batched_vs_unbatched_guide_graph(unbatched_path='test_output_files/universal_results_no_batching',
+                                     batched_path='test_output_files/universal_results_with_batching',
+                                     output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
+                                                   'My Drive/KRG Thesis/Figures/RiboDesigner paper/'
+                                                   'output figures from ribodesigner no batching', file_type='svg',
+                                     m_smithii_var_regs=m_smithii_var_regs, save_fig=True)
+
+    graphs_multiple_conditions(universal_path='test_output_files/universal_results_with_batching',
                                selective_path='test_output_files/selective_by_taxonomy',
                                output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
-                                             'My Drive/KRG Thesis/Posters/SEED 2024/Data files from Ribodesigner',
-                               add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs, file_type='png')
+                                             'My Drive/KRG Thesis/Figures/RiboDesigner paper/'
+                                             'output figures from ribodesigner',
+                               add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs, file_type='svg')
 
     import_data_to_df(['here is your result file'])

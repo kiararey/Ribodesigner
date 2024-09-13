@@ -5,16 +5,16 @@ seed = 1
 silva_ref_99_fasta = 'Datasets_used/SILVA_138.1_SSURef_NR99_tax_silva.fasta'
 silva_by_taxonomy_path = silva_ref_99_fasta
 ########################################################
-# # To generate SILVA squished datasets
-# # Determine at what taxonomic level we want the datasets. This must match one of the filenames from SequencePrepper.py:
-# taxonomy_level = 'Order'
-#
-# # Here is the file where we want to save the dataset
-# output_path = 'Datasets_used/SILVA_squished_datasets'
-#
-# # Prepare list to store data in:
-# num_of_sequences_per_order = 10
-#
+# To generate SILVA squished datasets
+# Determine at what taxonomic level we want the datasets. This must match one of the filenames from SequencePrepper.py:
+taxonomy_level = 'Order'
+
+# Here is the file where we want to save the dataset
+output_path = 'Datasets_used/SILVA_squished_datasets'
+
+# Prepare list to store data in:
+num_of_sequences_per_order = 10
+
 # # Generate the squished datasets
 # print('Making general datasets')
 # generate_silva_datasets(silva_ref_99_fasta, output_path,
@@ -110,45 +110,80 @@ to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes'],
                'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
 
+# These are the orders we got from Qiime - not necessarily present in the SILVA database!
+orders_in_wwtp_community = ['Aeromonadales', 'Enterobacterales', 'Pasteurellales', 'Alteromonadales', 'Vibrionales',
+                            'Pseudomonadales', 'Cellvibrionales', 'Xanthomonadales', 'Steroidobacterales', 'Bacillales',
+                            'Pseudonocardiales', 'Corynebacteriales', 'Streptosporangiales', 'Verrucomicrobiales',
+                            'Blastocatellales', 'SJA-28', 'Nitrospirales', 'Rubrobacterales', 'Burkholderiales']
+# 1 per genus
+# for taxonomy in taxonomy_levels_all:
+#     print(f'\nNow generating data for {taxonomy}:')
+#
+#     for include in to_generate[taxonomy]:
+#         print(f'\nDataset is now {include}:')
+#         output_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/{taxonomy}_{include}'
+#         generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included',
+#                                 num_of_sequences=1, include_only=include, unique_at='Species',
+#                                 exclude_taxonomy_level=taxonomy, seed=seed, divide_by='Genus')
+#         try:
+#             generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded',
+#                                     num_of_sequences=1, exclude_only=include, unique_at='Species',
+#                                     exclude_taxonomy_level=taxonomy, seed=seed, divide_by='Genus')
+#         except ZeroDivisionError:
+#             print(f'Dataset {include} has too few sequences to make exclude data')
+#
+# output_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Actinobacteriota_and_Firmicutes'
+# generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included',
+#                         num_of_sequences=1, include_only=['Actinobacteriota', 'Firmicutes'], unique_at='Species',
+#                         exclude_taxonomy_level='Phylum', seed=seed, divide_by='Genus')
+# generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded',
+#                         num_of_sequences=1, exclude_only=['Actinobacteriota', 'Firmicutes'], unique_at='Species',
+#                         exclude_taxonomy_level='Phylum', seed=seed, divide_by='Genus')
+
+# 1 per genus and only the wwtp
+num_of_seqs = 10
 for taxonomy in taxonomy_levels_all:
     print(f'\nNow generating data for {taxonomy}:')
 
     for include in to_generate[taxonomy]:
         print(f'\nDataset is now {include}:')
-        output_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/{taxonomy}_{include}'
+        output_path = f'Datasets_used/SILVA_squished_datasets_{num_of_seqs}_per_genus_wwtp_only/{taxonomy}_{include}'
         generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included',
-                                num_of_sequences=1, include_only=include, unique_at='Species',
-                                exclude_taxonomy_level=taxonomy, seed=seed, divide_by='Genus')
+                                num_of_sequences=num_of_seqs, include_only=include,
+                                unique_at='Species', exclude_taxonomy_level='any', seed=seed, divide_by='Genus')
         try:
             generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded',
-                                    num_of_sequences=1, exclude_only=include, unique_at='Species',
-                                    exclude_taxonomy_level=taxonomy, seed=seed, divide_by='Genus')
+                                    num_of_sequences=num_of_seqs, exclude_only=include,
+                                    include_only=orders_in_wwtp_community, unique_at='Species',
+                                    exclude_taxonomy_level='any', seed=seed, divide_by='Genus', name=include)
         except ZeroDivisionError:
             print(f'Dataset {include} has too few sequences to make exclude data')
 
-output_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Actinobacteriota_and_Firmicutes'
+output_path = f'Datasets_used/SILVA_squished_datasets_{num_of_seqs}_per_genus_wwtp_only/Actinobacteriota_and_Firmicutes'
 generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included',
-                        num_of_sequences=1, include_only=['Actinobacteriota', 'Firmicutes'], unique_at='Species',
-                        exclude_taxonomy_level='Phylum', seed=seed, divide_by='Genus')
+                        num_of_sequences=num_of_seqs, include_only=['Actinobacteriota', 'Firmicutes'],
+                        unique_at='Species', exclude_taxonomy_level='any', seed=seed, divide_by='Genus')
 generate_silva_datasets(silva_by_taxonomy_path, output_path + '_excluded',
-                        num_of_sequences=1, exclude_only=['Actinobacteriota', 'Firmicutes'], unique_at='Species',
-                        exclude_taxonomy_level='Phylum', seed=seed, divide_by='Genus')
+                        num_of_sequences=num_of_seqs, unique_at='Species',
+                        exclude_only=['Actinobacteriota', 'Firmicutes'], include_only=orders_in_wwtp_community,
+                        exclude_taxonomy_level='any', seed=seed, divide_by='Genus', name='Actinobacteriota_Firmicutes')
+
 # to_generate = ['Enterobacterales', 'Pseudomonadales']
 # for include in to_generate:
 #         output_path = f'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_{include}'
 #         generate_silva_datasets(silva_by_taxonomy_path, output_path + '_included', num_of_sequences=3000,
 #                                 unique_at='Species', include_only=[include], exclude_taxonomy_level='Order',
 #                                 seed=seed, pick_from_file=True)
-
-print('Now time for fungi hell yeahhhhh ')
-output_path = f'Datasets_used/SILVA_squished_datasets_fungi'
-generate_silva_datasets(silva_by_taxonomy_path, output_path, num_of_sequences=39, include_only=['Saccharomyces cerevisiae'],
-                        exclude_taxonomy_level='any', divide_by='Species', seed=seed, pick_from_file=True,
-                        repeat_species=True, only_test=True)
-
-generate_silva_datasets(silva_by_taxonomy_path, output_path, num_of_sequences=3000, divide_by='Family', unique_at='Species',
-                        include_only=['Ascomycota', 'Basidiomycota'], exclude_taxonomy_level='Family', seed=seed,
-                        pick_from_file=True)
+#
+# print('Now time for fungi hell yeahhhhh ')
+# output_path = f'Datasets_used/SILVA_squished_datasets_fungi'
+# generate_silva_datasets(silva_by_taxonomy_path, output_path, num_of_sequences=39, include_only=['Saccharomyces cerevisiae'],
+#                         exclude_taxonomy_level='any', divide_by='Species', seed=seed, pick_from_file=True,
+#                         repeat_species=True, only_test=True)
+#
+# generate_silva_datasets(silva_by_taxonomy_path, output_path, num_of_sequences=3000, divide_by='Family', unique_at='Species',
+#                         include_only=['Ascomycota', 'Basidiomycota'], exclude_taxonomy_level='Family', seed=seed,
+#                         pick_from_file=True)
 
 print('done!')
 

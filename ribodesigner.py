@@ -1278,7 +1278,7 @@ def get_directional_score(opti_seq, opti_len):
     return score
 
 
-def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_to_save: str = '',
+def couple_designs_to_test_seqs(designs_input: str | list[str], test_seqs_input: str, file_to_save: str = '',
                                 flexible_igs: bool = False, igs_len: int = 5, ref_idx_u_loc: int = 0,
                                 score_type: str = 'weighted'):
     # For now, you must tell the program the location of the U for random sequences to analyze.
@@ -1295,8 +1295,10 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
         igs = str(Seq(designs_input[-igs_len:]).upper().back_transcribe())
         guide = Seq(designs_input[:-igs_len - 1]).upper().back_transcribe()
         igs_id = igs + str(ref_idx_u_loc)
+        # Can get the score at least
+        score = return_score_from_type(sequence_to_test=guide, score_type=score_type, opti_len=len(guide))
         designs = [RibozymeDesign(id_attr=igs_id, guide_attr=guide, igs_attr=igs, ref_idx_attr=ref_idx_u_loc,
-                                  score_type_attr=score_type)]
+                                  score_type_attr=score_type, score_attr=score)]
 
         # Rename designs_input to correctly name file later on
         designs_input = os.path.normpath(subfile + '/' + igs_id + '.pickle')
@@ -1312,8 +1314,9 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
     # Need the design, the aligned target sequences to test against for each design
     coupled_datasets_name = designs_input.split('.')[0].split('/')[-1].split('\\')[-1] + '_vs_' + \
                             test_seqs_input.split('.')[0].split('/')[-1].split('\\')[-1]
-
-    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_' + coupled_datasets_name + '.coupled')
+    pickle_file_name = os.path.normpath(
+        subfile + f'/{len(designs)}_designs_' + coupled_datasets_name + '.coupled').replace('_designs_designs_',
+                                                                                            '_designs_')
     # Check if this file already exists
     if os.path.exists(pickle_file_name) and os.path.exists(os.path.normpath(subfile + '/big_checkpoint.txt')):
         print('Coupled file and checklist already exist! Skipping coupling...')
@@ -1368,7 +1371,6 @@ def couple_designs_to_test_seqs(designs_input: str, test_seqs_input: str, file_t
 
     # save into a separate folder. Each pickle file will have 50 designs in it
     print('Now saving...')
-    pickle_file_name = os.path.normpath(subfile + f'/{len(designs)}_' + coupled_datasets_name + '.coupled')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with open(pickle_file_name, 'wb') as handle:
             pickle.dump(designs, handle)
@@ -1940,7 +1942,8 @@ def words2countmatrix(words, priori: list = None):
                 m[i][1] = m[i][1] + priori[1]
                 m[i][2] = m[i][2] + priori[2]
                 m[i][3] = m[i][3] + priori[3]
-            # adding some ambiguity
+            # Below are my own edits
+            # adding some ambiguity: in case the input sequence has an ambiguous base!
             elif letter == 'R':
                 m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[2])
                 m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[2])
