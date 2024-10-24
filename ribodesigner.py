@@ -6,7 +6,7 @@ import pickle
 import subprocess
 import time
 from collections import defaultdict
-from math import exp, log
+from math import log
 import numpy as np
 import pandas as pd
 from Bio import AlignIO, SeqUtils
@@ -1181,69 +1181,10 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
 
 def get_naive_score(opti_seq, opti_len):
     # This version penalizes sequences that are too short
-    score = 1 - str(opti_seq).count('N') / opti_len
+    score = 1 - (str(opti_seq).count('N') + str(opti_seq).count('-')) / opti_len
     return score
 
 
-def get_quantitative_score(left_seq, alignments, chars_to_ignore: list[str] = None, count_gaps: bool = True,
-                           penalize_trailing_gaps: bool = False, priori=None):
-    """
-    :param alignments:
-    :param left_seq:
-    :param chars_to_ignore:
-    :param count_gaps:
-    :param penalize_trailing_gaps:
-    :return:
-    """
-    # a modified version of BioPython'string_to_analyze PSSM function that counts gaps by default and also gives us
-    # the quantitative score. This quantitative score is as follows:
-
-    if priori is None:
-        priori = [0.25, 0.25, 0.25, 0.25]
-    if chars_to_ignore is None:
-        chars_to_ignore = []
-    if not isinstance(chars_to_ignore, list):
-        raise TypeError('chars_to_ignore should be a list.')
-
-    gap_char = '-'
-    if not count_gaps:
-        chars_to_ignore.append(gap_char)
-
-    sum_probabilities = 0
-    # now start looping through all of the sequences and getting info
-    seq_num = len(alignments)
-    for residue_num in range(len(left_seq)):
-        pos_prob = 0
-        for record in alignments:
-            try:
-                this_residue = record[residue_num]
-            # if we hit an index error we've run out of sequence and
-            # should not add new residues
-            except IndexError:
-                this_residue = None
-            if this_residue and this_residue not in chars_to_ignore:
-                try:
-                    # If the current residue matches the consensus residue
-                    if this_residue == left_seq[residue_num]:
-                        pos_prob += 1
-                except KeyError:
-                    raise ValueError(
-                        f'Residue %s not found {this_residue}'
-                    ) from None
-
-        sum_probabilities += pos_prob / seq_num
-
-    # Replace gaps with N since we can't order gaps when ordering oligos
-    mat = words2countmatrix(alignments, priori=priori)
-    opti_seq = consensus(mat, priori=priori)
-    # opti_seq = Bio.motifs.create(alignments, alphabet='GATCRYWSMKHBVDN-').degenerate_consensus.strip('-').replace('-',
-    #                                                                                                               'N')
-    score = sum_probabilities / len(left_seq)
-
-    return score, opti_seq
-
-
-# noinspection DuplicatedCode
 def get_weighted_score(opti_seq, opti_len):
     # This version penalizes sequences that are too short
     # prepare scoring matrix a(x)
@@ -1260,21 +1201,22 @@ def get_weighted_score(opti_seq, opti_len):
 # noinspection DuplicatedCode
 def get_directional_score(opti_seq, opti_len):
     # This version penalizes sequences that are too short
-    # prepare scoring matrix a(x)
-    print('CAREFUL: Directional score calculation has not been fixed yet!!!')
+    # Note that the end of the sequence is closer to the catalytic U!
     a = give_scoring_dict()
 
-    # This is broken, have not fixed yet
     # score based on extended identity and position of the bases
-    weight_sum = 0
-    weight_score_sum = 0
+    ideal_score = 0
+    current_score = 0
 
     for i, x in enumerate(str(opti_seq)):
-        w = exp(opti_len - i)  # Calculate weight based on proximity to IGS
-        weight_sum += w
-        weight_score_sum += w * a[x]
-        i += 1  # move downstream (closer to igs)
-    score = weight_score_sum / weight_sum
+        w = (i + 1)  # Calculate weight based on proximity to IGS
+        ideal_score += w
+        current_score += w * a[x]
+    prelim_score = current_score / ideal_score
+
+    # Penalize sequences below the minimum length
+    score = prelim_score * (len(opti_seq)) / opti_len
+
     return score
 
 
@@ -2469,3 +2411,148 @@ def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, yl
     plt.savefig(fname=save_file_name + '.' + file_type, format=file_type)
     plt.show()
     return
+
+
+def check_checkpoint_file(coupled_folder):
+    print('Checking that there are files to analyze or if checkpoint file is corrupted...')
+    # Check if we have anything to test
+    analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
+
+    if len(analysis_files) == 0:
+        print('Please make sure to couple designs with the appropriate test sequences')
+        return -1
+
+    # check the amount of work by summing the number of designs on each file in the coupled folder
+    lengths = [int(name.split('/')[-1].split('\\')[-1].split('_designs')[0]) for name in analysis_files]
+    total_work = sum(lengths)
+
+    # read each line as a tuple of three values - big index, file name, small index
+    with open(os.path.normpath(coupled_folder + '/big_checkpoint.txt'), 'r') as handle:
+        work_to_do_list = handle.read().splitlines()
+
+    # Check the big work done checkpoint file and remove any indexes that are already there
+    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder)
+                       if f.startswith('work_done_')]
+    work_done = []
+    for work_done_file in work_done_files:
+        with open(work_done_file) as handle:
+            work_done.extend(handle.read().splitlines())
+
+    work_done = set(work_done)
+    #  Basically remove make an array that contains all lines NOT in big work done
+    work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if
+                       item.split('\t')[0] not in work_done]
+    work_to_do = len(work_to_do_list)
+    work_completed = len(work_done)
+    if total_work != work_to_do + work_completed:
+        if total_work == work_completed:
+            decision = input('All work to do has been done, but checkpoint file is corrupted. Recommending deleting '
+                            'checkpoint file and associated work / coupled files to re-do analysis. Would you like'
+                            'to delete these? [Y/N]: ')
+        else:
+            decision = input(f'big_checkpoint.txt does not match amount of work to do. '
+                             f'Would you like to delete checkpoint file and associated work / coupled files '
+                             f'to start analysis over? [Y/N]: ')
+        while decision != 'Y' and decision != 'N' and decision != 'y' and decision != 'n':
+            decision = input(
+                f'Please enter either Y or N: ')
+        if decision == 'Y' or decision == 'y':
+            print(f'Deleting files...')
+            # delete files
+            for file in os.listdir(coupled_folder):
+                if file.startswith('work_done') and file.endswith('.txt'):
+                    os.remove(os.path.normpath(coupled_folder + '/' + file))
+                elif file == 'big_checkpoint.txt':
+                    os.remove(os.path.normpath(coupled_folder + '/' + file))
+                elif file.endswith('.coupled'):
+                    os.remove(os.path.normpath(coupled_folder + '/' + file))
+            print('Done! Please make sure to check any results files in this folder too to make sure they are correct.'
+                  'Then rerun ribodesigner_routine to start that analysis again.')
+        else:
+            print('Ok! I won\'t delete any files. Now exiting...')
+        return -1
+
+    else:
+        if total_work == work_completed:
+            print('All work to do has been done, enjoy analyzing your data!')
+            return -1
+        else:
+            print('All looks good!')
+            return 0
+
+def run_local(output_folder, guide_len, num_of_workers:int = mp.cpu_count(), get_tm_nn:bool = True):
+    # finally, we test! Below is for local
+    # First check if checkpoint file is corrupted:
+    result = check_checkpoint_file(coupled_folder=os.path.normpath(output_folder+ '/coupled'))
+    if result == -1:
+        return -1
+    print(f'\n now testing {output_folder}... \n')
+    coupled_file = os.path.normpath(output_folder + '/coupled')
+    in_data = [(coupled_file, num_of_workers, j, 1, False, guide_len, get_tm_nn)
+               for j in range(num_of_workers)]
+    with alive_bar(unknown='fish', spinner='fishes') as bar:
+        with mp.Pool(processes=len(in_data)) as pool:
+            out_data = pool.starmap(ribo_checker, in_data)
+        bar()
+    combine_data(os.path.normpath(output_folder + '/coupled/results'))
+    return out_data
+
+def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, number_of_workers: int = mp.cpu_count(),
+               worker_number: int = 0):
+    # This is for NOTS (make sure to upload coupled data with globus before you do this!)
+    if scratch_path is None:
+        scratch_path = input('What is the scratch path? ')
+    print(f'\n now testing {output_folder}... \n')
+    get_tm_nn = True
+    # coupled_file = '/scratch/kpr1/RiboDesigner/' + output_folder + '/coupled/'
+    coupled_file = os.path.normpath(scratch_path + output_folder + '/coupled')
+    ribo_checker(coupled_folder=coupled_file, number_of_workers=number_of_workers, worker_number=worker_number,
+                 n_limit=n_limit, opti_len=guide_len, get_tm_nn=get_tm_nn)
+    combine_data(coupled_file + 'results')
+    return
+
+def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: list, out_path: str, ref_seq_file: str,
+                         guide_len: int = 50, igs_len: int = 5, min_len: int = 35, graph_results: bool = True,
+                         var_regs=None, graph_type: str = 'png', get_consensus_batches_test: bool = True,
+                         get_consensus_batches_designs: bool = False,
+                         batch_num: int = 10, score_type: str = 'weighted', msa_fast: bool = True,
+                         remove_x_dupes_in_graph: bool = True, var_regs_lim: int = 1580, min_true_cov: float = 0,
+                         percent_of_target_seqs_used: float = 1, gaps_allowed: bool = False,
+                         random_guide_sample_size: int = 10, flexible_igs: bool = True):
+    if var_regs is None:
+        var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173), (1243, 1294),
+                    (1435, 1465)]
+    all_test_file_names = []
+    for test_file in test_seqs_to_process:
+        title = test_file.split('.')[0].split('/')[-1].split('\\')[-1]
+        test_save_file_name = os.path.normpath(f'{out_path}/test_sequences_{title}.pickle')
+        all_test_file_names.append(test_save_file_name)
+        if not os.path.exists(test_save_file_name):
+            _ = prepare_test_seqs(test_folder=test_file, ref_sequence_file=ref_seq_file, guide_length=guide_len,
+                                  igs_length=igs_len, min_length=min_len, folder_to_save=out_path,
+                                  graph_results=graph_results, var_regs=var_regs, graph_file_type=graph_type,
+                                  get_consensus_batches=get_consensus_batches_test, batch_num=batch_num,
+                                  score_type=score_type, msa_fast=msa_fast,
+                                  remove_x_dupes_in_graph=remove_x_dupes_in_graph, lim=var_regs_lim)
+        else:
+            print(f'{title} exists already! Moving on...')
+    all_target_file_names = []
+    for target_file in target_seqs_to_process:
+        target_title = target_file.split('.')[0].split('/')[-1].split('\\')[-1]
+        target_save_file_name = os.path.normpath(f'{out_path}/designs_{target_title}_universal.pickle')
+        all_target_file_names.append(target_save_file_name)
+
+        if not os.path.exists(target_save_file_name):
+            _ = ribodesigner(target_sequences_folder=target_file, ref_sequence_file=ref_seq_file,
+                             guide_length=guide_len, igs_length=igs_len, min_length=min_len, fileout=True,
+                             folder_to_save=out_path, min_true_cov=min_true_cov, msa_fast=msa_fast,
+                             score_type=score_type, percent_of_target_seqs_used=percent_of_target_seqs_used,
+                             gaps_allowed=gaps_allowed, get_consensus_batches=get_consensus_batches_designs,
+                             random_guide_sample_size=random_guide_sample_size)
+        else:
+            print(f'{target_title} exists already! Moving on...')
+
+        for test_outfile in all_test_file_names:
+            _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
+                                            flexible_igs=flexible_igs, file_to_save=out_path)
+    return all_target_file_names, all_test_file_names
