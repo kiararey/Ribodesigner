@@ -1,158 +1,13 @@
 import sys
 import os
-from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
-                          select_designs, adjust_var_regs, import_data_to_df)
+                          select_designs, adjust_var_regs, import_data_to_df, import_data_to_df, run_local, run_remote,
+                          ribodesigner_routine)
 from graphs_for_paper import (graphs_multiple_conditions, batched_vs_unbatched_guide_graph, graph_simple_data_selective,
                               qpcr_graph)
 
 
-
-def check_checkpoint_file(coupled_folder):
-    print('Checking that there are files to analyze or if checkpoint file is corrupted...')
-    # Check if we have anything to test
-    analysis_files = [file for file in os.listdir(coupled_folder) if file.endswith('.coupled')]
-
-    if len(analysis_files) == 0:
-        print('Please make sure to couple designs with the appropriate test sequences')
-        return -1
-
-    # check the amount of work by summing the number of designs on each file in the coupled folder
-    lengths = [int(name.split('/')[-1].split('\\')[-1].split('_designs')[0]) for name in analysis_files]
-    total_work = sum(lengths)
-
-    # read each line as a tuple of three values - big index, file name, small index
-    with open(os.path.normpath(coupled_folder + '/big_checkpoint.txt'), 'r') as handle:
-        work_to_do_list = handle.read().splitlines()
-
-    # Check the big work done checkpoint file and remove any indexes that are already there
-    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder)
-                       if f.startswith('work_done_')]
-    work_done = []
-    for work_done_file in work_done_files:
-        with open(work_done_file) as handle:
-            work_done.extend(handle.read().splitlines())
-
-    work_done = set(work_done)
-    #  Basically remove make an array that contains all lines NOT in big work done
-    work_to_do_list = [tuple(item.strip('\n').split('\t')) for item in work_to_do_list if
-                       item.split('\t')[0] not in work_done]
-    work_to_do = len(work_to_do_list)
-    work_completed = len(work_done)
-    if total_work != work_to_do + work_completed:
-        if total_work == work_completed:
-            decision = input('All work to do has been done, but checkpoint file is corrupted. Recommending deleting '
-                            'checkpoint file and associated work / coupled files to re-do analysis. Would you like'
-                            'to delete these? [Y/N]: ')
-        else:
-            decision = input(f'big_checkpoint.txt does not match amount of work to do. '
-                             f'Would you like to delete checkpoint file and associated work / coupled files '
-                             f'to start analysis over? [Y/N]: ')
-        while decision != 'Y' and decision != 'N' and decision != 'y' and decision != 'n':
-            decision = input(
-                f'Please enter either Y or N: ')
-        if decision == 'Y' or decision == 'y':
-            print(f'Deleting files...')
-            # delete files
-            for file in os.listdir(coupled_folder):
-                if file.startswith('work_done') and file.endswith('.txt'):
-                    os.remove(os.path.normpath(coupled_folder + '/' + file))
-                elif file == 'big_checkpoint.txt':
-                    os.remove(os.path.normpath(coupled_folder + '/' + file))
-                elif file.endswith('.coupled'):
-                    os.remove(os.path.normpath(coupled_folder + '/' + file))
-            print('Done! Please make sure to check any results files in this folder too to make sure they are correct.'
-                  'Then rerun ribodesigner_routine to start that analysis again.')
-        else:
-            print('Ok! I won\'t delete any files. Now exiting...')
-        return -1
-
-    else:
-        if total_work == work_completed:
-            print('All work to do has been done, enjoy analyzing your data!')
-            return -1
-        else:
-            print('All looks good!')
-            return 0
-
-def run_local(output_folder, guide_len, num_of_workers:int = mp.cpu_count(), get_tm_nn:bool = True):
-    # finally, we test! Below is for local
-    # First check if checkpoint file is corrupted:
-    result = check_checkpoint_file(coupled_folder=os.path.normpath(output_folder+ '/coupled'))
-    if result == -1:
-        return -1
-    print(f'\n now testing {output_folder}... \n')
-    coupled_file = os.path.normpath(output_folder + '/coupled')
-    in_data = [(coupled_file, num_of_workers, j, 1, False, guide_len, get_tm_nn)
-               for j in range(num_of_workers)]
-    with alive_bar(unknown='fish', spinner='fishes') as bar:
-        with mp.Pool(processes=len(in_data)) as pool:
-            out_data = pool.starmap(ribo_checker, in_data)
-        bar()
-    combine_data(os.path.normpath(output_folder + '/coupled/results'))
-    return out_data
-
-
-def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, number_of_workers: int = mp.cpu_count(),
-               worker_number: int = 0):
-    # This is for NOTS (make sure to upload coupled data with globus before you do this!)
-    if scratch_path is None:
-        scratch_path = input('What is the scratch path? ')
-    print(f'\n now testing {output_folder}... \n')
-    get_tm_nn = True
-    # coupled_file = '/scratch/kpr1/RiboDesigner/' + output_folder + '/coupled/'
-    coupled_file = os.path.normpath(scratch_path + output_folder + '/coupled')
-    ribo_checker(coupled_folder=coupled_file, number_of_workers=number_of_workers, worker_number=worker_number,
-                 n_limit=n_limit, opti_len=guide_len, get_tm_nn=get_tm_nn)
-    combine_data(coupled_file + 'results')
-    return
-
-def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: list, out_path: str, ref_seq_file: str,
-                         guide_len: int = 50, igs_len: int = 5, min_len: int = 35, graph_results: bool = True,
-                         var_regs=None, graph_type: str = 'png', get_consensus_batches_test: bool = True,
-                         get_consensus_batches_designs: bool = False,
-                         batch_num: int = 10, score_type: str = 'weighted', msa_fast: bool = True,
-                         remove_x_dupes_in_graph: bool = True, var_regs_lim: int = 1580, min_true_cov: float = 0,
-                         percent_of_target_seqs_used: float = 1, gaps_allowed: bool = False,
-                         random_guide_sample_size: int = 10, flexible_igs: bool = True):
-    if var_regs is None:
-        var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173), (1243, 1294),
-                    (1435, 1465)]
-    all_test_file_names = []
-    for test_file in test_seqs_to_process:
-        title = test_file.split('.')[0].split('/')[-1].split('\\')[-1]
-        test_save_file_name = os.path.normpath(f'{out_path}/test_sequences_{title}.pickle')
-        all_test_file_names.append(test_save_file_name)
-        if not os.path.exists(test_save_file_name):
-            _ = prepare_test_seqs(test_folder=test_file, ref_sequence_file=ref_seq_file, guide_length=guide_len,
-                                  igs_length=igs_len, min_length=min_len, folder_to_save=out_path,
-                                  graph_results=graph_results, var_regs=var_regs, graph_file_type=graph_type,
-                                  get_consensus_batches=get_consensus_batches_test, batch_num=batch_num,
-                                  score_type=score_type, msa_fast=msa_fast,
-                                  remove_x_dupes_in_graph=remove_x_dupes_in_graph, lim=var_regs_lim)
-        else:
-            print(f'{title} exists already! Moving on...')
-    all_target_file_names = []
-    for target_file in target_seqs_to_process:
-        target_title = target_file.split('.')[0].split('/')[-1].split('\\')[-1]
-        target_save_file_name = os.path.normpath(f'{out_path}/designs_{target_title}_universal.pickle')
-        all_target_file_names.append(target_save_file_name)
-
-        if not os.path.exists(target_save_file_name):
-            _ = ribodesigner(target_sequences_folder=target_file, ref_sequence_file=ref_seq_file,
-                             guide_length=guide_len, igs_length=igs_len, min_length=min_len, fileout=True,
-                             folder_to_save=out_path, min_true_cov=min_true_cov, msa_fast=msa_fast,
-                             score_type=score_type, percent_of_target_seqs_used=percent_of_target_seqs_used,
-                             gaps_allowed=gaps_allowed, get_consensus_batches=get_consensus_batches_designs,
-                             random_guide_sample_size=random_guide_sample_size)
-        else:
-            print(f'{target_title} exists already! Moving on...')
-
-        for test_outfile in all_test_file_names:
-            _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
-                                            flexible_igs=flexible_igs, file_to_save=out_path)
-    return all_target_file_names, all_test_file_names
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -1069,26 +924,26 @@ if __name__ == '__main__':
     #                                         flexible_igs=True, file_to_save=out_path)
 
     #
-    # # Here is an example of how to run ribodesigner with all options to make designs locally and test them locally.
-    # test_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Saccharomyces cerevisiae_Only_by_Species_test.fasta',
-    #                         'Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_test.fasta']
-    # target_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target.fasta']
-    # out_path = 'test_output_files/test'
-    #
-    # # If when generating graphs it says it is not done cooking, comment out the ribodesigner routine and just run
-    # # run_local or else you risk having to couple everything again
-    # target_file_names, test_file_names = (
-    #     ribodesigner_routine(target_seqs_to_process=target_seqs_to_process, test_seqs_to_process=test_seqs_to_process,
-    #                          out_path=out_path, ref_seq_file=ref_path_euk, guide_len=n, igs_len=m, min_len=n,
-    #                          graph_results=True,var_regs=s_cerevisiae_var_regs, graph_type='png',
-    #                          get_consensus_batches_test=True, get_consensus_batches_designs=False, batch_num=10, score_type='weighted', msa_fast=True,
-    #                          remove_x_dupes_in_graph=True, var_regs_lim=1800, min_true_cov=0,
-    #                          percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
-    #                          flexible_igs=True))
-    #
-    # # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
-    # # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
-    # output = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
+    # Here is an example of how to run ribodesigner with all options to make designs locally and test them locally.
+    test_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Saccharomyces cerevisiae_Only_by_Species_test.fasta',
+                            'Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_test.fasta']
+    target_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target.fasta']
+    out_path = 'test_output_files/test'
+
+    # If when generating graphs it says it is not done cooking, comment out the ribodesigner routine and just run
+    # run_local or else you risk having to couple everything again
+    target_file_names, test_file_names = (
+        ribodesigner_routine(target_seqs_to_process=target_seqs_to_process, test_seqs_to_process=test_seqs_to_process,
+                             out_path=out_path, ref_seq_file=ref_path_euk, guide_len=n, igs_len=m, min_len=n,
+                             graph_results=True,var_regs=s_cerevisiae_var_regs, graph_type='png',
+                             get_consensus_batches_test=True, get_consensus_batches_designs=False, batch_num=10, score_type='weighted', msa_fast=True,
+                             remove_x_dupes_in_graph=True, var_regs_lim=1800, min_true_cov=0,
+                             percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+                             flexible_igs=True))
+
+    # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
+    # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
+    output = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
 
     # # if run_remotely:
     # #     run_remote(out_path, guide_len, n_limit=1, scratch_path='/scratch/kpr1/RiboDesigner/',

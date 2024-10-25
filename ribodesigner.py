@@ -7,16 +7,17 @@ import subprocess
 import time
 from collections import defaultdict
 from math import log
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from Bio import AlignIO, SeqUtils
 from Bio.Align import AlignInfo, PairwiseAligner
 from Bio.Seq import Seq
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from alive_progress import alive_bar
 from icecream import ic
-import seaborn as sns
-import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
 ic.configureOutput(prefix='debug | --> ')
@@ -40,8 +41,8 @@ class TargetSeq:
 
     # noinspection DuplicatedCode
     def give_taxonomy(self, level: str):
-        level_names = {'Domain': 0, 'Phylum': 1, 'Class': 2, 'Order': 3, 'Family': 4,
-                       'Genus': 5, 'Species': 6, 'Taxon': 7}
+        level_names = {'Domain': 0, 'Phylum': 1, 'Class': 2, 'Order': 3, 'Family': 4, 'Genus': 5, 'Species': 6,
+                       'Taxon': 7}
         if level not in level_names:
             print('Taxonomic level not found')
         # gives us the name at a certain taxonomic level
@@ -68,13 +69,12 @@ class RibozymeDesign:
     def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
                  perc_on_target_attr: float = None, true_perc_cov_attr: float = None,
-                 background_tm_nn_attr: float = None,
-                 background_score_attr: float = None, perc_cov_background_attr: float = None,
-                 perc_on_target_background_attr: float = None, true_perc_cov_background_attr: float = None,
-                 background_guides_attr: list[Seq] = None, anti_guide_attr: Seq = '', anti_guide_score_attr: int = None,
-                 background_targets_attr: set = None, igs_attr: str = '', ref_idx_attr: int = None,
-                 u_consv_background_attr: float = None, tested_design_attr: bool = False,
-                 perc_cov_test_attr: float = None,
+                 background_tm_nn_attr: float = None, background_score_attr: float = None,
+                 perc_cov_background_attr: float = None, perc_on_target_background_attr: float = None,
+                 true_perc_cov_background_attr: float = None, background_guides_attr: list[Seq] = None,
+                 anti_guide_attr: Seq = '', anti_guide_score_attr: int = None, background_targets_attr: set = None,
+                 igs_attr: str = '', ref_idx_attr: int = None, u_consv_background_attr: float = None,
+                 tested_design_attr: bool = False, perc_cov_test_attr: float = None,
                  perc_on_target_test_attr: float = None, true_perc_cov_test_attr: float = None,
                  dict_initialize: dict = None):
         if dict_initialize:
@@ -239,105 +239,87 @@ class RibozymeDesign:
         if type(taxonomy) is list:
             for target in taxonomy:
                 if self.targets:
-                    target_input = (str(give_taxonomy(str(self.targets), level=target))
-                                    .replace('[[', '{').replace('\']]', '}')
-                                    .replace(', \'', ':').replace('\'], [', ';')
-                                    .replace('\n', ''))
+                    target_input = (
+                        str(give_taxonomy(str(self.targets), level=target)).replace('[[', '{').replace(
+                            '\']]', '}').replace(', \'', ':').replace(
+                            '\'], [', ';').replace('\n', ''))
                     inputs[f'target_{target}'] = target_input
                 else:
                     inputs[f'target_{target}'] = ''
                 if self.background_targets:
-                    back_target_input = (str(give_taxonomy(str(self.background_targets), level=target))
-                                         .replace('[[', '{').replace('\']]', '}')
-                                         .replace(', \'', ':').replace('\'], [', ';')
-                                         .replace('\n', ''))
+                    back_target_input = (
+                        str(give_taxonomy(str(self.background_targets), level=target)).replace(
+                            '[[', '{').replace('\']]', '}').replace(
+                            ', \'', ':').replace('\'], [', ';').replace('\n', ''))
                     inputs[f'target_{target}_background'] = back_target_input
                 else:
                     inputs[f'target_{target}_background'] = ''
                 if self.test_targets:
-                    test_target_input = (str(give_taxonomy(str(self.test_targets), level=target))
-                                         .replace('[[', '{').replace('\']]', '}')
-                                         .replace(', \'', ':').replace('\'], [', ';')
-                                         .replace('\n', ''))
+                    test_target_input = (
+                        str(give_taxonomy(str(self.test_targets), level=target)).replace(
+                            '[[', '{').replace('\']]', '}').replace(
+                            ', \'', ':').replace('\'], [', ';').replace('\n', ''))
                     inputs[f'target_{target}_test'] = test_target_input
                 else:
                     inputs[f'target_{target}_test'] = ''
         else:
             if self.targets:
-                target_input = (str(give_taxonomy(str(self.targets), level=taxonomy))
-                                .replace('[[', '{').replace('\']]', '}')
-                                .replace(', \'', ':').replace('\'], [', ';')
-                                .replace('\n', ''))
+                target_input = (str(give_taxonomy(str(self.targets), level=taxonomy)).replace(
+                    '[[', '{').replace('\']]', '}').replace(', \'', ':').replace(
+                    '\'], [', ';').replace('\n', ''))
             else:
                 target_input = ''
             if self.background_targets:
-                background_target_input = (str(give_taxonomy(str(self.background_targets), level=taxonomy))
-                                           .replace('[[', '{').replace('\']]', '}')
-                                           .replace(', \'', ':').replace('\'], [', ';')
-                                           .replace('\n', ''))
+                background_target_input = (
+                    str(give_taxonomy(str(self.background_targets), level=taxonomy)).replace(
+                        '[[', '{').replace('\']]', '}').replace(
+                        ', \'', ':').replace('\'], [', ';').replace('\n', ''))
             else:
                 background_target_input = ''
             if self.test_targets:
-                test_target_input = (str(give_taxonomy(str(self.test_targets), level=taxonomy))
-                                     .replace('[[', '{').replace('\']]', '}')
-                                     .replace(', \'', ':').replace('\'], [', ';')
-                                     .replace('\n', ''))
+                test_target_input = (
+                    str(give_taxonomy(str(self.test_targets), level=taxonomy)).replace(
+                        '[[', '{').replace('\']]', '}').replace(
+                        ', \'', ':').replace('\'], [', ';').replace('\n', ''))
             else:
                 test_target_input = ''
             inputs[taxonomy] = target_input
             inputs[f'{taxonomy}_background'] = background_target_input
             inputs[f'{taxonomy}_test'] = test_target_input
-        return_dict = {
-            'id': self.id,
-            'igs': self.igs,
-            'reference_idx': self.ref_idx,
-            'optimized_to_targets': self.optimized_to_targets,
-            'optimized_to_background': self.optimized_to_background,
-            'tested': self.tested,
-            'tested_design': self.tested_design,
-            'guide': str(self.guide),
-            'num_of_targets': self.number_of_targets,
-            'score_type': self.score_type,
-            'score': self.score,
-            'U_IGS_coverage': self.perc_cov,
-            'U_IGS_on target': self.perc_on_target,
-            'true_U_IGS_cov': self.true_perc_cov,
-            'composite_score': self.composite_score,
-            'num_of_targets_background': self.number_of_targets_background,
-            'u_conservation_background': self.u_conservation_background,
-            'background_score': self.background_score,
-            # 'tm_nn_vs_background': self.background_tm_nn,
-            'U_IGS_coverage_background': self.perc_cov_background,
-            'U_IGS_on target_background': self.perc_on_target_background,
-            'true_U_IGS_cov_background': self.true_perc_cov_background,
-            'composite_background_score': self.composite_background_score,
-            'delta_igs_vs_background': self.delta_igs_vs_background,
-            'delta_guide_vs_background': self.delta_guide_vs_background,
-            'delta_vs_background': self.delta_vs_background,
-            'name_of_test_dataset': self.name_of_test_dataset,
-            'num_of_targets_test': self.number_of_targets_test,
-            'u_conservation_test': self.u_conservation_test,
-            'test_score': self.test_score,
-            'tm_nn_vs_test': self.test_tm_nn,
-            'U_IGS_coverage_test': self.perc_cov_test,
-            'U_IGS_on target_test': self.perc_on_target_test,
-            'true_U_IGS_cov_test': self.true_perc_cov_test,
-            'composite_test_score': self.composite_test_score,
-            'delta_igs_vs_test': self.delta_igs_vs_test,
-            'delta_guide_vs_test': self.delta_guide_vs_test,
-            'delta_vs_test': self.delta_vs_test
+        return_dict = {'id': self.id, 'igs': self.igs, 'reference_idx': self.ref_idx,
+                       'optimized_to_targets': self.optimized_to_targets,
+                       'optimized_to_background': self.optimized_to_background,
+                       'tested': self.tested, 'tested_design': self.tested_design, 'guide': str(self.guide),
+                       'num_of_targets': self.number_of_targets, 'score_type': self.score_type, 'score': self.score,
+                       'U_IGS_coverage': self.perc_cov, 'U_IGS_on target': self.perc_on_target,
+                       'true_U_IGS_cov': self.true_perc_cov, 'composite_score': self.composite_score,
+                       'num_of_targets_background': self.number_of_targets_background,
+                       'u_conservation_background': self.u_conservation_background,
+                       'background_score': self.background_score,
+                       # 'tm_nn_vs_background': self.background_tm_nn,
+                       'U_IGS_coverage_background': self.perc_cov_background,
+                       'U_IGS_on target_background': self.perc_on_target_background,
+                       'true_U_IGS_cov_background': self.true_perc_cov_background,
+                       'composite_background_score': self.composite_background_score,
+                       'delta_igs_vs_background': self.delta_igs_vs_background,
+                       'delta_guide_vs_background': self.delta_guide_vs_background,
+                       'delta_vs_background': self.delta_vs_background,
+                       'name_of_test_dataset': self.name_of_test_dataset,
+                       'num_of_targets_test': self.number_of_targets_test,
+                       'u_conservation_test': self.u_conservation_test,
+                       'test_score': self.test_score, 'tm_nn_vs_test': self.test_tm_nn,
+                       'U_IGS_coverage_test': self.perc_cov_test,
+                       'U_IGS_on target_test': self.perc_on_target_test, 'true_U_IGS_cov_test': self.true_perc_cov_test,
+                       'composite_test_score': self.composite_test_score, 'delta_igs_vs_test': self.delta_igs_vs_test,
+                       'delta_guide_vs_test': self.delta_guide_vs_test, 'delta_vs_test': self.delta_vs_test
 
-        }
+                       }
         if all_data:
             guide_tuples = [f'({seq};{val})' for seq, val in self.guide_batches]
             guide_batches_input = ';'.join(guide_tuples)
-            more_data = {
-                'guides_to_use': self.guides_to_use,
-                'background_guides': self.background_guides,
-                'anti_guide': str(self.anti_guide),
-                'anti_guide_score': self.anti_guide_score,
-                'guide_batches': guide_batches_input
-            }
+            more_data = {'guides_to_use': self.guides_to_use, 'background_guides': self.background_guides,
+                         'anti_guide': str(self.anti_guide), 'anti_guide_score': self.anti_guide_score,
+                         'guide_batches': guide_batches_input}
             return_dict.update(more_data)
         return_dict.update(inputs)
         return return_dict
@@ -468,11 +450,11 @@ class RibozymeDesign:
                    f'{self.perc_cov},{self.perc_on_target},{self.true_perc_cov},{self.composite_score},' \
                    f'{self.guide},{self.guide}G{self.igs}\n'
         elif self.tested_design:
-            background_target_input = str(give_taxonomy(str(self.background_targets),
-                                                        level=taxonomy)).replace(',', ';').replace('\'', '')
+            background_target_input = str(give_taxonomy(str(self.background_targets), level=taxonomy)).replace(
+                ',', ';').replace('\'', '')
             # first_row = 'IGS,Reference index,Number of tested species targeted,Score type,Design score,
-            # Score on targets,U_IGS cov background,U_IGS on target background,true U_IGS cov background,Composite score background,
-            # Optimized guide,Optimized guide + G + IGS,Ideal guide,Ideal guide + G + IGS\n'
+            # Score on targets,U_IGS cov background,U_IGS on target background,true U_IGS cov background,
+            # Composite score background,Optimized guide,Optimized guide + G + IGS,Ideal guide,Ideal guide + G + IGS\n'
             text = f'{self.igs},{self.ref_idx},{self.number_of_targets_background},{background_target_input},' \
                    f'{self.score_type},{self.score},{self.background_score},{self.perc_cov_background},' \
                    f'{self.perc_on_target_background},{self.true_perc_cov_background},' \
@@ -485,9 +467,8 @@ class RibozymeDesign:
         return text
 
 
-def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
-                 guide_length: int = 50, min_length: int = 35, ref_sequence_file=None, min_true_cov: float = 0.7,
-                 fileout: bool = False, folder_to_save: str = '',
+def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length: int = 50, min_length: int = 35,
+                 ref_sequence_file=None, min_true_cov: float = 0.7, fileout: bool = False, folder_to_save: str = '',
                  score_type: str = 'weighted', msa_fast: bool = False, gaps_allowed: bool = True,
                  percent_of_target_seqs_used: float = 1.0, get_consensus_batches: bool = True,
                  random_guide_sample_size: int = 10, store_batch_results: bool = False):
@@ -584,13 +565,6 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
 
     # Now, optimize all of the possible guide sequences for each IGS:
     print('Now optimizing guide sequences...')
-    # # Test optimizing guide sequences
-    # for i in range(0, 10):
-    #     optimize_designs(to_optimize[i], score_type=score_type, msa_fast=msa_fast,
-    #                      gaps_allowed=gaps_allowed, compare_to_background=False,
-    #                      random_sample_size=random_guide_sample_size, random_sample=get_consensus_batches)
-    #     ic()
-    # time1 = time.perf_counter()
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         # vectorize function. For the multiprocessing module I made it return the updated RibozymeDesign
 
@@ -598,9 +572,9 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5,
                               excluded=['score_type', 'guide_len', 'msa_fast', 'gaps_allowed', 'compare_to_background',
                                         'random_sample_size', 'random_sample', 'store_batch_results'])
         # prepare data for starmap
-        in_data = [(sub_array, score_type, guide_length, msa_fast, gaps_allowed, False,
-                    random_guide_sample_size, get_consensus_batches, store_batch_results)
-                   for sub_array in np.array_split(to_optimize, process_num)]
+        in_data = [(sub_array, score_type, guide_length, msa_fast, gaps_allowed, False, random_guide_sample_size,
+                    get_consensus_batches, store_batch_results) for sub_array in
+                   np.array_split(to_optimize, process_num)]
 
         # multithread
         with mp.Pool(processes=process_num) as pool:
@@ -668,8 +642,8 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
 
     if get_consensus_batches:
         print('Getting consensus sequences for test locations...')
-        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[str, float], excluded=['muscle_exe_name', 'msa_fast',
-                                                                                         'score_type', 'guide_len'])
+        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[str, float],
+                                 excluded=['muscle_exe_name', 'msa_fast', 'score_type', 'guide_len'])
         with alive_bar(len(test_seqs_dict), spinner='fishes') as bar:
             for idx, loc_data in test_seqs_dict.items():
                 for idx_id, idx_id_data in loc_data[0].items():
@@ -692,16 +666,16 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
                                                     score_type=score_type, guide_len=guide_length)
                         guides = [*seqs_and_scores[0]]
                         # Get the average score
-                        score = sum(seqs_and_scores[1])/ len(seqs_and_scores[1])
+                        score = sum(seqs_and_scores[1]) / len(seqs_and_scores[1])
 
                     else:
-                        best_guide, best_score = muscle_msa_routine(sequences_to_align=guides_to_use, name_of_file=idx_id,
-                                                           muscle_exe_name='muscle5', msa_fast=msa_fast,
-                                                           score_type=score_type, guide_len=guide_length)
+                        best_guide, best_score = muscle_msa_routine(sequences_to_align=guides_to_use,
+                                                                    name_of_file=idx_id, muscle_exe_name='muscle5',
+                                                                    msa_fast=msa_fast, score_type=score_type,
+                                                                    guide_len=guide_length)
                         guides = [best_guide]
                         score = best_score
                     test_seqs_dict[idx][0][idx_id][0] = guides
-                    # test_seqs_dict[idx][0][idx_id].append(score)
                     guide_scores[idx_id] = score
                     if len(test_seqs_dict[idx][0][idx_id]) > 6:
                         print('uh oh')
@@ -722,29 +696,20 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         igs_true_perc_cov_list = []
         ref_idxes_list = []
         guide_scores_list = []
-        in_var_reg = []
         for igs_id, igs_id_count in igs_ids_counts.items():
             ref_idx = int(igs_id[igs_length:])
             ref_idxes_list.append(ref_idx)
             u_conservation_list.append(counts_of_ref_idx[ref_idx] / num_of_seqs)
             igs_true_perc_cov_list.append(igs_id_count / num_of_seqs)
             guide_scores_list.append(guide_scores[igs_id])
-            # for l, r in var_regs:
-            #     if l <= ref_idx <= r:
-            #         in_var_reg_temp = True
-            #         break
-            #     else:
-            #         in_var_reg_temp = False
-            # in_var_reg.append(in_var_reg_temp)
-        make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U coverage',
-                             y_data=igs_true_perc_cov_list, ylabel='IGS true coverage', loc_data=ref_idxes_list,
-                             var_regs=var_regs, save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
+        make_test_seqs_graph(title, x_data=u_conservation_list, xlabel='U coverage', y_data=igs_true_perc_cov_list,
+                             ylabel='IGS true coverage', loc_data=ref_idxes_list, var_regs=var_regs,
+                             save_file_name=save_file_name, file_type=graph_file_type, alpha=0.3,
                              dataset_len=num_of_seqs)
         # Graph guide score data
         make_guide_score_plot(xdata=igs_true_perc_cov_list, xlabel='IGS true coverage', ydata=guide_scores_list,
                               ylabel='Average guide score', loc_data=ref_idxes_list, var_regs=var_regs, lim=lim,
-                              save_file_name=save_file_name, bins_wanted = 100, file_type=graph_file_type, save_fig=True)
-
+                              save_file_name=save_file_name, bins_wanted=100, file_type=graph_file_type, save_fig=True)
 
     if os.path.exists(f'{save_file_name}.pickle'):
         os.remove(f'{save_file_name}.pickle')
@@ -1035,9 +1000,9 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
     if return_test_seqs:
         # IGS_id: [guides, targets, perc cov, perc on target, true perc cov]
-        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets,
-                                       counts / counts_of_igs[igs[:igs_len]], counts / total_targets, counts]
-                                 for igs, counts in igs_ids_counts.items()}
+        igs_over_min_true_cov = {
+            igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets, counts / counts_of_igs[igs[:igs_len]],
+                  counts / total_targets, counts] for igs, counts in igs_ids_counts.items()}
         # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location
         # of the target sequence
         # in our initial aligned_targets array
@@ -1063,10 +1028,10 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
         # this gives us a dictionary where the ID is matched to the true percent coverage
         # Measure true percent coverage of these and keep IGSes that are at least the minimum
         # true percent coverage needed
-        igs_over_min_true_cov = {igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets,
-                                       counts / counts_of_igs[igs[:igs_len]], counts / total_targets]
-                                 for igs, counts in igs_ids_counts.items()
-                                 if counts / total_targets >= min_true_cov}
+        igs_over_min_true_cov = {
+            igs: [[], set(), counts_of_igs[igs[:igs_len]] / total_targets, counts / counts_of_igs[igs[:igs_len]],
+                  counts / total_targets] for igs, counts in igs_ids_counts.items() if
+            counts / total_targets >= min_true_cov}
 
         # Here each item in the list is an IGS id (IGS + reference index), a guide, and the location of the
         # target sequence in our initial aligned_targets array
@@ -1087,14 +1052,14 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
         # Now make an array of all of the putative designs for later use.
         to_optimize = np.array([RibozymeDesign(id_attr=igs_id, guides_to_use_attr=item[0], targets_attr=item[1],
                                                perc_cov_attr=item[2], perc_on_target_attr=item[3],
-                                               true_perc_cov_attr=item[4])
-                                for igs_id, item in igs_over_min_true_cov.items()])
+                                               true_perc_cov_attr=item[4]) for igs_id, item in
+                                igs_over_min_true_cov.items()])
         return to_optimize
 
 
-def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: int = 50,
-                     msa_fast: bool = True, gaps_allowed: bool = True, compare_to_background: bool = False,
-                     random_sample_size: int = 10, random_sample: bool = False, store_batch_results: bool = False):
+def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: int = 50, msa_fast: bool = True,
+                     gaps_allowed: bool = True, compare_to_background: bool = False, random_sample_size: int = 10,
+                     random_sample: bool = False, store_batch_results: bool = False):
     """
     Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
     when compare_to_background is set to true, will do an MSA on background seqs and will update the anti-guide sequence
@@ -1116,11 +1081,11 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
 
         # Prepare to run msa
         names = np.array([f'{to_optimize.id}_{i}' for i in range(len(batches))])
-        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[np.ndarray, str], excluded=['muscle_exe_name', 'msa_fast',
-                                                                                         'score_type', 'guide_len'])
+        fn_muscle = np.vectorize(muscle_msa_routine, otypes=[np.ndarray, str],
+                                 excluded=['muscle_exe_name', 'msa_fast', 'score_type', 'guide_len'])
         # Should return an array of tuples - (truncated_seq, score)
         seqs_and_scores = fn_muscle(batches, names, muscle_exe_name='muscle5', msa_fast=msa_fast,
-                                    score_type=score_type, guide_len=guide_len)
+                                    score_type=score_type,guide_len=guide_len)
 
         # Pick the sequence with the best score: this will be our guide sequence to optimize
         index = np.argmax(seqs_and_scores[1])
@@ -1135,8 +1100,7 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
                                                     guide_len=guide_len)
         if not compare_to_background:
             to_optimize.update_after_optimizing(score_attr=best_score, guide_attr=best_guide,
-                                                score_type_attr=score_type,
-                                                reset_guides=True)
+                                                score_type_attr=score_type, reset_guides=True)
         else:
             to_optimize.anti_guide = best_guide[-len(to_optimize.guide):]
             to_optimize.anti_guide_score = best_score
@@ -1170,8 +1134,8 @@ def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: in
                 to_optimize.guide = best_guide
                 to_optimize.score = best_score
 
-        to_optimize.update_after_optimizing(score_attr=best_score, guide_attr=best_guide,
-                                            score_type_attr=score_type, reset_guides=True)
+        to_optimize.update_after_optimizing(score_attr=best_score, guide_attr=best_guide, score_type_attr=score_type,
+                                            reset_guides=True)
     else:
         # In case the sequence is using min_len that is different than the guide length
         to_optimize.anti_guide = best_guide[-len(to_optimize.guide):]
@@ -1198,7 +1162,6 @@ def get_weighted_score(opti_seq, opti_len):
     return score
 
 
-# noinspection DuplicatedCode
 def get_directional_score(opti_seq, opti_len):
     # This version penalizes sequences that are too short
     # Note that the end of the sequence is closer to the catalytic U!
@@ -1362,8 +1325,8 @@ def ribo_checker(coupled_folder: str, number_of_workers: int, worker_number: int
         work_to_do_list = handle.read().splitlines()
 
     # Check the big work done checkpoint file and remove any indexes that are already there
-    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder)
-                       if f.startswith('work_done_')]
+    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder) if
+                       f.startswith('work_done_')]
     work_done = []
     for work_done_file in work_done_files:
         with open(work_done_file) as handle:
@@ -1495,8 +1458,8 @@ def select_designs(tested_to_targets_path: list[str], designs_required: int, res
 
     # Remove those not in included variable regions if asked
     if choose_var_reg_site:
-        filtered_df = filtered_df[(filtered_df['reference_idx'] <= end_idx) &
-                                  (filtered_df['reference_idx'] >= start_idx)]
+        filtered_df = filtered_df[
+            (filtered_df['reference_idx'] <= end_idx) & (filtered_df['reference_idx'] >= start_idx)]
     # sort to select
     filtered_df.sort_values(by=[igs_var, guide_var], ascending=False)
 
@@ -1692,8 +1655,7 @@ def write_output_file(designs: np.ndarray[RibozymeDesign] | list[RibozymeDesign]
 def give_taxonomy(silva_name: str | TargetSeq, level: str):
     if type(silva_name) is TargetSeq:
         return silva_name.give_taxonomy(level)
-    level_names = {'Domain': 0, 'Phylum': 1, 'Class': 2, 'Order': 3,
-                   'Family': 4, 'Genus': 5, 'Species': 6, 'Taxon': 7}
+    level_names = {'Domain': 0, 'Phylum': 1, 'Class': 2, 'Order': 3, 'Family': 4, 'Genus': 5, 'Species': 6, 'Taxon': 7}
     if level not in level_names:
         print('Taxonomic level not found')
     # gives us the name at a certain taxonomic level
@@ -1717,8 +1679,8 @@ def give_taxonomy(silva_name: str | TargetSeq, level: str):
         return None
 
 
-def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: str, msa_fast: bool,
-                       score_type: str, guide_len: int, priori=None):
+def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: str, msa_fast: bool, score_type: str,
+                       guide_len: int, priori=None):
     # First create a dummy file with all the guides we want to optimize
     if priori is None:
         priori = [0.25, 0.25, 0.25, 0.25]
@@ -1727,11 +1689,13 @@ def muscle_msa_routine(sequences_to_align, name_of_file: str, muscle_exe_name: s
             f.write('>seq' + str(i) + '\n' + str(line) + '\n')
 
     if msa_fast:
-        subprocess.check_output([muscle_exe_name, '-super5', f'to_align_{name_of_file}.fasta', '-output',
-                                 f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
+        subprocess.check_output(
+            [muscle_exe_name, '-super5', f'to_align_{name_of_file}.fasta', '-output', f'aln_{name_of_file}.afa'],
+            stderr=subprocess.DEVNULL)
     else:
-        subprocess.check_output([muscle_exe_name, '-align', f'to_align_{name_of_file}.fasta', '-output',
-                                 f'aln_{name_of_file}.afa'], stderr=subprocess.DEVNULL)
+        subprocess.check_output(
+            [muscle_exe_name, '-align', f'to_align_{name_of_file}.fasta', '-output', f'aln_{name_of_file}.afa'],
+            stderr=subprocess.DEVNULL)
 
     msa = AlignIO.read(open(f'aln_{name_of_file}.afa'), 'fasta')
 
@@ -1821,8 +1785,7 @@ def give_scoring_dict():
 
 def combine_data(folder_path):
     # Get all files in the folder that end in .txt
-    files = [os.path.normpath(f'{folder_path}/{f}') for f in os.listdir(folder_path)
-             if f.endswith('.txt')]
+    files = [os.path.normpath(f'{folder_path}/{f}') for f in os.listdir(folder_path) if f.endswith('.txt')]
     worker_file_names = defaultdict(lambda: [])
 
     for file_temp in files:
@@ -1887,39 +1850,39 @@ def words2countmatrix(words, priori: list = None):
             # Below are my own edits
             # adding some ambiguity: in case the input sequence has an ambiguous base!
             elif letter == 'R':
-                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[2])
-                m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[2])
+                m[i][0] = m[i][0] + priori[0] / (priori[0] + priori[2])
+                m[i][2] = m[i][2] + priori[2] / (priori[0] + priori[2])
             elif letter == 'Y':
-                m[i][1] = m[i][1] + priori[1]/(priori[1] + priori[3])
-                m[i][3] = m[i][3] + priori[3]/(priori[1] + priori[3])
+                m[i][1] = m[i][1] + priori[1] / (priori[1] + priori[3])
+                m[i][3] = m[i][3] + priori[3] / (priori[1] + priori[3])
             elif letter == 'W':
-                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[3])
-                m[i][3] = m[i][3] + priori[3]/(priori[0] + priori[3])
+                m[i][0] = m[i][0] + priori[0] / (priori[0] + priori[3])
+                m[i][3] = m[i][3] + priori[3] / (priori[0] + priori[3])
             elif letter == 'S':
-                m[i][1] = m[i][1] + priori[1]/(priori[1] + priori[2])
-                m[i][2] = m[i][2] + priori[2]/(priori[1] + priori[2])
+                m[i][1] = m[i][1] + priori[1] / (priori[1] + priori[2])
+                m[i][2] = m[i][2] + priori[2] / (priori[1] + priori[2])
             elif letter == 'M':
-                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[1])
-                m[i][1] = m[i][1] + priori[1]/(priori[0] + priori[1])
+                m[i][0] = m[i][0] + priori[0] / (priori[0] + priori[1])
+                m[i][1] = m[i][1] + priori[1] / (priori[0] + priori[1])
             elif letter == 'K':
-                m[i][2] = m[i][2] + priori[2]/(priori[2] + priori[3])
-                m[i][3] = m[i][3] + priori[3]/(priori[2] + priori[3])
+                m[i][2] = m[i][2] + priori[2] / (priori[2] + priori[3])
+                m[i][3] = m[i][3] + priori[3] / (priori[2] + priori[3])
             elif letter == 'H':
-                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[1] + priori[3])
-                m[i][1] = m[i][1] + priori[1]/(priori[0] + priori[1] + priori[3])
-                m[i][3] = m[i][3] + priori[3]/(priori[0] + priori[1] + priori[3])
+                m[i][0] = m[i][0] + priori[0] / (priori[0] + priori[1] + priori[3])
+                m[i][1] = m[i][1] + priori[1] / (priori[0] + priori[1] + priori[3])
+                m[i][3] = m[i][3] + priori[3] / (priori[0] + priori[1] + priori[3])
             elif letter == 'B':
-                m[i][1] = m[i][1] + priori[1]/(priori[1] + priori[2] + priori[3])
-                m[i][2] = m[i][2] + priori[2]/(priori[1] + priori[2] + priori[3])
-                m[i][3] = m[i][3] + priori[3]/(priori[1] + priori[2] + priori[3])
+                m[i][1] = m[i][1] + priori[1] / (priori[1] + priori[2] + priori[3])
+                m[i][2] = m[i][2] + priori[2] / (priori[1] + priori[2] + priori[3])
+                m[i][3] = m[i][3] + priori[3] / (priori[1] + priori[2] + priori[3])
             elif letter == 'V':
-                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[1] + priori[2])
-                m[i][1] = m[i][1] + priori[1]/(priori[0] + priori[1] + priori[2])
-                m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[1] + priori[2])
+                m[i][0] = m[i][0] + priori[0] / (priori[0] + priori[1] + priori[2])
+                m[i][1] = m[i][1] + priori[1] / (priori[0] + priori[1] + priori[2])
+                m[i][2] = m[i][2] + priori[2] / (priori[0] + priori[1] + priori[2])
             elif letter == 'D':
-                m[i][0] = m[i][0] + priori[0]/(priori[0] + priori[2] + priori[3])
-                m[i][2] = m[i][2] + priori[2]/(priori[0] + priori[2] + priori[3])
-                m[i][3] = m[i][3] + priori[3]/(priori[0] + priori[2] + priori[3])
+                m[i][0] = m[i][0] + priori[0] / (priori[0] + priori[2] + priori[3])
+                m[i][2] = m[i][2] + priori[2] / (priori[0] + priori[2] + priori[3])
+                m[i][3] = m[i][3] + priori[3] / (priori[0] + priori[2] + priori[3])
     return m
 
 
@@ -1942,23 +1905,8 @@ N       = G, A, C or T  (aNy)
 '''
 
 # Modified to include a gap
-CONSENSUS = {'A': 'A',
-             'C': 'C',
-             'G': 'G',
-             'T': 'T',
-             'AG': 'R',
-             'CT': 'Y',
-             'AT': 'W',
-             'CG': 'S',
-             'AC': 'M',
-             'GT': 'K',
-             'ACT': 'H',
-             'CGT': 'B',
-             'ACG': 'V',
-             'AGT': 'D',
-             'ACGT': 'N',
-             '': '-'
-             }
+CONSENSUS = {'A': 'A', 'C': 'C', 'G': 'G', 'T': 'T', 'AG': 'R', 'CT': 'Y', 'AT': 'W', 'CG': 'S', 'AC': 'M', 'GT': 'K',
+             'ACT': 'H', 'CGT': 'B', 'ACG': 'V', 'AGT': 'D', 'ACGT': 'N', '': '-'}
 
 
 # Changed some variable names
@@ -2037,9 +1985,7 @@ def get_tm_gc(seq, strict=True, valueset=7, userset=None, mismatch=True, mismatc
 
     """
     if strict and any(x in seq for x in "KMNRYBVDH"):
-        raise ValueError(
-            "ambiguous bases B, D, H, K, M, N, R, V, Y not allowed when 'strict=True'"
-        )
+        raise ValueError("ambiguous bases B, D, H, K, M, N, R, V, Y not allowed when 'strict=True'")
 
     # Ambiguous bases: add 0.5, 0.67 or 0.33% depending on G+C probability:
     percent_gc = SeqUtils.gc_fraction(seq, "weighted") * 100
@@ -2083,19 +2029,19 @@ def extract_info(results_file_path: str, dataset: str):
     # Now extact data here:
     column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
                     'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
-                    'num_of_targets': int, 'score_type': str, 'score': float, 'U_IGS_coverage': float, 'U_IGS_on target': float,
-                    'true_U_IGS_cov': float, 'composite_score': float, 'num_of_targets_background': int,
-                    'u_conservation_background': float, 'background_score': float, 'U_IGS_coverage_background': float,
-                    'U_IGS_on target_background': float, 'true_U_IGS_cov_background': float,
-                    'composite_background_score': float,
+                    'num_of_targets': int, 'score_type': str, 'score': float, 'U_IGS_coverage': float,
+                    'U_IGS_on target': float, 'true_U_IGS_cov': float, 'composite_score': float,
+                    'num_of_targets_background': int, 'u_conservation_background': float, 'background_score': float,
+                    'U_IGS_coverage_background': float, 'U_IGS_on target_background': float,
+                    'true_U_IGS_cov_background': float, 'composite_background_score': float,
                     'delta_igs_vs_background': float, 'delta_guide_vs_background': float, 'delta_vs_background': float,
                     'name_of_test_dataset': str, 'num_of_targets_test': int, 'u_conservation_test': float,
-                    'test_score': float, 'tm_nn_vs_test': float, 'U_IGS_coverage_test': float, 'U_IGS_on target_test': float,
-                    'true_U_IGS_cov_test': float, 'composite_test_score': float, 'delta_igs_vs_test': float,
-                    'delta_guide_vs_test': float, 'delta_vs_test': float, 'target_Domain': str,
-                    'target_Domain_background': str, 'target_Domain_test': str, 'target_Phylum': str,
-                    'target_Phylum_background': str, 'target_Phylum_test': str, 'target_Class': str,
-                    'target_Class_background': str, 'target_Class_test': str, 'target_Order': str,
+                    'test_score': float, 'tm_nn_vs_test': float, 'U_IGS_coverage_test': float,
+                    'U_IGS_on target_test': float, 'true_U_IGS_cov_test': float, 'composite_test_score': float,
+                    'delta_igs_vs_test': float, 'delta_guide_vs_test': float, 'delta_vs_test': float,
+                    'target_Domain': str, 'target_Domain_background': str, 'target_Domain_test': str,
+                    'target_Phylum': str, 'target_Phylum_background': str, 'target_Phylum_test': str,
+                    'target_Class': str, 'target_Class_background': str, 'target_Class_test': str, 'target_Order': str,
                     'target_Order_background': str, 'target_Order_test': str, 'target_Family': str,
                     'target_Family_background': str, 'target_Family_test': str, 'target_Genus': str,
                     'target_Genus_background': str, 'target_Genus_test': str, 'target_Species': str,
@@ -2123,6 +2069,7 @@ def extract_info(results_file_path: str, dataset: str):
     else:
         design_df = pd.DataFrame.from_records(designs, index=dataset).convert_dtypes()
     return design_df
+
 
 def import_data_to_df(designs_path: list[str], name: str = 'designs', check_integrity: bool = True):
     dfs = []
@@ -2152,8 +2099,8 @@ def import_data_to_df(designs_path: list[str], name: str = 'designs', check_inte
     return designs_df
 
 
-def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, loc_data: list,
-                          var_regs: list, save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True,
+def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, loc_data: list, var_regs: list,
+                          save_file_name: str, bins_wanted: int = 100, file_type='png', save_fig=True,
                           add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None, lim=1580,
                           dual_plot: bool = True):
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (10.193, 6.932)}
@@ -2161,10 +2108,8 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
     if dual_plot:
         jointplot_fig = plt.figure()
         gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=14)
-        joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[0:6, 6:14]),
-            1: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
-        }
+        joint_ax = {0: jointplot_fig.add_subplot(gridspec[0:6, 6:14]),
+                    1: jointplot_fig.add_subplot(gridspec[0:6, 0:6]), }
         # Plot scatter and kde plots
         # below is for individual log norms
         good_guides = 0
@@ -2177,7 +2122,8 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
         hist_data = jointplot_fig.axes[0].hist2d(xdata, ydata, cmap='viridis', bins=bins_wanted, norm='log')
         jointplot_fig.colorbar(hist_data[-1], ax=jointplot_fig.axes[0])
 
-        jointplot_fig.axes[0].annotate(f'n = {good_guides}\ncandidate\ndesigns', xy=(0.75, 0.15), xycoords='axes fraction')
+        jointplot_fig.axes[0].annotate(f'n = {good_guides}\ncandidate\ndesigns', xy=(0.75, 0.15),
+                                       xycoords='axes fraction')
 
         jointplot_fig.axes[0].set_xlabel(xlabel)
         jointplot_fig.axes[0].set_ylabel(ylabel)
@@ -2189,7 +2135,7 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
 
         if add_control:
             sns.scatterplot(x=control_loc_data, y=control_y_data, ax=joint_ax[1], legend=False, alpha=1, c='#43a2ca',
-                            edgecolors = 'black', linewidth = 0.8, marker = '^', sizes = [150] * len(control_loc_data))
+                            edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
             sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
                             edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
 
@@ -2204,9 +2150,7 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
     else:
         jointplot_fig = plt.figure()
         gridspec = jointplot_fig.add_gridspec(nrows=6, ncols=6)
-        joint_ax = {
-            0: jointplot_fig.add_subplot(gridspec[0:6, 0:6]),
-        }
+        joint_ax = {0: jointplot_fig.add_subplot(gridspec[0:6, 0:6]), }
         # Plot scatter and kde plots
         # below is for individual log norms
         good_guides = 0
@@ -2232,7 +2176,8 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
         jointplot_fig.axes[0].set_ylabel(ylabel)
         jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02])
 
-    name = save_file_name.split('/')[-1].split('\\')[-1].replace('_', ' ').replace('scores', 'guide scores')
+    name = save_file_name.split('/')[-1].split('\\')[-1].replace('_', ' ').replace('scores',
+                                                                                   'guide scores')
     jointplot_fig.suptitle(name.replace('vs test', 'tested to target'))
     plt.tight_layout()
     if save_fig:
@@ -2253,22 +2198,18 @@ def plot_variable_regions(ax, var_regs, invert=False):
     return
 
 
-def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, ylabel: str,
-                         loc_data: list[int], var_regs: list, save_file_name: str, alpha=0.5,
-                         file_type: str = 'png', dataset_len: int = None, add_three_panel: bool = True,
-                         add_control=False, control_x_data=None, control_y_data=None, control_loc_data=None):
+def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, ylabel: str, loc_data: list[int],
+                         var_regs: list, save_file_name: str, alpha=0.5, file_type: str = 'png',
+                         dataset_len: int = None, add_three_panel: bool = True, add_control=False, control_x_data=None,
+                         control_y_data=None, control_loc_data=None):
     # Set plot parameters
     custom_params = {"axes.spines.right": False, "axes.spines.top": False, 'figure.figsize': (30 * 0.6, 18 * 0.6)}
     sns.set_theme(context='talk', style="ticks", rc=custom_params, palette='viridis')
     # Prepare axes for first figure
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=7, ncols=14)
-    joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[1:7, 0:7]),
-        1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
-        2: jointplot_fig.add_subplot(gridspec[1:7, 7:14]),
-        3: jointplot_fig.add_subplot(gridspec[0:1, 7:14])
-    }
+    joint_ax = {0: jointplot_fig.add_subplot(gridspec[1:7, 0:7]), 1: jointplot_fig.add_subplot(gridspec[0:1, 0:7]),
+                2: jointplot_fig.add_subplot(gridspec[1:7, 7:14]), 3: jointplot_fig.add_subplot(gridspec[0:1, 7:14])}
     # Prepare hue data: color based on yes no var regs
     yes_no_var_reg = ['Conserved region'] * len(loc_data)
     for i, loc in enumerate(loc_data):
@@ -2302,8 +2243,6 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     sns.kdeplot(x=x_data, ax=joint_ax[1], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0,
                 clip=[0.1, 1])
     joint_ax[1].label_outer()
-    # sns.kdeplot(y=y_data, ax=joint_ax[2], fill=True, common_norm=True, alpha=.3, legend=False, color='#000000', cut=0)
-    # jointplot_fig.axes[1].tick_params(axis='both', labelleft=False)
     sns.kdeplot(x=x_data, ax=joint_ax[3], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
                 palette=yes_no_palette, cut=0, clip=[0.1, 1])
     if add_control:
@@ -2311,8 +2250,6 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
         jointplot_fig.axes[2].scatter(x=control_x_data, y=control_y_data, alpha=1, c='#43a2ca', edgecolors='black',
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
-    # sns.kdeplot(y=y_data, ax=joint_ax[5], hue=yes_no_var_reg, fill=True, common_norm=True, alpha=.3, legend=False,
-    #             palette=yes_no_palette, cut=0)
     jointplot_fig.axes[0].set(xlabel=xlabel, ylabel=ylabel, xlim=[0, 1], ylim=[0, 1])
     jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
     joint_ax[2].label_outer()
@@ -2339,7 +2276,6 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     return
 
 
-
 def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, ylabel, dataset_len, title,
                            save_file_name, file_type, add_control: bool = False, control_loc_data=None,
                            control_x_data=None, control_y_data=None):
@@ -2349,11 +2285,8 @@ def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, yl
     # Prepare axes for figure
     jointplot_fig = plt.figure()
     gridspec = jointplot_fig.add_gridspec(nrows=9, ncols=7)
-    joint_ax = {
-        0: jointplot_fig.add_subplot(gridspec[0:3, 0:7]),
-        1: jointplot_fig.add_subplot(gridspec[3:6, 0:7]),
-        2: jointplot_fig.add_subplot(gridspec[6:9, 0:7])
-    }
+    joint_ax = {0: jointplot_fig.add_subplot(gridspec[0:3, 0:7]), 1: jointplot_fig.add_subplot(gridspec[3:6, 0:7]),
+                2: jointplot_fig.add_subplot(gridspec[6:9, 0:7])}
     # Set variable regions for location plots
     plot_variable_regions(joint_ax[0], var_regs)
     plot_variable_regions(joint_ax[1], var_regs)
@@ -2372,18 +2305,18 @@ def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, yl
         to_plot_nums_of_vals.append(num_of_vals)
     if len(to_plot_loc) != len(to_plot_x):
         print('x data contains non-unique values and cannot be plotted by reducing duplicates')
-        sns.scatterplot(x=loc_data, y=x_data, linewidth=0, size=0.5, color='#000000',
-                        ax=jointplot_fig.axes[0], alpha=alpha / 2, legend=False)
+        sns.scatterplot(x=loc_data, y=x_data, linewidth=0, size=0.5, color='#000000', ax=jointplot_fig.axes[0],
+                        alpha=alpha / 2, legend=False)
     else:
-        sns.scatterplot(x=to_plot_loc, y=to_plot_x, linewidth=0, size=0.5, color='#000000',
-                        ax=jointplot_fig.axes[0], alpha=1, legend=False)
+        sns.scatterplot(x=to_plot_loc, y=to_plot_x, linewidth=0, size=0.5, color='#000000', ax=jointplot_fig.axes[0],
+                        alpha=1, legend=False)
         jointplot_fig.axes[0].set_title(f'{len(to_plot_loc)} unique U sites', loc='left')
         jointplot_fig.axes[0].label_outer()
     jointplot_fig.axes[1].bar(to_plot_loc, to_plot_nums_of_vals, color='#000000', edgecolor='#000000')
     # jointplot_fig.axes[1].set_title(f'{len(loc_data)} unique U-IGS sites', loc='left')
     jointplot_fig.axes[1].label_outer()
-    sns.scatterplot(x=loc_data, y=y_data, linewidth=0, size=0.5, color='#000000',
-                    ax=jointplot_fig.axes[2], alpha=alpha / 2, legend=False)
+    sns.scatterplot(x=loc_data, y=y_data, linewidth=0, size=0.5, color='#000000', ax=jointplot_fig.axes[2],
+                    alpha=alpha / 2, legend=False)
     if add_control:
         jointplot_fig.axes[0].scatter(x=control_loc_data, y=control_x_data, alpha=1, c='#43a2ca', edgecolors='black',
                                       linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
@@ -2431,8 +2364,8 @@ def check_checkpoint_file(coupled_folder):
         work_to_do_list = handle.read().splitlines()
 
     # Check the big work done checkpoint file and remove any indexes that are already there
-    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder)
-                       if f.startswith('work_done_')]
+    work_done_files = [os.path.normpath(f'{coupled_folder}/{f}') for f in os.listdir(coupled_folder) if
+                       f.startswith('work_done_')]
     work_done = []
     for work_done_file in work_done_files:
         with open(work_done_file) as handle:
@@ -2447,15 +2380,14 @@ def check_checkpoint_file(coupled_folder):
     if total_work != work_to_do + work_completed:
         if total_work == work_completed:
             decision = input('All work to do has been done, but checkpoint file is corrupted. Recommending deleting '
-                            'checkpoint file and associated work / coupled files to re-do analysis. Would you like'
-                            'to delete these? [Y/N]: ')
+                             'checkpoint file and associated work / coupled files to re-do analysis. Would you like'
+                             'to delete these? [Y/N]: ')
         else:
             decision = input(f'big_checkpoint.txt does not match amount of work to do. '
                              f'Would you like to delete checkpoint file and associated work / coupled files '
                              f'to start analysis over? [Y/N]: ')
         while decision != 'Y' and decision != 'N' and decision != 'y' and decision != 'n':
-            decision = input(
-                f'Please enter either Y or N: ')
+            decision = input(f'Please enter either Y or N: ')
         if decision == 'Y' or decision == 'y':
             print(f'Deleting files...')
             # delete files
@@ -2480,22 +2412,23 @@ def check_checkpoint_file(coupled_folder):
             print('All looks good!')
             return 0
 
-def run_local(output_folder, guide_len, num_of_workers:int = mp.cpu_count(), get_tm_nn:bool = True):
+
+def run_local(output_folder, guide_len, num_of_workers: int = mp.cpu_count(), get_tm_nn: bool = True):
     # finally, we test! Below is for local
     # First check if checkpoint file is corrupted:
-    result = check_checkpoint_file(coupled_folder=os.path.normpath(output_folder+ '/coupled'))
+    result = check_checkpoint_file(coupled_folder=os.path.normpath(output_folder + '/coupled'))
     if result == -1:
         return -1
     print(f'\n now testing {output_folder}... \n')
     coupled_file = os.path.normpath(output_folder + '/coupled')
-    in_data = [(coupled_file, num_of_workers, j, 1, False, guide_len, get_tm_nn)
-               for j in range(num_of_workers)]
+    in_data = [(coupled_file, num_of_workers, j, 1, False, guide_len, get_tm_nn) for j in range(num_of_workers)]
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with mp.Pool(processes=len(in_data)) as pool:
             out_data = pool.starmap(ribo_checker, in_data)
         bar()
     combine_data(os.path.normpath(output_folder + '/coupled/results'))
     return out_data
+
 
 def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, number_of_workers: int = mp.cpu_count(),
                worker_number: int = 0):
@@ -2511,13 +2444,13 @@ def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, numb
     combine_data(coupled_file + 'results')
     return
 
+
 def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: list, out_path: str, ref_seq_file: str,
                          guide_len: int = 50, igs_len: int = 5, min_len: int = 35, graph_results: bool = True,
                          var_regs=None, graph_type: str = 'png', get_consensus_batches_test: bool = True,
-                         get_consensus_batches_designs: bool = False,
-                         batch_num: int = 10, score_type: str = 'weighted', msa_fast: bool = True,
-                         remove_x_dupes_in_graph: bool = True, var_regs_lim: int = 1580, min_true_cov: float = 0,
-                         percent_of_target_seqs_used: float = 1, gaps_allowed: bool = False,
+                         get_consensus_batches_designs: bool = False, batch_num: int = 10, score_type: str = 'weighted',
+                         msa_fast: bool = True, remove_x_dupes_in_graph: bool = True, var_regs_lim: int = 1580,
+                         min_true_cov: float = 0, percent_of_target_seqs_used: float = 1, gaps_allowed: bool = False,
                          random_guide_sample_size: int = 10, flexible_igs: bool = True):
     if var_regs is None:
         var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173), (1243, 1294),

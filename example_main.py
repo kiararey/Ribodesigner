@@ -1,5 +1,5 @@
-import sys
 import multiprocessing as mp
+import sys
 from ribodesigner import (import_data_to_df, run_local, run_remote, ribodesigner_routine)
 
 if __name__ == '__main__':
@@ -55,10 +55,9 @@ if __name__ == '__main__':
                              out_path=out_path, ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=minlen,
                              graph_results=True, var_regs=var_regs_dict['Bacteria'], graph_type='png',
                              get_consensus_batches_test=True, get_consensus_batches_designs=False, batch_num=10,
-                             score_type='weighted', msa_fast=True,
-                             remove_x_dupes_in_graph=True, var_regs_lim=1800, min_true_cov=0,
-                             percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
-                             flexible_igs=True))
+                             score_type='weighted', msa_fast=True, remove_x_dupes_in_graph=True, var_regs_lim=1800,
+                             min_true_cov=0, percent_of_target_seqs_used=1, gaps_allowed=False,
+                             random_guide_sample_size=10, flexible_igs=True))
 
     # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
     # It will skip analyzing files that have already been made and remake the checkpoint file if needed.

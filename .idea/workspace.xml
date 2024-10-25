@@ -8,8 +8,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Found a bug (oversight?) in the consensus function words2countmatrix where it does not know what to do if the input sequence has some ambiguity!">
-      <change afterPath="$PROJECT_DIR$/example_main.py" afterDir="false" />
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Cleaning up, fixing some scoring functions, and adding an example_main.py file that is very clean!">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/example_main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -821,7 +823,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="190" />
+    <option name="localTasksCounter" value="191" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -861,7 +863,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="Ok hopefully last round for real for experimentation still working on a few graphs for more selective designs" />
     <MESSAGE value="Quick change: made combine_data less bad" />
     <MESSAGE value="Working on making a few more graphs" />
     <MESSAGE value="While making graphs for guide sequences for test seqs I realized I was not saving sequences with only one guide per batch rip&#10;&#10;Here I've fixed this oversight" />
@@ -886,7 +887,8 @@
     <MESSAGE value="Cleaning up" />
     <MESSAGE value="Separating out graphing functions into their own file so they don't" />
     <MESSAGE value="Found a bug (oversight?) in the consensus function words2countmatrix where it does not know what to do if the input sequence has some ambiguity!" />
-    <option name="LAST_COMMIT_MESSAGE" value="Found a bug (oversight?) in the consensus function words2countmatrix where it does not know what to do if the input sequence has some ambiguity!" />
+    <MESSAGE value="Cleaning up, fixing some scoring functions, and adding an example_main.py file that is very clean!" />
+    <option name="LAST_COMMIT_MESSAGE" value="Cleaning up, fixing some scoring functions, and adding an example_main.py file that is very clean!" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -898,12 +900,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>546</line>
+          <line>401</line>
           <option name="timeStamp" value="1112" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>462</line>
+          <line>317</line>
           <option name="timeStamp" value="1149" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -948,27 +950,27 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>836</line>
+          <line>691</line>
           <option name="timeStamp" value="1346" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>783</line>
+          <line>638</line>
           <option name="timeStamp" value="1350" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>912</line>
+          <line>767</line>
           <option name="timeStamp" value="1481" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>943</line>
+          <line>798</line>
           <option name="timeStamp" value="1531" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>976</line>
+          <line>831</line>
           <option name="timeStamp" value="1532" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="python-line">
@@ -1001,6 +1003,11 @@
           <line>2505</line>
           <option name="timeStamp" value="1737" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>945</line>
+          <option name="timeStamp" value="1738" />
+        </line-breakpoint>
       </breakpoints>
       <breakpoints-defaults>
         <breakpoint type="python-line" />
@@ -1025,7 +1032,7 @@
     <SUITE FILE_PATH="coverage/RiboDesigner$scratch.coverage" NAME="scratch Coverage Results" MODIFIED="1691095320521" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$generate_SILVA_datasets.coverage" NAME="generate_SILVA_datasets Coverage Results" MODIFIED="1673372601578" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
     <SUITE FILE_PATH="coverage/RiboDesigner$prepSeqs.coverage" NAME="prepSeqs Coverage Results" MODIFIED="1654725912590" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1729801543282" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/RiboDesigner$main.coverage" NAME="main Coverage Results" MODIFIED="1729803315938" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$RiboDesigner_classes.coverage" NAME="RiboDesigner_classes Coverage Results" MODIFIED="1691081689609" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$Figure_plotting_functions.coverage" NAME="Figure_plotting_functions Coverage Results" MODIFIED="1673372511009" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/RiboDesigner$scratch_1.coverage" NAME="scratch_1 Coverage Results" MODIFIED="1666212891303" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
