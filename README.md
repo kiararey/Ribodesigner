@@ -1,10 +1,18 @@
 # RiboDesigner
 
 ### Setting up
+notes from Kiara:
+- install muscle5 - make sure to follow their installation instructions!
+- Download python 3.11
+- Download all files, unzip
+- open the folder in your favorite IDE or code editor (I like opening mine as a project in PyCharm)
+- Extract ``Ribodesigner_test_files`` and put ``test_output_files`` in the same folder
+- Open ``main.py`` and follow running sample data
+
 
 I've finally uploaded sample data to use, I've added this in the Ribodesigner_test_files folder.
 
-To use, unzip this folder and extract the ``Datasets_used`` and ``test_output_files`` directories into the same folder 
+To use, unzip this folder and extract the ``test_output_files`` directory into the same folder 
 where you'll run ribodesigner on.
 
 Make sure you have Muscle5 installed in your path! More info found here: https://www.drive5.com/muscle/
@@ -12,10 +20,10 @@ Make sure you have Muscle5 installed in your path! More info found here: https:/
 This program makes use of Biopython, numpy, pandas, seaborn, and matplotlib, playsound, date_util, icecream, alive_progress. I think the rest of the dependencies are
 default libraries but please let me know if this is not the case. I'll make an environment file later too
 
-To run, I've honestly been opening main.py on Pycharm. if you're running this for the first time I highly suggest
-replacing all instances of ``test_data_folders`` with ``test_data_folders_test``. I also strongly suggest to set all 
-``percent_of_target_seqs_used``, ``percent_of_target_seqs_used`` and ``percent_of_background_seqs_used`` to something 
-like 0.01 (except for the reference sequence and control sequences, those only have one target).
+### Running sample data
+1. Edit main.py to run ``ribodesigner_routine`` with test data
+2. Once test data is done, run ``run_local`` to analyze data
+3. Exctract data to later analyze with ``import_data_to_df``
 
 ### Troubleshooting
 

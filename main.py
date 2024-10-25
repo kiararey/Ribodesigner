@@ -1,11 +1,13 @@
 import sys
 import os
-from alive_progress import alive_bar
 import multiprocessing as mp
 from ribodesigner import (ribodesigner, ribo_checker, couple_designs_to_test_seqs, prepare_test_seqs, combine_data,
-                          select_designs, adjust_var_regs)
-from graph_making import (make_graphs, make_sequence_logo_graph, make_violin_plots, graphs_multiple_guide_lengths,
-                          graphs_multiple_conditions)
+                          select_designs, adjust_var_regs, import_data_to_df, import_data_to_df, run_local, run_remote,
+                          ribodesigner_routine)
+from graphs_for_paper import (graphs_multiple_conditions, batched_vs_unbatched_guide_graph, graph_simple_data_selective,
+                              qpcr_graph)
+
+
 
 if __name__ == '__main__':
     # Run RiboDesigner on all datasets we are looking at
@@ -22,41 +24,35 @@ if __name__ == '__main__':
         number_of_workers = mp.cpu_count()
         pass
 
-    def run_local(output_folder, guide_len):
-        # finally, we test! Below is for local
-        print(f'\n now testing {output_folder}... \n')
-        get_tm_nn = True
-        coupled_file = output_folder + '/coupled/'
-        in_data = [(coupled_file, number_of_workers, j, 1, False, guide_len, get_tm_nn)
-                   for j in range(number_of_workers)]
-        with alive_bar(unknown='fish', spinner='fishes') as bar:
-            with mp.Pool(processes=len(in_data)) as pool:
-                out_data = pool.starmap(ribo_checker, in_data)
-            bar()
-        combine_data(output_folder + '/coupled/results/')
-        return  out_data
-
     # Barcode sequence is split sfGFP just cuz. This does not affect guide sequence design.
-    barcode_seq_file = 'Common_sequences/sfGFP_2_seq_barcode.txt'
+    barcode_seq_file = os.path.normpath('Common_sequences/sfGFP_2_seq_barcode.txt')
 
     # We'll be using the Ribozyme published in the RAM paper
-    ribobody_file = 'Common_sequences/ribozyme_body.txt'
+    ribobody_file = os.path.normpath('Common_sequences/ribozyme_body.txt')
 
     # Prepare the datasets
-    datasets_path = 'Datasets_used/zymo_files/'
+    datasets_path = os.path.normpath('Datasets_used/zymo_files/')
 
     # Output folder
-    output_path = 'test_output_files/'
+    output_path = os.path.normpath('test_output_files/')
 
     # Reference sequence - will have to be E. coli to graph the variable regions
-    ref_path = 'Common_sequences/e-coli-16s-mg1655.fasta'
-    ref_path_arc = 'Common_sequences/Methanobrevibacter smithii 16s.fasta'
-    ref_path_euk = 'Common_sequences/Saccharomyces cerevisiae 18s.fasta'
+    ref_path = os.path.normpath('Common_sequences/e-coli-16s-mg1655.fasta')
+    ref_path_arc = os.path.normpath('Common_sequences/Methanobrevibacter smithii 16s.fasta')
+    ref_path_euk = os.path.normpath('Common_sequences/Saccharomyces cerevisiae 18s.fasta')
+
+    ref_paths_dict = {'All': ref_path, 'Bacteria': ref_path, 'Eukaryota': ref_path_euk, 'Archaea': ref_path_arc}
 
     # Our random sequence!
-    random_seq_path = 'Common_sequences/Lactobacillus_casei_example.fasta'
+    random_seq_path = os.path.normpath('Common_sequences/Lactobacillus_casei_example.fasta')
 
     u1376 = 'CAACCCACTCCCATGGTGTGACGGGCGGTGTGTACAAGGCCCGGGAACGTgTTCAC'
+
+    # files = [(background_data_arc, ref_path_arc, m_smithii_var_regs, 'Archaea', universal_data_2, 1450),
+    #          (background_data_euk, ref_path_euk, s_cerevisiae_var_regs, 'Eukaryota', universal_data_3, 1850),
+    #          (background_data_bac, ref_path, e_coli_var_regs, 'Bacteria', universal_data_1, 1580),
+    #          (background_data_all, ref_path, e_coli_var_regs, 'All', universal_data_4, 1580)]
+    ssu_rrna_lim = {'All': 1580, 'Bacteria': 1580, 'Eukaryota': 1850, 'Archaea': 1450}
 
     # this is from Reich, M. & Labes, A. How to boost marine fungal research: A first step towards a multidisciplinary
     # approach by combining molecular fungal ecology and natural products chemistry. Marine Genomics 36, 57-75 (2017).
@@ -73,64 +69,67 @@ if __name__ == '__main__':
     m_smithii_var_regs = adjust_var_regs(known_seq_file=ref_path, known_var_regs=e_coli_var_regs,
                                          unknown_seq_file=ref_path_arc)
 
+    var_regs_dict = {'All': e_coli_var_regs, 'Bacteria': e_coli_var_regs, 'Eukaryota': s_cerevisiae_var_regs,
+                     'Archaea': m_smithii_var_regs}
+
     # find equivalent location of our original design in archaea and eukaryota
     arch_1376_idx = adjust_var_regs(known_seq_file=ref_path, known_var_regs=1376, unknown_seq_file=ref_path_arc)
     euk_1376_idx = adjust_var_regs(known_seq_file=ref_path, known_var_regs=1376, unknown_seq_file=ref_path_euk)
 
     # ########################################################
-    # test data targeted
-    path = 'Datasets_used/SILVA_squished_datasets_1_per_genus/'
-    bad_targets = 'Datasets_used/Bacillus_halotolerans.fasta'
-    universal_data_1 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
-    universal_data_2 = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_2.fasta'
-    universal_data_3 = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_2.fasta'
-    universal_data_4 = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_2.fasta'
-    big_data_entero_only = path + 'Enterobacterales_only_squished/Enterobacterales_only_by_Genus_1.fasta'
-    big_data_pseudo_only = path + 'Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_1.fasta'
-    big_data_no_entero_or_pseudo = path + 'Background_Bacteria_squished/' \
-                                          'Background_Bacteria_squished_no_pseudo_or_entero.fasta'
-    big_data_no_pseudo = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
-    big_data_no_entero = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
-    big_data_only_entero_and_pseudo = path + 'Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta'
-    big_data_gram_pos_only = path + 'Gram_positives_only/Gram_positives_only.fasta'
-    big_data_no_gram_pos = path + 'No_Gram_positives/No_Gram_positives.fasta'
-    background_data_bac = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
-    background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
-    background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
-    background_data_all = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta'
-    test_output_folder = 'test_output_files/test_outputs_parallelizing'
-    test_file = 'test_dataset_for_graphs.csv'
-    big_data_file_for_output = 'large_dataset.csv'
-    ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
-
-    test_data_folders = [background_data_euk, background_data_arc, background_data_bac, background_data_all]
-    selective_data_folders_targets = [big_data_no_entero_or_pseudo, big_data_entero_only, big_data_pseudo_only,
-                                      big_data_gram_pos_only]
-    selective_data_folders_tests = [big_data_only_entero_and_pseudo, big_data_no_entero, big_data_no_pseudo,
-                                    big_data_no_gram_pos]
-    universal_data_files = [universal_data_1, universal_data_2, universal_data_3, universal_data_4]
-    test_data_folders_test = [bad_targets, big_data_entero_only]
-    # Test new RiboDesigner for images
-    universal_datasets = []
-    selective_datasets = []
-
-    test_data_pickles = ['test_sequences_All_by_Genus_1.pickle', 'test_sequences_Archaea_Only_by_Genus_1.pickle',
-                         'test_sequences_Bacteria_Only_by_Genus_1.pickle',
-                         'test_sequences_Eukaryota_Only_by_Genus_1.pickle',
-                         'test_sequences_All_by_Genus_1_batched.pickle',
-                         'test_sequences_Archaea_Only_by_Genus_1_batched.pickle',
-                         'test_sequences_Bacteria_Only_by_Genus_1_batched.pickle',
-                         'test_sequences_Eukaryota_Only_by_Genus_1_batched.pickle']
-    test_data_pickles = [test_output_folder + '/' + item for item in test_data_pickles]
-
-    universal_data_pickles = ['designs_Eukaryota_Only_by_Genus_2_universal.pickle',
-                              'designs_All_by_Genus_2_universal.pickle',
-                              'designs_Archaea_Only_by_Genus_2_universal.pickle',
-                              'designs_Bacteria_Only_by_Genus_2_universal.pickle']
-    universal_data_pickles = [test_output_folder + '/' + item for item in universal_data_pickles]
-
-    ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
-    random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
+    # # test data targeted
+    # path = 'Datasets_used/SILVA_squished_datasets_1_per_genus/'
+    # bad_targets = 'Datasets_used/Bacillus_halotolerans.fasta'
+    # universal_data_1 = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_2.fasta'
+    # universal_data_2 = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_2.fasta'
+    # universal_data_3 = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_2.fasta'
+    # universal_data_4 = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_2.fasta'
+    # big_data_entero_only = path + 'Enterobacterales_only_squished/Enterobacterales_only_by_Genus_1.fasta'
+    # big_data_pseudo_only = path + 'Pseudomonadales_only_squished/Pseudomonadales_only_by_Genus_1.fasta'
+    # big_data_no_entero_or_pseudo = path + 'Background_Bacteria_squished/' \
+    #                                       'Background_Bacteria_squished_no_pseudo_or_entero.fasta'
+    # big_data_no_pseudo = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_pseudo.fasta'
+    # big_data_no_entero = path + 'Background_Bacteria_squished/Background_Bacteria_squished_no_entero.fasta'
+    # big_data_only_entero_and_pseudo = path + 'Pseudo_and_entero_only_squished/Pseudo_and_entero_only_by_Genus_1.fasta'
+    # big_data_gram_pos_only = path + 'Gram_positives_only/Gram_positives_only.fasta'
+    # big_data_no_gram_pos = path + 'No_Gram_positives/No_Gram_positives.fasta'
+    # background_data_bac = path + 'SILVA_squished_datasets_Bacteria_Only/Bacteria_Only_by_Genus_1.fasta'
+    # background_data_arc = path + 'SILVA_squished_datasets_Archaea_Only/Archaea_Only_by_Genus_1.fasta'
+    # background_data_euk = path + 'SILVA_squished_datasets_Eukaryota_Only/Eukaryota_Only_by_Genus_1.fasta'
+    # background_data_all = path + 'SILVA_squished_datasets_All_Kingdoms/All_by_Genus_1.fasta'
+    # test_output_folder = 'test_output_files/test_outputs_parallelizing'
+    # test_file = 'test_dataset_for_graphs.csv'
+    # big_data_file_for_output = 'large_dataset.csv'
+    # ref_analysis_folder = 'test_output_files/test_outputs_parallelizing/native ecoli mg1655 designs'
+    #
+    # test_data_folders = [background_data_euk, background_data_arc, background_data_bac, background_data_all]
+    # selective_data_folders_targets = [big_data_no_entero_or_pseudo, big_data_entero_only, big_data_pseudo_only,
+    #                                   big_data_gram_pos_only]
+    # selective_data_folders_tests = [big_data_only_entero_and_pseudo, big_data_no_entero, big_data_no_pseudo,
+    #                                 big_data_no_gram_pos]
+    # universal_data_files = [universal_data_1, universal_data_2, universal_data_3, universal_data_4]
+    # test_data_folders_test = [bad_targets, big_data_entero_only]
+    # # Test new RiboDesigner for images
+    # universal_datasets = []
+    # selective_datasets = []
+    #
+    # test_data_pickles = ['test_sequences_All_by_Genus_1.pickle', 'test_sequences_Archaea_Only_by_Genus_1.pickle',
+    #                      'test_sequences_Bacteria_Only_by_Genus_1.pickle',
+    #                      'test_sequences_Eukaryota_Only_by_Genus_1.pickle',
+    #                      'test_sequences_All_by_Genus_1_batched.pickle',
+    #                      'test_sequences_Archaea_Only_by_Genus_1_batched.pickle',
+    #                      'test_sequences_Bacteria_Only_by_Genus_1_batched.pickle',
+    #                      'test_sequences_Eukaryota_Only_by_Genus_1_batched.pickle']
+    # test_data_pickles = [test_output_folder + '/' + item for item in test_data_pickles]
+    #
+    # universal_data_pickles = ['designs_Eukaryota_Only_by_Genus_2_universal.pickle',
+    #                           'designs_All_by_Genus_2_universal.pickle',
+    #                           'designs_Archaea_Only_by_Genus_2_universal.pickle',
+    #                           'designs_Bacteria_Only_by_Genus_2_universal.pickle']
+    # universal_data_pickles = [test_output_folder + '/' + item for item in universal_data_pickles]
+    #
+    # ref_seq_pickle = test_output_folder + '/designs_e-coli-16s-mg1655_universal.pickle'
+    # random_seq_pickle = test_output_folder + '/designs_Lactobacillus_casei_example_universal.pickle'
 
     # # Here we make the designs batched
     # for test_data in test_data_folders:
@@ -246,74 +245,74 @@ if __name__ == '__main__':
 
     # print(f'Test data done!\n########################################################\n')
 
-    results_folder = test_output_folder + '/coupled/results'
-    # combine_data(results_folder)
-
-    control_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                         if f.startswith('1_designs')]
-    control_design_results_file_names.sort()
-    batched_control_design_results_file_names = [name for name in control_design_results_file_names if
-                                                 'batched' in name]
-    unbatched_control_design_results_file_names = [name for name in control_design_results_file_names if
-                                                   not 'batched' in name]
-
-    ref_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                     if f.startswith('304_designs')]
-    ref_design_results_file_names.sort()
-    batched_ref_design_results_file_names = [name for name in ref_design_results_file_names if 'batched' in name]
-    unbatched_ref_design_results_file_names = [name for name in ref_design_results_file_names if not 'batched' in name]
-
-    random_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                        if f.startswith('326_designs')]
-    random_design_results_file_names.sort()
-    batched_random_design_results_file_names = [name for name in random_design_results_file_names if 'batched' in name]
-    unbatched_random_design_results_file_names = [name for name in random_design_results_file_names if
-                                                  not 'batched' in name]
-
-    universal_design_archaea_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                                   if f.startswith('14652_designs')]
-    universal_design_archaea_results_file_names.sort()
-    batched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names
-                                                           if 'batched' in name]
-    unbatched_universal_design_archaea_results_file_names = [name for name in
-                                                             universal_design_archaea_results_file_names if
-                                                             not 'batched' in name]
-
-    universal_design_eukarya_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                                   if f.startswith('72490_designs')]
-    universal_design_eukarya_results_file_names.sort()
-    batched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names
-                                                           if 'batched' in name]
-    unbatched_universal_design_eukarya_results_file_names = [name for name in
-                                                             universal_design_eukarya_results_file_names if
-                                                             not 'batched' in name]
-
-    universal_design_bacteria_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                                    if f.startswith('77193_designs')]
-    universal_design_bacteria_results_file_names.sort()
-    batched_universal_design_bacteria_results_file_names = [name for name in
-                                                            universal_design_bacteria_results_file_names if
-                                                            'batched' in name]
-    unbatched_universal_design_bacteria_results_file_names = [name for name in
-                                                              universal_design_bacteria_results_file_names if
-                                                              not 'batched' in name]
-
-    universal_design_all_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
-                                               if f.startswith('137620_designs')]
-    universal_design_all_results_file_names.sort()
-    batched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if
-                                                       'batched' in name]
-    unbatched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if
-                                                         not 'batched' in name]
-
-    batched_all_targets_universal_design_file_names = [*batched_universal_design_archaea_results_file_names,
-                                                       *batched_universal_design_eukarya_results_file_names,
-                                                       *batched_universal_design_bacteria_results_file_names,
-                                                       *batched_universal_design_all_results_file_names]
-    unbatched_all_targets_universal_design_file_names = [*unbatched_universal_design_archaea_results_file_names,
-                                                         *unbatched_universal_design_eukarya_results_file_names,
-                                                         *unbatched_universal_design_bacteria_results_file_names,
-                                                         *unbatched_universal_design_all_results_file_names]
+    # results_folder = test_output_folder + '/coupled/results'
+    # # combine_data(results_folder)
+    #
+    # control_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                      if f.startswith('1_designs')]
+    # control_design_results_file_names.sort()
+    # batched_control_design_results_file_names = [name for name in control_design_results_file_names if
+    #                                              'batched' in name]
+    # unbatched_control_design_results_file_names = [name for name in control_design_results_file_names if
+    #                                                not 'batched' in name]
+    #
+    # ref_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                  if f.startswith('304_designs')]
+    # ref_design_results_file_names.sort()
+    # batched_ref_design_results_file_names = [name for name in ref_design_results_file_names if 'batched' in name]
+    # unbatched_ref_design_results_file_names = [name for name in ref_design_results_file_names if not 'batched' in name]
+    #
+    # random_design_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                     if f.startswith('326_designs')]
+    # random_design_results_file_names.sort()
+    # batched_random_design_results_file_names = [name for name in random_design_results_file_names if 'batched' in name]
+    # unbatched_random_design_results_file_names = [name for name in random_design_results_file_names if
+    #                                               not 'batched' in name]
+    #
+    # universal_design_archaea_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                                if f.startswith('14652_designs')]
+    # universal_design_archaea_results_file_names.sort()
+    # batched_universal_design_archaea_results_file_names = [name for name in universal_design_archaea_results_file_names
+    #                                                        if 'batched' in name]
+    # unbatched_universal_design_archaea_results_file_names = [name for name in
+    #                                                          universal_design_archaea_results_file_names if
+    #                                                          not 'batched' in name]
+    #
+    # universal_design_eukarya_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                                if f.startswith('72490_designs')]
+    # universal_design_eukarya_results_file_names.sort()
+    # batched_universal_design_eukarya_results_file_names = [name for name in universal_design_eukarya_results_file_names
+    #                                                        if 'batched' in name]
+    # unbatched_universal_design_eukarya_results_file_names = [name for name in
+    #                                                          universal_design_eukarya_results_file_names if
+    #                                                          not 'batched' in name]
+    #
+    # universal_design_bacteria_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                                 if f.startswith('77193_designs')]
+    # universal_design_bacteria_results_file_names.sort()
+    # batched_universal_design_bacteria_results_file_names = [name for name in
+    #                                                         universal_design_bacteria_results_file_names if
+    #                                                         'batched' in name]
+    # unbatched_universal_design_bacteria_results_file_names = [name for name in
+    #                                                           universal_design_bacteria_results_file_names if
+    #                                                           not 'batched' in name]
+    #
+    # universal_design_all_results_file_names = [f'{results_folder}/{f}' for f in os.listdir(results_folder)
+    #                                            if f.startswith('137620_designs')]
+    # universal_design_all_results_file_names.sort()
+    # batched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if
+    #                                                    'batched' in name]
+    # unbatched_universal_design_all_results_file_names = [name for name in universal_design_all_results_file_names if
+    #                                                      not 'batched' in name]
+    #
+    # batched_all_targets_universal_design_file_names = [*batched_universal_design_archaea_results_file_names,
+    #                                                    *batched_universal_design_eukarya_results_file_names,
+    #                                                    *batched_universal_design_bacteria_results_file_names,
+    #                                                    *batched_universal_design_all_results_file_names]
+    # unbatched_all_targets_universal_design_file_names = [*unbatched_universal_design_archaea_results_file_names,
+    #                                                      *unbatched_universal_design_eukarya_results_file_names,
+    #                                                      *unbatched_universal_design_bacteria_results_file_names,
+    #                                                      *unbatched_universal_design_all_results_file_names]
 
     # # All data
     # make_graphs(control_designs_path=control_design_results_file_names,
@@ -786,7 +785,7 @@ if __name__ == '__main__':
     #                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
     # test_seq_path = f'Datasets_used/SILVA_squished_datasets_1_per_genus/Selective datasets per taxonomy/'
     # # test_seq_path = f'Datasets_used/SILVA_squished_datasets_5_per_genus/Selective datasets per taxonomy/'
-    save_file_path = output_path + 'selective_by_taxonomy/'
+    # save_file_path = output_path + 'selective_by_taxonomy/'
     #
     # # Graph!
     # test_seqs_to_process = [([test_seq_path + f'{taxonomy}_{include}_included/{taxonomy}_{include}_included_1.fasta',
@@ -875,12 +874,229 @@ if __name__ == '__main__':
     #                                                   random_guide_sample_size=10)
     #         else:
     #             print(f'{target_save_file_name} exists already! Moving on...')
-    #         # for test_outfile in all_test_file_names:
-    #         #     _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
-    #         #                                     flexible_igs=True, file_to_save=out_path)
+    #         for test_outfile in all_test_file_names:
+    #             _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
+    #                                             flexible_igs=True, file_to_save=out_path)
     #     output = run_local(output_folder=out_path, guide_len=n)
+    #
+    # graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
+    #                            selective_path='test_output_files/selective_by_taxonomy',
+    #                            output_folder='test_output_files/best_designs/For experimental selection',
+    #                            add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs)
 
-    graphs_multiple_conditions(universal_path='test_output_files/universal_diff_var_regs',
+    # # fungiii
+    # test_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Saccharomyces cerevisiae_Only_by_Species_test.fasta',
+    #                         'Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_test.fasta']
+    # target_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target.fasta']
+    # out_path = 'test_output_files/fungi'
+    # all_test_file_names = []
+    # all_target_file_names = []
+    # for test_file in test_seqs_to_process:
+    #     title = test_file.split('.')[0].split('/')[-1]
+    #     test_save_file_name = f'{out_path}/test_sequences_{title}.pickle'
+    #     all_test_file_names.append(test_save_file_name)
+    #     if not os.path.exists(test_save_file_name):
+    #         test_seqs_pickle_file_name = prepare_test_seqs(test_folder=test_file, ref_sequence_file=ref_path_euk,
+    #                                                        guide_length=n, igs_length=m, min_length=n,
+    #                                                        folder_to_save=out_path, graph_results=True,
+    #                                                        var_regs=s_cerevisiae_var_regs, graph_file_type='png',
+    #                                                        get_consensus_batches=True, batch_num=10,
+    #                                                        score_type='weighted', msa_fast=True,
+    #                                                        remove_x_dupes_in_graph=True, lim=1800)
+    #     else:
+    #         print(f'{test_save_file_name} exists already! Moving on...')
+    # for target_file in target_seqs_to_process:
+    #     target_title = target_file.split('.')[0].split('/')[-1]
+    #     target_save_file_name = f'{out_path}/designs_{target_title}_universal.pickle'
+    #     all_target_file_names.append(target_save_file_name)
+    #
+    #     if not os.path.exists(target_save_file_name):
+    #         design_pickle_name = ribodesigner(target_sequences_folder=target_file, ref_sequence_file=ref_path_euk,
+    #                                           guide_length=n, igs_length=m, min_length=n,
+    #                                           folder_to_save=out_path, min_true_cov=0, msa_fast=True,
+    #                                           score_type='weighted', percent_of_target_seqs_used=1,
+    #                                           gaps_allowed=False, random_guide_sample_size=10)
+    #     else:
+    #         print(f'{target_save_file_name} exists already! Moving on...')
+    #
+    #     for test_outfile in all_test_file_names:
+    #         _ = couple_designs_to_test_seqs(designs_input=target_save_file_name, test_seqs_input=test_outfile,
+    #                                         flexible_igs=True, file_to_save=out_path)
+
+    #
+    # Here is an example of how to run ribodesigner with all options to make designs locally and test them locally.
+    test_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Saccharomyces cerevisiae_Only_by_Species_test.fasta',
+                            'Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_test.fasta']
+    target_seqs_to_process = ['Datasets_used/SILVA_squished_datasets_fungi/Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target.fasta']
+    out_path = 'test_output_files/test'
+
+    # If when generating graphs it says it is not done cooking, comment out the ribodesigner routine and just run
+    # run_local or else you risk having to couple everything again
+    target_file_names, test_file_names = (
+        ribodesigner_routine(target_seqs_to_process=target_seqs_to_process, test_seqs_to_process=test_seqs_to_process,
+                             out_path=out_path, ref_seq_file=ref_path_euk, guide_len=n, igs_len=m, min_len=n,
+                             graph_results=True,var_regs=s_cerevisiae_var_regs, graph_type='png',
+                             get_consensus_batches_test=True, get_consensus_batches_designs=False, batch_num=10, score_type='weighted', msa_fast=True,
+                             remove_x_dupes_in_graph=True, var_regs_lim=1800, min_true_cov=0,
+                             percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+                             flexible_igs=True))
+
+    # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
+    # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
+    output = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
+
+    # # if run_remotely:
+    # #     run_remote(out_path, guide_len, n_limit=1, scratch_path='/scratch/kpr1/RiboDesigner/',
+    # #                number_of_workers=mp.cpu_count(), worker_number=0)
+    # # else:
+    # #     output = run_local(output_folder=out_path, guide_len=guide_len)
+    #
+    # stringent_path = 'test_output_files/fungi/coupled/results/combined/75016_designs_designs_Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target_universal_vs_test_sequences_Saccharomyces cerevisiae_Only_by_Species_test.txt'
+    # to_compare_path = 'test_output_files/fungi/coupled/results/combined/75016_designs_designs_Ascomycota_Basidiomycota_Only_by_Family_unique_Species_target_universal_vs_test_sequences_Ascomycota_Basidiomycota_Only_by_Family_unique_Species_test.txt'
+    # get_fungi_designs(results_stringent_path=stringent_path, results_to_compare_path=to_compare_path,
+    #              output_folder=out_path, file_type='png', add_overhangs=True)
+
+    # # Set up datasets we will test
+    # # 1 - Universal (unbatched, batched)
+    # path = 'Datasets_used/SILVA_squished_datasets'
+    # universal_target_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
+    #                          if file.endswith('_target.fasta')}
+    # universal_test_seqs = {file.split('_')[0]: f'{path}/{file}' for file in os.listdir(path)
+    #                        if file.endswith('_test.fasta')}
+    # save_file_path = 'test_output_files/universal_results_no_batching'
+    #
+    # for key, targets in universal_target_seqs.items():
+    #     save_file = save_file_path + f'/{key}'
+    #     print(f'\nNow making universal ribozymes for {key}...')
+    #     current_ref_path = ref_paths_dict[key]
+    #     var_regs = var_regs_dict[key]
+    #     target_file_names, test_file_names = (
+    #         ribodesigner_routine(target_seqs_to_process=[targets],
+    #                              test_seqs_to_process=[universal_test_seqs[key]],
+    #                              out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
+    #                              graph_results=True, var_regs=var_regs, graph_type='svg',
+    #                              get_consensus_batches_test=True, get_consensus_batches_designs=False,
+    #                              batch_num=10, score_type='weighted', msa_fast=True,
+    #                              remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
+    #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+    #                              flexible_igs=True))
+    #
+    #     output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    #
+    # save_file_path = 'test_output_files/universal_results_with_batching'
+    #
+    # for key, targets in universal_target_seqs.items():
+    #     save_file = save_file_path + f'/{key}'
+    #     print(f'\nNow making universal ribozymes for {key}...')
+    #     current_ref_path = ref_paths_dict[key]
+    #     var_regs = var_regs_dict[key]
+    #     target_file_names, test_file_names = (
+    #         ribodesigner_routine(target_seqs_to_process=[targets],
+    #                              test_seqs_to_process=[universal_test_seqs[key]],
+    #                              out_path=save_file, ref_seq_file=current_ref_path, guide_len=n, igs_len=m, min_len=n,
+    #                              graph_results=True, var_regs=var_regs, graph_type='svg',
+    #                              get_consensus_batches_test=True, get_consensus_batches_designs=True,
+    #                              batch_num=10, score_type='weighted', msa_fast=True,
+    #                              remove_x_dupes_in_graph=True, var_regs_lim=ssu_rrna_lim[key], min_true_cov=0,
+    #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+    #                              flexible_igs=True))
+    #
+    #     output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    #
+    # # 2 Selective pseudo and entero
+    # path_e = 'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_Enterobacterales_included'
+    # path_p = 'Datasets_used/SILVA_squished_datasets_3000_per_order/Order_Pseudomonadales_included'
+    # target_seqs_selective_e_p = [f'{path_e}/{file}' for file in os.listdir(path_e) if file.endswith('_target.fasta')]
+    # target_seqs_selective_e_p.extend([f'{path_p}/{file}' for file in os.listdir(path_p) if file.endswith('_target.fasta')])
+    # test_seqs_selective_e_p = [f'{path_e}/{file}' for file in os.listdir(path_e) if file.endswith('_test.fasta')]
+    # test_seqs_selective_e_p.extend([f'{path_p}/{file}' for file in os.listdir(path_p) if file.endswith('_test.fasta')])
+    # save_file = 'test_output_files/Pseudo and Entero'
+    #
+    # print('\n Moving on to making Entero and Pseudo designs...')
+    # target_file_names, test_file_names = (
+    #     ribodesigner_routine(target_seqs_to_process=target_seqs_selective_e_p, test_seqs_to_process=test_seqs_selective_e_p,
+    #                          out_path=save_file, ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=n,
+    #                          graph_results=True, var_regs=e_coli_var_regs, graph_type='svg',
+    #                          get_consensus_batches_test=True, get_consensus_batches_designs=True, batch_num=10,
+    #                          score_type='weighted', msa_fast=True,
+    #                              remove_x_dupes_in_graph=True, var_regs_lim=1580, min_true_cov=0,
+    #                              percent_of_target_seqs_used=1, gaps_allowed=False, random_guide_sample_size=10,
+    #                              flexible_igs=True))
+    #
+    # output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    #
+    # # 3 - Selective 1 per genus
+    # taxonomy_levels_all = ['Phylum', 'Class', 'Order', 'Family', 'Genus']
+    # to_generate = {'Phylum': ['Proteobacteria', 'Firmicutes', 'Actinobacteriota_and_Firmicutes'],
+    #                'Class': ['Gammaproteobacteria', 'Bacilli'],
+    #                'Order': ['Enterobacterales', 'Pseudomonadales', 'Bacillales'],
+    #                'Family': ['Enterobacteriaceae', 'Pseudomonadaceae', 'Bacillaceae'],
+    #                'Genus': ['Escherichia-Shigella', 'Pseudomonas', 'Bacillus']}
+    # test_seq_path = f'Datasets_used/SILVA_squished_datasets_10_per_genus_wwtp_only'
+    # save_file_path = output_path + '/selective_by_taxonomy/'
+    # selective_target_test_pairs = []
+    # for level, vals in to_generate.items():
+    #     for taxonomy in vals:
+    #         file_to_check = f'{test_seq_path}/{level}_{taxonomy}'
+    #         selective_test_seqs_to_process = [f'{file_to_check}_excluded/{file}' for file in
+    #                                           os.listdir(f'{file_to_check}_excluded') if file.endswith('_test.fasta')]
+    #         selective_target_seqs_to_process = [f'{file_to_check}_excluded/{file}' for file in
+    #                                             os.listdir(f'{file_to_check}_excluded')
+    #                                             if file.endswith('_target.fasta')]
+    #         selective_test_seqs_to_process.extend([f'{file_to_check}_included/{file}' for file in
+    #                                                os.listdir(f'{file_to_check}_included')
+    #                                                if file.endswith('_test.fasta')])
+    #         selective_target_seqs_to_process.extend([f'{file_to_check}_included/{file}' for file in
+    #                                                  os.listdir(f'{file_to_check}_included')
+    #                                                  if file.endswith('_target.fasta')])
+    #         save_file = save_file_path + f'{level}_{taxonomy}'
+    #         print(f'\nNow making universal ribozymes for {save_file}...')
+    #         target_file_names, test_file_names = (
+    #             ribodesigner_routine(target_seqs_to_process=selective_target_seqs_to_process,
+    #                                  test_seqs_to_process=selective_test_seqs_to_process, out_path=save_file,
+    #                                  ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=n, graph_results=True,
+    #                                  var_regs=e_coli_var_regs, graph_type='svg', get_consensus_batches_test=True,
+    #                                  get_consensus_batches_designs=True,
+    #                                  batch_num=10, score_type='weighted', msa_fast=True, remove_x_dupes_in_graph=True,
+    #                                  var_regs_lim=1800, min_true_cov=0, percent_of_target_seqs_used=1,
+    #                                  gaps_allowed=False, random_guide_sample_size=10, flexible_igs=True))
+    #
+    #         # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
+    #         # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
+    #         output = run_local(output_folder=save_file, guide_len=n, num_of_workers=number_of_workers)
+    #
+    # # Test our chosen designs against a set of test sequences
+    # test_files = [
+    #     'test_output_files/Pseudo and Entero/test_sequences_Enterobacterales_Only_by_Order_unique_Species_test.pickle',
+    #     'test_output_files/Pseudo and Entero/test_sequences_Pseudomonadales_Only_by_Order_unique_Species_test.pickle']
+    # pribo = 'GAGTGCCCACCATAACGTGCTGGTAACTAAGGACAAGGGTTGCGCTCGTTgCGGGA'
+    #
+    # for designs_to_test, uloc, name in [(pribo, 1099, 'pribo'), (u1376, 1376, 'u64')]:
+    #     for test_seq_file in test_files:
+    #         file_to_save = f'test_output_files/checking_scores_figure_5/{name}'
+    #         couple_designs_to_test_seqs(designs_to_test, test_seqs_input=test_seq_file, file_to_save=file_to_save,
+    #                                     flexible_igs=True, ref_idx_u_loc=uloc)
+    #
+    #         output = run_local(output_folder=file_to_save, guide_len=n, num_of_workers=number_of_workers)
+
+    graph_simple_data_selective(data_path='test_output_files/checking_scores_figure_5',
+                                qpcr_data_path='/Users/kiarareyes/Downloads/q24_U64_Pcat.csv',
+                                output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
+                                              'My Drive/KRG Thesis/Figures/RiboDesigner paper/'
+                                              'output figures from ribodesigner only pribo u64', file_type='svg')
+
+    batched_vs_unbatched_guide_graph(unbatched_path='test_output_files/universal_results_no_batching',
+                                     batched_path='test_output_files/universal_results_with_batching',
+                                     output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
+                                                   'My Drive/KRG Thesis/Figures/RiboDesigner paper/'
+                                                   'output figures from ribodesigner no batching', file_type='svg',
+                                     m_smithii_var_regs=m_smithii_var_regs, save_fig=True)
+
+    graphs_multiple_conditions(universal_path='test_output_files/universal_results_with_batching',
                                selective_path='test_output_files/selective_by_taxonomy',
-                               output_folder='test_output_files/best_designs/For experimental selection',
-                               add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs)
+                               output_folder='/Users/kiarareyes/Library/CloudStorage/GoogleDrive-kpr1@rice.edu/'
+                                             'My Drive/KRG Thesis/Figures/RiboDesigner paper/'
+                                             'output figures from ribodesigner',
+                               add_overhangs=True, m_smithii_var_regs=m_smithii_var_regs, file_type='svg')
+
+    import_data_to_df(['here is your result file'])
