@@ -8,12 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Cleaning up, fixing some scoring functions, and adding an example_main.py file that is very clean!">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example_main.py" beforeDir="false" afterPath="$PROJECT_DIR$/example_main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ribodesigner.py" beforeDir="false" afterPath="$PROJECT_DIR$/ribodesigner.py" afterDir="false" />
-    </list>
+    <list default="true" id="f581072c-34c5-464c-bbb4-1a6c7308106f" name="Changes" comment="Cleaning up, fixing some scoring functions, and adding an example_main.py file that is very clean!" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -823,7 +818,7 @@
       <option name="project" value="LOCAL" />
       <updated>1695765221670</updated>
     </task>
-    <option name="localTasksCounter" value="191" />
+    <option name="localTasksCounter" value="192" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
