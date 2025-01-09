@@ -522,6 +522,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
         ref_name_and_seq = np.random.choice(target_names_and_seqs)
     else:
         ref_name_and_seq = read_fasta(ref_sequence_file)[0]
+        ref_name_and_seq = TargetSeq(id_attr=ref_name_and_seq[0], seq_attr=ref_name_and_seq[1])
 
     print(f'Found {target_names_and_seqs.size} total target sequences to analyze.')
 
@@ -532,7 +533,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
         print(f'Randomly sampling {target_names_and_seqs.size} sequences to analyze.\n')
 
     time1 = time.perf_counter()
-    print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq[0].replace("_", " ")}')
+    print(f'Now finding catalytic sites and aligning to reference {ref_name_and_seq.id.replace("_", " ")}')
     process_num = mp.cpu_count()
     # with alive_bar(unknown='fish', spinner='fishes') as bar:
     #     fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
@@ -617,6 +618,7 @@ def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, 
         ref_name_and_seq = np.random.choice(test_names_and_seqs)
     else:
         ref_name_and_seq = read_fasta(ref_sequence_file)[0]
+        ref_name_and_seq = TargetSeq(id_attr=ref_name_and_seq[0], seq_attr=ref_name_and_seq[1])
 
     fn_align_to_ref = np.vectorize(align_to_ref, otypes=[TargetSeq],
                                    excluded=['ref_name_and_seq', 'igs_length', 'guide_length', 'min_length'])
@@ -930,7 +932,7 @@ def align_to_ref(target_sequence: TargetSeq, ref_name_and_seq, igs_length: int =
     # will have to keep in mind the potential lengths of the sequences and add length igs_length to our final
     # E.coli index
     aligner = PairwiseAligner(mode='global')
-    alignments = aligner.align(target_sequence.seq, ref_name_and_seq[1])[0]
+    alignments = aligner.align(target_sequence.seq, ref_name_and_seq.seq)[0]
 
     # seq_a is the test sequence, seq_b is the reference sequence
     seq_a, seq_b = alignments
@@ -2139,7 +2141,7 @@ def make_guide_score_plot(xdata: list, xlabel: str, ydata: list, ylabel: str, lo
             sns.scatterplot(x=control_x_data, y=control_y_data, ax=joint_ax[0], legend=False, alpha=1, c='#43a2ca',
                             edgecolors='black', linewidth=0.8, marker='^', sizes=[150] * len(control_loc_data))
 
-        jointplot_fig.axes[1].set_xlabel('16s rRNA sequence position on reference sequence')
+        jointplot_fig.axes[1].set_xlabel('16S rRNA sequence position on reference sequence')
         jointplot_fig.axes[1].set_ylabel(ylabel)
         jointplot_fig.axes[0].set(xlim=[0, 1.02], ylim=[0, 1.02], ylabel=None)
         # recall e coli ref seq length is 1542, so 1580 should be plenty of space!
@@ -2226,7 +2228,7 @@ def make_test_seqs_graph(title: str, x_data: list, xlabel: str, y_data: list, yl
     colorbar_data.set_array([])
     joint_ax[0].get_legend().remove()
     jointplot_fig.colorbar(colorbar_data, ax=joint_ax[0], pad=0.1, orientation='horizontal',
-                           label='Location along E. coli 16s')
+                           label='Location along E. coli 16S')
     sns.scatterplot(x=x_data, y=y_data, linewidth=0, alpha=alpha, hue=yes_no_var_reg, ax=joint_ax[2],
                     palette=yes_no_palette)
     cmap = ListedColormap(colors=['#000000', 'g'])
@@ -2332,7 +2334,7 @@ def plot_three_panel_graph(var_regs, loc_data, x_data, alpha, y_data, xlabel, yl
     jointplot_fig.axes[2].sharex(jointplot_fig.axes[0])
     jointplot_fig.axes[2].sharey(jointplot_fig.axes[0])
     jointplot_fig.axes[2].set(xlabel=None)
-    jointplot_fig.axes[2].set(xlabel='Reference 16s rRNA index')
+    jointplot_fig.axes[2].set(xlabel='Reference 16S rRNA index')
     jointplot_fig.axes[1].sharex(jointplot_fig.axes[0])
     jointplot_fig.axes[0].tick_params(labelbottom=False)
     if dataset_len is not None:
