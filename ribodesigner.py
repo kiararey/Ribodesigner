@@ -61,10 +61,6 @@ class TargetSeq:
 
 
 class RibozymeDesign:
-    """
-    Accepted kwargs:
-    'g': list[Seq]  # guides to use to later
-    """
 
     def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
@@ -324,16 +320,12 @@ class RibozymeDesign:
 
 def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length: int = 50, min_length: int = 35,
                  ref_sequence_file=None, min_true_cov: float = 0.7, fileout: bool = False, folder_to_save: str = '',
-                 score_type: str = 'weighted', msa_fast: bool = False, gaps_allowed: bool = True,
+                 score_type: str = 'weighted', msa_fast: bool = False,
                  percent_of_target_seqs_used: float = 1.0, get_consensus_batches: bool = True,
                  random_guide_sample_size: int = 10, store_batch_results: bool = False):
     """Generates ribozyme designs to target a set of sequences.
-    :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
-    sequences used without replacement
     :param percent_of_target_seqs_used: In case target data is very large we can get a random sample of the sequences
     used without replacement
-    :param gaps_allowed:
-    :param min_delta: when making targeted designs, disregard any that have a composite score less than this
     :param target_sequences_folder: folder containing all the sequences you want to design ribozymes for. Can be either
     a folder of fasta files or a single fasta file.
     :param igs_length: how long you want your IGS to be in base pairs. Default is 5 bp.
@@ -342,19 +334,13 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
     Default is 35 bp. Ex: if you want your guide sequence to bind to at least 35 nt at the 3' end of the target
     sequence, set min_length = 35.
     :param ref_sequence_file:
-    :param background_sequences_folder: folder containing all the sequences you do NOT want to design ribozymes for.
-    Can be either a folder of fasta files or a single fasta file.
     :param min_true_cov: minimum percentage of targets you want to hit at a conserved location with a single optimized
     design. Default is 0.7 (70% of targets).
-    :param identity_thresh: How much sequence identity do you want to use for the MSA. Only applicable for designs made
-    without considering IUPAC ambiguity codes.
     :param fileout: whether we want a csv file output or not. Default is False.
     :param folder_to_save: the path where the folder we will save our outputs in if fileout = True
     :param score_type:
     :param msa_fast: whether to use super5 MUSCLE MSA or just regular MUSCLE MSA. Recommended for large datasets (over
     300 sequences) for faster data processing.
-    :param n_limit: What percentage of Ns are acceptable in the final design? This is applied when doing targeted
-    designs only for the time being.
     """
 
     start = time.perf_counter()
@@ -425,10 +411,10 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
         # vectorize function. For the multiprocessing module I made it return the updated RibozymeDesign
 
         fn_msa = np.vectorize(optimize_designs, otypes=[RibozymeDesign],
-                              excluded=['score_type', 'guide_len', 'msa_fast', 'gaps_allowed', 'compare_to_background',
+                              excluded=['score_type', 'guide_len', 'msa_fast', 'compare_to_background',
                                         'random_sample_size', 'random_sample', 'store_batch_results'])
         # prepare data for starmap
-        in_data = [(sub_array, score_type, guide_length, msa_fast, gaps_allowed, False, random_guide_sample_size,
+        in_data = [(sub_array, score_type, guide_length, msa_fast, False, random_guide_sample_size,
                     get_consensus_batches, store_batch_results) for sub_array in
                    np.array_split(to_optimize, process_num)]
 
@@ -441,7 +427,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
     time2 = time.perf_counter()
     round_convert_time(start=time1, end=time2, round_to=4, task_timed='generating optimized designs')
 
-    pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1].split('\\')[-1] + '_universal'
+    pickle_file_name = target_sequences_folder.split('.')[0].split('/')[-1].split('\\')[-1]
     print('Now pickling output file...')
     with alive_bar(unknown='fish', spinner='fishes') as bar:
         with open(os.path.normpath(f'{folder_to_save}/designs_{pickle_file_name}.pickle'), 'wb') as handle:
@@ -462,7 +448,7 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
 
 def prepare_test_seqs(test_folder, ref_sequence_file, guide_length, igs_length, min_length, folder_to_save,
                       graph_results, var_regs, graph_file_type, get_consensus_batches, batch_num, score_type, msa_fast,
-                      remove_x_dupes_in_graph, lim):
+                      lim):
     start = time.perf_counter()
     test_names_and_seqs = read_silva_fasta(in_file=test_folder)
     print(f'Found {test_names_and_seqs.size} total test sequences to analyze.')
@@ -915,7 +901,7 @@ def filter_igs_candidates(aligned_targets: np.ndarray[TargetSeq], min_true_cov: 
 
 
 def optimize_designs(to_optimize: RibozymeDesign, score_type: str, guide_len: int = 50, msa_fast: bool = True,
-                     gaps_allowed: bool = True, compare_to_background: bool = False, random_sample_size: int = 10,
+                     compare_to_background: bool = False, random_sample_size: int = 10,
                      random_sample: bool = False, store_batch_results: bool = False):
     """
     Takes in a RibozymeDesign with guide list assigned and uses MUSCLE msa to optimize the guides.
@@ -2311,9 +2297,46 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
                          guide_len: int = 50, igs_len: int = 5, min_len: int = 35, graph_results: bool = True,
                          var_regs=None, graph_type: str = 'png', get_consensus_batches_test: bool = True,
                          get_consensus_batches_designs: bool = False, batch_num: int = 10, score_type: str = 'weighted',
-                         msa_fast: bool = True, remove_x_dupes_in_graph: bool = True, var_regs_lim: int = 1580,
-                         min_true_cov: float = 0, percent_of_target_seqs_used: float = 1, gaps_allowed: bool = False,
+                         msa_fast: bool = True, var_regs_lim: int = 1580,
+                         min_true_cov: float = 0, percent_of_target_seqs_used: float = 1,
                          random_guide_sample_size: int = 10, flexible_igs: bool = True):
+    """
+    This runs ribodesigner.
+    ----
+    The 4 first params are required, everything else can be set to the defaults shown above.
+    :param target_seqs_to_process: a list of strings of fasta files that you want to make cat-RNA designs for.
+    :param test_seqs_to_process: a list of strings of fasta files that you want to compare your cat-RNA designs against.
+    All designs generated will be compared against all of these test sequences.
+    :param out_path: a string of a folder you want to save your files in.
+    :param ref_seq_file: a string of a fasta file containing your reference sequence. If this is empty, ribodesigner
+    will randomly choose a reference sequence for you, but this is highly not advised.
+    ----
+    :param guide_len: an int of how long you want your guide to be.
+    :param igs_len: an int of how long you want your igs to be.
+    :param min_len: an int of how short you are willing to make your guide.
+    If a guide length is < guide_len and >= minlen it will still be analyzed but the score will be penalized.
+    :param graph_results: a boolean showing if you want intermediate results to be graphed.
+    :param var_regs: a list of indexes (from the main.py file) showing where variable regions are. This is only relevant
+    when graph_results is True.
+    :param graph_type: a string indicating the file extension of graph you want. This is only relevant when
+    graph_results is True.
+    :param get_consensus_batches_test: a boolean indicating whether you want to do batching on the test sequences.
+    :param get_consensus_batches_designs: a boolean indicating whether you want to do batching on the cat-RNA designs.
+    :param batch_num: an int indicating how large your batches should be for MSA for the test sequences.
+    :param score_type: a string showing what kind of score you want to use ('naive', 'weighted', or 'directional').
+    :param msa_fast: a bool showing if you want to use muscle5's fast msa option.
+    :param var_regs_lim: an int showing the rightmost number you want on your x-axis when graphing variable regions.
+    This is only relevant when graph_results is True.
+    :param min_true_cov: a float showing the minimum igs true coverage you are willing to keep for your designs.
+    :param percent_of_target_seqs_used: a float showing the fracrtion of target sequences you want to use.
+    :param random_guide_sample_size: basically batch_num for target sequences. Advised to be the same number, but I
+    separeted them here in case you want to make them different sizes for some reason.
+    :param flexible_igs: a bool showing if you want to consider U-IGS availability when calculating guide scores.
+    If you want a guide score to be calculated with sequences that have a U at that position, choose True.
+    If you want a guide score to be calculated with sequences that have the exact U AND pentanucleotide at that
+    position, choose False.
+    :return:
+    """
     if var_regs is None:
         var_regs = [(69, 99), (137, 242), (433, 497), (576, 682), (822, 879), (986, 1043), (1117, 1173), (1243, 1294),
                     (1435, 1465)]
@@ -2327,14 +2350,13 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
                                   igs_length=igs_len, min_length=min_len, folder_to_save=out_path,
                                   graph_results=graph_results, var_regs=var_regs, graph_file_type=graph_type,
                                   get_consensus_batches=get_consensus_batches_test, batch_num=batch_num,
-                                  score_type=score_type, msa_fast=msa_fast,
-                                  remove_x_dupes_in_graph=remove_x_dupes_in_graph, lim=var_regs_lim)
+                                  score_type=score_type, msa_fast=msa_fast, lim=var_regs_lim)
         else:
             print(f'{title} exists already! Moving on...')
     all_target_file_names = []
     for target_file in target_seqs_to_process:
         target_title = target_file.split('.')[0].split('/')[-1].split('\\')[-1]
-        target_save_file_name = os.path.normpath(f'{out_path}/designs_{target_title}_universal.pickle')
+        target_save_file_name = os.path.normpath(f'{out_path}/designs_{target_title}.pickle')
         all_target_file_names.append(target_save_file_name)
 
         if not os.path.exists(target_save_file_name):
@@ -2342,7 +2364,7 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
                              guide_length=guide_len, igs_length=igs_len, min_length=min_len, fileout=True,
                              folder_to_save=out_path, min_true_cov=min_true_cov, msa_fast=msa_fast,
                              score_type=score_type, percent_of_target_seqs_used=percent_of_target_seqs_used,
-                             gaps_allowed=gaps_allowed, get_consensus_batches=get_consensus_batches_designs,
+                             get_consensus_batches=get_consensus_batches_designs,
                              random_guide_sample_size=random_guide_sample_size)
         else:
             print(f'{target_title} exists already! Moving on...')
