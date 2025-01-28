@@ -61,10 +61,6 @@ class TargetSeq:
 
 
 class RibozymeDesign:
-    """
-    Accepted kwargs:
-    'g': list[Seq]  # guides to use to later
-    """
 
     def __init__(self, id_attr: str = '', guides_to_use_attr: list[Seq] = None, targets_attr: set = None,
                  guide_attr: Seq = '', score_attr: float = None, score_type_attr: str = '', perc_cov_attr: float = None,
@@ -328,33 +324,6 @@ def ribodesigner(target_sequences_folder: str, igs_length: int = 5, guide_length
                  percent_of_target_seqs_used: float = 1.0, get_consensus_batches: bool = True,
                  random_guide_sample_size: int = 10, store_batch_results: bool = False):
     """Generates ribozyme designs to target a set of sequences.
-    :param percent_of_background_seqs_used: In case background data is very large we can get a random sample of the
-    sequences used without replacement
-    :param percent_of_target_seqs_used: In case target data is very large we can get a random sample of the sequences
-    used without replacement
-    :param gaps_allowed:
-    :param min_delta: when making targeted designs, disregard any that have a composite score less than this
-    :param target_sequences_folder: folder containing all the sequences you want to design ribozymes for. Can be either
-    a folder of fasta files or a single fasta file.
-    :param igs_length: how long you want your IGS to be in base pairs. Default is 5 bp.
-    :param guide_length: how long you want your guide sequence to be in base pairs. Default is 5 bp.
-    :param min_length: minimum guide sequence length from 3' end. Must be smaller or equal to guide_length.
-    Default is 35 bp. Ex: if you want your guide sequence to bind to at least 35 nt at the 3' end of the target
-    sequence, set min_length = 35.
-    :param ref_sequence_file:
-    :param background_sequences_folder: folder containing all the sequences you do NOT want to design ribozymes for.
-    Can be either a folder of fasta files or a single fasta file.
-    :param min_true_cov: minimum percentage of targets you want to hit at a conserved location with a single optimized
-    design. Default is 0.7 (70% of targets).
-    :param identity_thresh: How much sequence identity do you want to use for the MSA. Only applicable for designs made
-    without considering IUPAC ambiguity codes.
-    :param fileout: whether we want a csv file output or not. Default is False.
-    :param folder_to_save: the path where the folder we will save our outputs in if fileout = True
-    :param score_type:
-    :param msa_fast: whether to use super5 MUSCLE MSA or just regular MUSCLE MSA. Recommended for large datasets (over
-    300 sequences) for faster data processing.
-    :param n_limit: What percentage of Ns are acceptable in the final design? This is applied when doing targeted
-    designs only for the time being.
     """
 
     start = time.perf_counter()
