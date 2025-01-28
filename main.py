@@ -9,7 +9,7 @@ if __name__ == '__main__':
     out_path = '<path to save your files>'
     ref_path = '<Path to your reference fasta file>'
 
-    # m is your IGS/ penanucleotide length
+    # m is your IGS/ pentanucleotide length
     m = 5
     # n is your ideal guide length
     n = 50
