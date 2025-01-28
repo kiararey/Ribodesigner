@@ -4,6 +4,7 @@ from ribodesigner import (import_data_to_df, run_local, run_remote, ribodesigner
 
 if __name__ == '__main__':
     # Here is an example of how to run ribodesigner with all options to make designs locally and test them locally.
+
     # --------- Edit everything between these lines so that your correct sequences are being analyzed!
     # a list of .fasta files including organisms that you want to make designs for
     target_seqs_to_process = ['<Path to your target sequences file>', '<Another path to your target sequences file>']
@@ -56,7 +57,7 @@ if __name__ == '__main__':
 
     # If when generating graphs it says it is not done cooking, comment out the ribodesigner routine and just run
     # run_local or else you risk having to couple everything again
-
+    
     # For an explanation of what each of these options does, please check out the ribodesigner_routine function in
     # ribodesigner.py as it has explanations on each one.
     target_file_names, test_file_names = (
