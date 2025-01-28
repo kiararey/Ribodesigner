@@ -4,10 +4,16 @@ from ribodesigner import (import_data_to_df, run_local, run_remote, ribodesigner
 
 if __name__ == '__main__':
     # Here is an example of how to run ribodesigner with all options to make designs locally and test them locally.
-    test_seqs_to_process = ['<Path to your test sequences file>', '<Another path to your test sequences file>']
+    # --------- Edit everything between these lines so that your correct sequences are being analyzed!
+    # a list of .fasta files including organisms that you want to make designs for
     target_seqs_to_process = ['<Path to your target sequences file>', '<Another path to your target sequences file>']
+    # a list of .fasta files including organsims that you want to test your designs against
+    test_seqs_to_process = ['<Path to your test sequences file>', '<Another path to your test sequences file>']
+    # the path to the folder where you want your files to be saved
     out_path = '<path to save your files>'
+    # the path to the refrence sequence you will use to align everything to
     ref_path = '<Path to your reference fasta file>'
+    # ---------
 
     # m is your IGS/ pentanucleotide length
     m = 5
@@ -50,20 +56,25 @@ if __name__ == '__main__':
 
     # If when generating graphs it says it is not done cooking, comment out the ribodesigner routine and just run
     # run_local or else you risk having to couple everything again
+
+    # For an explanation of what each of these options does, please check out the ribodesigner_routine function in
+    # ribodesigner.py as it has explanations on each one.
     target_file_names, test_file_names = (
         ribodesigner_routine(target_seqs_to_process=target_seqs_to_process, test_seqs_to_process=test_seqs_to_process,
                              out_path=out_path, ref_seq_file=ref_path, guide_len=n, igs_len=m, min_len=minlen,
                              graph_results=True, var_regs=var_regs_dict['Bacteria'], graph_type='png',
                              get_consensus_batches_test=True, get_consensus_batches_designs=False, batch_num=10,
-                             score_type='weighted', msa_fast=True, remove_x_dupes_in_graph=True, var_regs_lim=1800,
-                             min_true_cov=0, percent_of_target_seqs_used=1, gaps_allowed=False,
+                             score_type='weighted', msa_fast=True, var_regs_lim=1800,
+                             min_true_cov=0, percent_of_target_seqs_used=1,
                              random_guide_sample_size=10, flexible_igs=True))
 
     # If it says that big_checkpoint is corrupted, follow the prompts on the command line and run everything again!
     # It will skip analyzing files that have already been made and remake the checkpoint file if needed.
     if run_remotely:
-        run_remote(out_path, n, n_limit=1, scratch_path='<Path where you are allowed to save your files>',
+        run_remote(out_path, n, n_limit=1, scratch_path=out_path,
                    number_of_workers=mp.cpu_count(), worker_number=number_of_workers)
     else:
         output, output_files = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
-        import_data_to_df(output_files)
+        df_data = import_data_to_df(output_files)
+        # This will save all of your data as a single .csv file. I recommend using pandas to analyze the df though.
+        df_data.to_csv(out_path + 'results.csv')
