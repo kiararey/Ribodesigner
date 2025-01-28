@@ -83,6 +83,7 @@ class RibozymeDesign:
             self.tested = dict_initialize['tested']
             self.tested_design = dict_initialize['tested_design']
             self.guide = dict_initialize['guide']
+            self.full_guide_g_igs = dict_initialize['full_guide_g_igs']
             self.number_of_targets = dict_initialize['num_of_targets']
             self.score_type = dict_initialize['score_type']
             self.score = dict_initialize['score']
@@ -123,6 +124,8 @@ class RibozymeDesign:
                 self.ref_idx = int(id_attr[5:])
             self.guide = guide_attr
             self.guides_to_use = guides_to_use_attr
+            if self.guide:
+                self.full_guide_g_igs = self.guide + 'g' + self.igs
             self.targets = targets_attr
             if targets_attr:
                 self.number_of_targets = len(targets_attr)
@@ -217,6 +220,7 @@ class RibozymeDesign:
         return_dict = {'id': self.id, 'igs': self.igs, 'reference_idx': self.ref_idx,
                        'optimized_to_targets': self.optimized_to_targets,
                        'tested': self.tested, 'tested_design': self.tested_design, 'guide': str(self.guide),
+                       'full_guide_g_igs': self.full_guide_g_igs,
                        'num_of_targets': self.number_of_targets, 'score_type': self.score_type, 'score': self.score,
                        'U_IGS_coverage': self.perc_cov, 'U_IGS_on target': self.perc_on_target,
                        'true_U_IGS_cov': self.true_perc_cov, 'composite_score': self.composite_score,
@@ -233,7 +237,7 @@ class RibozymeDesign:
         if all_data:
             guide_tuples = [f'({seq};{val})' for seq, val in self.guide_batches]
             guide_batches_input = ';'.join(guide_tuples)
-            more_data = {'guides_to_use': self.guides_to_use,'anti_guide': str(self.anti_guide),
+            more_data = {'guides_to_use': self.guides_to_use, 'anti_guide': str(self.anti_guide),
                          'anti_guide_score': self.anti_guide_score, 'guide_batches': guide_batches_input}
             return_dict.update(more_data)
         return_dict.update(inputs)
@@ -288,6 +292,7 @@ class RibozymeDesign:
         self.score_type = score_type_attr
         self.optimized_to_targets = True
         self.composite_score = self.true_perc_cov * score_attr
+        self.full_guide_g_igs = self.guide + 'g' + self.igs
 
     def update_to_test(self, test_score_attr: float, name_of_test_dataset_attr: str, test_tm_nn_attr: float = None):
         self.tested = True
@@ -310,7 +315,7 @@ class RibozymeDesign:
         if self.optimized_to_targets:
             text = f'{self.igs},{self.ref_idx},{self.number_of_targets},{self.score},{self.score_type},' \
                    f'{self.perc_cov},{self.perc_on_target},{self.true_perc_cov},{self.composite_score},' \
-                   f'{self.guide},{self.guide}G{self.igs}\n'
+                   f'{self.guide},{self.full_guide_g_igs}\n'
         else:
             print('Please optimize to targets first.')
             return
@@ -1639,6 +1644,7 @@ def combine_data(folder_path):
     # Get all files in the folder that end in .txt
     files = [os.path.normpath(f'{folder_path}/{f}') for f in os.listdir(folder_path) if f.endswith('.txt')]
     worker_file_names = defaultdict(lambda: [])
+    files_created = []
 
     for file_temp in files:
         file_name = file_temp.split('/')[-1].split('\\')[-1].split('_worker')[0]
@@ -1653,13 +1659,14 @@ def combine_data(folder_path):
             os.remove(os.path.normpath(f'{folder_path}/combined/{file}'))
 
     for new_file_name, items_to_write in worker_file_names.items():
+        files_created.append(new_file_name)
         for item in items_to_write:
             with open(item, 'r') as r:
                 designs = r.readlines()
             with open(new_file_name, 'a') as d:
                 for line in designs:
                     d.write(line)
-    return
+    return files_created
 
 
 """
@@ -1881,6 +1888,7 @@ def extract_info(results_file_path: str, dataset: str):
     # Now extact data here:
     column_types = {'id': str, 'igs': str, 'reference_idx': int, 'optimized_to_targets': bool,
                     'optimized_to_background': bool, 'tested': bool, 'tested_design': bool, 'guide': str,
+                    'full_guide_g_igs': str,
                     'num_of_targets': int, 'score_type': str, 'score': float, 'U_IGS_coverage': float,
                     'U_IGS_on target': float, 'true_U_IGS_cov': float, 'composite_score': float,
                     'num_of_targets_background': int, 'u_conservation_background': float, 'background_score': float,
@@ -2270,7 +2278,9 @@ def run_local(output_folder, guide_len, num_of_workers: int = mp.cpu_count(), ge
     # First check if checkpoint file is corrupted:
     result = check_checkpoint_file(coupled_folder=os.path.normpath(output_folder + '/coupled'))
     if result == -1:
-        return -1
+        files_created = [output_folder + '/coupled/results/combined/' + file
+                         for file in os.listdir(output_folder + '/coupled/results/combined') if file.endswith('.txt')]
+        return None, files_created
     print(f'\n now testing {output_folder}... \n')
     coupled_file = os.path.normpath(output_folder + '/coupled')
     in_data = [(coupled_file, num_of_workers, j, 1, False, guide_len, get_tm_nn) for j in range(num_of_workers)]
@@ -2278,8 +2288,8 @@ def run_local(output_folder, guide_len, num_of_workers: int = mp.cpu_count(), ge
         with mp.Pool(processes=len(in_data)) as pool:
             out_data = pool.starmap(ribo_checker, in_data)
         bar()
-    combine_data(os.path.normpath(output_folder + '/coupled/results'))
-    return out_data
+    files_created = combine_data(os.path.normpath(output_folder + '/coupled/results'))
+    return out_data, files_created
 
 
 def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, number_of_workers: int = mp.cpu_count(),
@@ -2293,7 +2303,7 @@ def run_remote(output_folder, guide_len, n_limit, scratch_path: str = None, numb
     coupled_file = os.path.normpath(scratch_path + output_folder + '/coupled')
     ribo_checker(coupled_folder=coupled_file, number_of_workers=number_of_workers, worker_number=worker_number,
                  n_limit=n_limit, opti_len=guide_len, get_tm_nn=get_tm_nn)
-    combine_data(coupled_file + 'results')
+    _ = combine_data(coupled_file + 'results')
     return
 
 

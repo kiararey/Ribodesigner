@@ -65,5 +65,5 @@ if __name__ == '__main__':
         run_remote(out_path, n, n_limit=1, scratch_path='<Path where you are allowed to save your files>',
                    number_of_workers=mp.cpu_count(), worker_number=number_of_workers)
     else:
-        output = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
-        import_data_to_df([output])
+        output, output_files = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
+        import_data_to_df(output_files)
