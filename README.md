@@ -21,7 +21,7 @@ This program makes use of Biopython, numpy, pandas, seaborn, and matplotlib, pla
 default libraries but please let me know if this is not the case. I'll make an environment file later too
 
 ### Running sample data
-1. Edit main.py to run ``ribodesigner_routine`` with test data
+1. Edit ``main.py`` to run ``ribodesigner_routine`` with test data
 2. Once test data is done, run ``run_local`` to analyze data
 3. Exctract data to later analyze with ``import_data_to_df``
 
