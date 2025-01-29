@@ -2,7 +2,7 @@
 
 ### Setting up
 notes from Kiara:
-- install muscle5 - make sure to follow their installation instructions!
+- Install muscle5 - make sure to follow their installation instructions!
 - Download python 3.11
 - Download all files, unzip
 - open the folder in your favorite IDE or code editor (I like opening mine as a project in PyCharm)
