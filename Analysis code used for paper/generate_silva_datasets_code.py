@@ -10,7 +10,7 @@ silva_by_taxonomy_path = silva_ref_99_fasta
 taxonomy_level = 'Order'
 
 # Here is the file where we want to save the dataset
-output_path = 'Datasets_used/SILVA_squished_datasets'
+output_path = '../Datasets_used/SILVA_squished_datasets'
 
 # Prepare list to store data in:
 num_of_sequences_per_order = 10
