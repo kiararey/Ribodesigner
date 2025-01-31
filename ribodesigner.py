@@ -2331,10 +2331,11 @@ def ribodesigner_routine(target_seqs_to_process: list, test_seqs_to_process: lis
     :param percent_of_target_seqs_used: a float showing the fracrtion of target sequences you want to use.
     :param random_guide_sample_size: basically batch_num for target sequences. Advised to be the same number, but I
     separeted them here in case you want to make them different sizes for some reason.
-    :param flexible_igs: a bool showing if you want to consider U-IGS availability when calculating guide scores.
-    If you want a guide score to be calculated with sequences that have a U at that position, choose True.
-    If you want a guide score to be calculated with sequences that have the exact U AND pentanucleotide at that
-    position, choose False.
+    :param flexible_igs: a bool showing if you want to consider U-IGS availability when calculating test guide scores.
+    If you want a test guide score to be calculated with sequences that have a U at that position, choose True.
+    If you want a test guide score to be calculated with sequences that have the exact U AND pentanucleotide at that
+    position, choose False. This does not affect target designs and cat-RNA generation, only how each design guide is 
+    evaluated against the test sequences.
     :return:
     """
     if var_regs is None:
