@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import sys
+import os
 from ribodesigner import (import_data_to_df, run_local, run_remote, ribodesigner_routine)
 
 if __name__ == '__main__':
@@ -78,4 +79,5 @@ if __name__ == '__main__':
         output, output_files = run_local(output_folder=out_path, guide_len=n, num_of_workers=number_of_workers)
         df_data = import_data_to_df(output_files)
         # This will save all of your data as a single .csv file. I recommend using pandas to analyze the df though.
-        df_data.to_csv(out_path + 'results.csv')
+        df_data.to_csv(os.path.normpath(out_path + '/results.csv'))
+        
