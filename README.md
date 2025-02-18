@@ -1,14 +1,15 @@
 # Ribodesigner
+### What is Ribodesigner?
+Ribodesigner is a python script that generates cat-RNA designs that can barcode specific members of a microbial community using our [RAM memory system](https://doi.org/10.1101/2023.04.16.536800). For more on how it works, check out my [thesis defense video](https://www.youtube.com/watch?v=OOB-XeLD-sg) where I go in depth on it! And keep an eye out for our publication for it which will be out on biorxiv soon.
 
 ### Setting up
-notes from Kiara:
+Heads up: I made this to work on Mac / Linux. Ideally use those operating systems if you want to make sure everything works as expected!
 - Install [muscle5](https://www.drive5.com/muscle/) - make sure to follow their installation instructions!
 - Download python 3.11
 - Download all files, unzip
 - open the folder in your favorite IDE or code editor (I like opening mine as a project in PyCharm)
 - Extract ``Ribodesigner_test_files`` and put ``test_output_files`` in the same folder
 - Open ``main.py`` and follow running sample data
-
 
 I've finally uploaded sample data to use, I've added this in the Ribodesigner_test_files folder.
 
@@ -17,8 +18,7 @@ where you'll run ribodesigner on.
 
 Make sure you have Muscle5 installed in your path! More info found here: https://www.drive5.com/muscle/
 
-This program makes use of Biopython, numpy, pandas, seaborn, and matplotlib, playsound, date_util, icecream, alive_progress. I think the rest of the dependencies are
-default libraries but please let me know if this is not the case. I'll make an environment file later too
+This program makes use of all libraries and version numbers shown in ``requirements.txt``. I think the rest of the dependencies are default libraries but please let me know if this is not the case.
 
 ### Running sample data
 1. Edit ``main.py`` to run ``ribodesigner_routine`` with test data
@@ -63,7 +63,7 @@ IF MUSCLE STOPS WORKING!!!!!
 - **name_of_test_dataset** (str) : The name of the fasta file used for the test dataset.
 - **num_of_targets_test** (int) : The number of test sequences that had a U-pentanucleotide matching the IGS of the cat-RNA design at the location targeted.
 - **u_conservation_test** (float) : The fraction of test sequences that have a U at the correct position targetted by the cat-RNA. 
-- **test_score** (float) : The average guide score for the cat-RNA design when evaluated against the test sequences. A 0 means there is no conservation on average between test sequences and the cat-RNA guide sequence at the location targetted and 1 means that there is perfect conservation with all of them. *(caveat below)*
+- **test_score** (float) : The average guide score for the cat-RNA design when evaluated against the test sequences. A 0 means there is no conservation on average between test sequences and the cat-RNA guide sequence at the location targeted and 1 means that there is perfect conservation with all of them. *(caveat below)*
 - **tm_nn_vs_test** (float) : The average melting temperature of the guide with the possible binding sequences in the test sequences. Uses GC content to evaluate. It's calculated but I would not recommend using this as we did not go further with this type of data. *(caveat below)*
 - **U_IGS_coverage_test** (float) : The fraction of test sequences that have a U-pentanucleotide complementary to the IGS at any location out of all test sequences. (number of test sequences with a matching U-pentanucleotide / total number of test sequences)
 - **U_IGS_on_target_test** (float) : The fraction of test sequences with a U-pentanucleotide complementary to the IGS where that U is at the correct targeted location out of sequences that have a matching U-pentanucleotide at any position. (number of test sequences with a matching U-pentanucleotide at the correct location / number of test sequences with a matching U-pentanucleotide)
