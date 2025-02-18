@@ -1,4 +1,4 @@
-# RiboDesigner
+# Ribodesigner
 
 ### Setting up
 notes from Kiara:
