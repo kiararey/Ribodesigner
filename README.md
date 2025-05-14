@@ -1,6 +1,6 @@
 # Ribodesigner
 ### What is Ribodesigner?
-Ribodesigner is a python script that generates cat-RNA designs that can barcode specific members of a microbial community using our [RAM memory system](https://doi.org/10.1038/s41587-025-02593-0). For more on how it works, check out my [thesis defense video](https://www.youtube.com/watch?v=OOB-XeLD-sg) where I go in depth on it! And keep an eye out for our publication for it which will be out on biorxiv soon.
+Ribodesigner is a python script that generates cat-RNA designs that can barcode specific members of a microbial community using our [RAM memory system](https://doi.org/10.1038/s41587-025-02593-0). For more on how it works, check out [our preprint](https://www.biorxiv.org/content/10.1101/2025.04.29.651329v3) or my [thesis defense video](https://www.youtube.com/watch?v=OOB-XeLD-sg) where I go in depth on it! And keep an eye out for our publication for it which will be out on biorxiv soon.
 
 ### Setting up
 Heads up: I made this to work on Mac / Linux. Ideally use those operating systems if you want to make sure everything works as expected!
